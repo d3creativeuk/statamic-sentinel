@@ -1,0 +1,38 @@
+{
+    "name": "d3creative/sentinel",
+    "description": "Sentinel by D3 Creative — daily dependency audits for Statamic sites. Sentinel surfaces PHP version, Statamic version, and known package vulnerabilities in the Control Panel.",
+    "type": "statamic-addon",
+    "license": "proprietary",
+    "authors": [
+        {
+            "name": "D3 Creative",
+            "email": "hello@d3creative.uk",
+            "homepage": "https://d3creative.uk"
+        }
+    ],
+    "require": {
+        "php": "^8.0",
+        "statamic/cms": "^3.3|^4.0|^5.0|^6.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "D3Creative\\Sentinel\\": "src/"
+        }
+    },
+    "extra": {
+        "statamic": {
+            "name": "Sentinel",
+            "description": "Monitor your Statamic version, PHP version, and package vulnerabilities directly from the Control Panel.",
+            "developer": "D3 Creative",
+            "developer_url": "https://d3creative.uk",
+            "tags": ["monitoring", "security", "maintenance"]
+        },
+        "laravel": {
+            "providers": [
+                "D3Creative\\Sentinel\\ServiceProvider"
+            ]
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}
