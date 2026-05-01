@@ -10,27 +10,25 @@ class AuditService
     const OSV_BATCH_API     = 'https://api.osv.dev/v1/querybatch';
     const PACKAGIST_STATAMIC_API = 'https://repo.packagist.org/p2/statamic/cms.json';
     const PACKAGIST_LARAVEL_API  = 'https://repo.packagist.org/p2/laravel/framework.json';
-    const CACHE_TTL_MINUTES = 360; // 6 hours
+    const CACHE_KEY = 'd3creative_sentinel_audit';
 
     const EOL_DATE_PHP_API = 'https://endoflife.date/api/php.json';
 
     /**
-     * Full audit result, cached for 6 hours.
+     * Last cached audit result, or null if nothing is cached yet.
+     * Never triggers a scan.
+     */
+    public function cached(): ?array
+    {
+        return Cache::get(self::CACHE_KEY);
+    }
+
+    /**
+     * Return cached result; if nothing is cached, run a scan and cache it.
      */
     public function run(): array
     {
-        return Cache::remember('d3creative_sentinel_audit', now()->addMinutes(self::CACHE_TTL_MINUTES), function () {
-            $composer = array_merge($this->composerAudit(), ['outdated' => $this->composerOutdated()]);
-
-            return [
-                'statamic'    => $this->statamicInfo($composer),
-                'laravel'     => $this->laravelInfo($composer),
-                'php'         => $this->phpInfo(),
-                'composer'    => $composer,
-                'npm'         => array_merge($this->npmAudit(), ['outdated' => $this->npmOutdated()]),
-                'audited_at'  => now()->format('j M Y, H:i'),
-            ];
-        });
+        return $this->cached() ?? $this->refresh();
     }
 
     // -------------------------------------------------------------------------
@@ -111,12 +109,28 @@ class AuditService
     }
 
     /**
-     * Force refresh by clearing the cache and re-running.
+     * Run a scan and overwrite the cache. Used by the scheduler, the
+     * sentinel:scan command, and the manual "Scan now" / "Refresh" buttons.
+     * Cached forever — the scheduler owns freshness.
      */
     public function refresh(): array
     {
-        Cache::forget('d3creative_sentinel_audit');
-        return $this->run();
+        $composer = array_merge($this->composerAudit(), ['outdated' => $this->composerOutdated()]);
+
+        $result = [
+            'statamic'   => $this->statamicInfo($composer),
+            'laravel'    => $this->laravelInfo($composer),
+            'php'        => $this->phpInfo(),
+            'composer'   => $composer,
+            'npm'        => array_merge($this->npmAudit(), ['outdated' => $this->npmOutdated()]),
+            'audited_at' => now()->format('j M Y, H:i'),
+        ];
+
+        Cache::forever(self::CACHE_KEY, $result);
+
+        app(HistoryService::class)->recordIfChanged($result);
+
+        return $result;
     }
 
     // -------------------------------------------------------------------------

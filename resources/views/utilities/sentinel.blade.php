@@ -9,7 +9,45 @@
 
 @section('content')
 
+<div x-data x-init="$nextTick(() => window.scrollTo({ top: 0, behavior: 'instant' }))" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; color: #1e293b;">
+
+@if (! $audit)
+
+    {{-- Empty state: no scan has run yet --}}
+    <header style="display:flex; align-items:center; gap:10px; padding:32px 0;">
+        <h1 style="display:flex; align-items:center; gap:10px; font-size:25px; line-height:1.25; font-weight:500; color:#0f172a; margin:0; -webkit-font-smoothing:antialiased;">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="currentColor" width="22" height="22" style="color:#0f172a; flex-shrink:0;">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z" />
+            </svg>
+            Sentinel
+        </h1>
+    </header>
+    <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:48px 24px; text-align:center;">
+        <p style="font-size:18px; font-weight:600; color:#0f172a; margin:0 0 6px 0;">No scan yet</p>
+        <p style="font-size:13px; color:#64748b; margin:0 0 20px 0; line-height:1.55; max-width:420px; margin-left:auto; margin-right:auto;">Run your first scan to see Statamic, Laravel, PHP and dependency status. Future scans run automatically each day at 10:00.</p>
+        <a x-data
+           x-init="if (! document.getElementById('sentinel-keyframes')) { var s = document.createElement('style'); s.id = 'sentinel-keyframes'; s.textContent = '@keyframes sentinel-spin { to { transform: rotate(360deg); } }'; document.head.appendChild(s); }"
+           x-on:click.prevent="$el.querySelector('[data-sentinel-label]').textContent = 'Scanning…'; $el.querySelector('[data-sentinel-icon]').style.animation = 'sentinel-spin 1s linear infinite'; requestAnimationFrame(() => requestAnimationFrame(() => location.href = $el.href))"
+           href="?d3_refresh=1"
+           style="display:inline-flex; align-items:center; justify-content:center; gap:8px; white-space:nowrap; font-weight:600; cursor:pointer; text-decoration:none; color:#fff; background:#0f172a; padding:0 18px; height:38px; font-size:13px; line-height:1.25; border-radius:8px;">
+            <span data-sentinel-label>Scan Now</span>
+            <svg data-sentinel-icon xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" width="14" height="14" style="flex-shrink:0;">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+            </svg>
+        </a>
+        <p style="font-size:11px; color:#94a3b8; margin:14px 0 0 0;">Takes 10–20 seconds.</p>
+    </div>
+    <div style="display:flex; align-items:center; justify-content:flex-start; margin-top:16px; padding-top:14px;">
+        <p style="font-size:12px; color:rgb(63 63 71); margin:0; letter-spacing:-0.01em;">
+            Sentinel by <a href="https://d3creative.uk/sentinel" target="_blank" style="color:rgb(63 63 71); text-decoration:underline;">D3 Creative</a>. Security and update alerts for Statamic sites.
+        </p>
+    </div>
+
+@else
+
 @php
+    extract($audit);
+
     $statusColours = [
         'ok'         => '#10b981',
         'active'     => '#10b981',
@@ -43,8 +81,6 @@
         ($npm['counts']['CRITICAL'] ?? 0) > 0;
 @endphp
 
-<div x-data x-init="$nextTick(() => window.scrollTo({ top: 0, behavior: 'instant' }))" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; color: #1e293b;">
-
     {{-- Header --}}
     <header style="position:relative; display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:16px; padding:32px 0;">
         <h1 style="display:flex; align-items:center; gap:10px; font-size:25px; line-height:1.25; font-weight:500; color:#0f172a; margin:0; -webkit-font-smoothing:antialiased;">
@@ -55,9 +91,49 @@
         </h1>
         <div style="display:flex; align-items:center; gap:14px;">
             <span style="font-size:12px; color:rgb(63 63 71);">Last scanned: {{ $audited_at }}</span>
-            <a href="?d3_refresh=1" style="font-size:12px; color:rgb(63 63 71); text-decoration:none;" title="Refresh audit results">↺ Refresh</a>
+            <a x-data
+               x-init="if (! document.getElementById('sentinel-keyframes')) { var s = document.createElement('style'); s.id = 'sentinel-keyframes'; s.textContent = '@keyframes sentinel-spin { to { transform: rotate(360deg); } }'; document.head.appendChild(s); }"
+               x-on:click.prevent="$el.querySelector('[data-sentinel-label]').textContent = 'Scanning…'; $el.querySelector('[data-sentinel-icon]').style.animation = 'sentinel-spin 1s linear infinite'; requestAnimationFrame(() => requestAnimationFrame(() => location.href = $el.href))"
+               href="?d3_refresh=1"
+               title="Refresh audit results"
+               style="display:inline-flex; align-items:center; gap:4px; font-size:12px; color:rgb(63 63 71); text-decoration:none;">
+                <svg data-sentinel-icon xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="currentColor" style="width:14px; height:14px; flex-shrink:0;">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+                </svg>
+                <span data-sentinel-label>Refresh</span>
+            </a>
         </div>
     </header>
+
+    {{-- Tabs --}}
+    <div x-data="{ tab: 'current' }">
+
+        <div role="tablist" style="display:flex; gap:4px; border-bottom:1px solid #e2e8f0; margin-bottom:18px;">
+            <button type="button"
+                    role="tab"
+                    x-on:click="tab = 'current'"
+                    x-bind:aria-selected="tab === 'current'"
+                    x-bind:style="tab === 'current'
+                        ? 'cursor:pointer; background:transparent; border:0; border-bottom:2px solid #0f172a; padding:10px 14px; margin-bottom:-1px; font-size:13px; font-weight:600; font-family:inherit; color:#0f172a;'
+                        : 'cursor:pointer; background:transparent; border:0; border-bottom:2px solid transparent; padding:10px 14px; margin-bottom:-1px; font-size:13px; font-weight:600; font-family:inherit; color:#64748b;'">
+                Current
+            </button>
+            <button type="button"
+                    role="tab"
+                    x-on:click="tab = 'history'"
+                    x-bind:aria-selected="tab === 'history'"
+                    x-bind:style="tab === 'history'
+                        ? 'cursor:pointer; background:transparent; border:0; border-bottom:2px solid #0f172a; padding:10px 14px; margin-bottom:-1px; font-size:13px; font-weight:600; font-family:inherit; color:#0f172a;'
+                        : 'cursor:pointer; background:transparent; border:0; border-bottom:2px solid transparent; padding:10px 14px; margin-bottom:-1px; font-size:13px; font-weight:600; font-family:inherit; color:#64748b;'">
+                History
+                @if (! empty($history))
+                    <span style="display:inline-block; margin-left:6px; padding:1px 7px; border-radius:9px; background:#e2e8f0; color:#475569; font-size:11px; font-weight:600;">{{ count($history) }}</span>
+                @endif
+            </button>
+        </div>
+
+        {{-- Current tab --}}
+        <div x-show="tab === 'current'" role="tabpanel">
 
     {{-- Version list: Statamic / Laravel / PHP --}}
     <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden; margin-bottom:12px;">
@@ -90,75 +166,61 @@
 
     {{-- Email report form --}}
     @php $userEmail = auth()->user()?->email ?? ''; @endphp
-    <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:14px 16px; margin-bottom:12px;">
+    <div x-data="{
+            sending: false,
+            state: 'idle',
+            message: '',
+            send(form) {
+                this.sending = true;
+                this.state = 'idle';
+                this.message = '';
+                fetch(form.action, {
+                    method: 'POST',
+                    body: new FormData(form),
+                    headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
+                })
+                .then(res => res.json().then(body => ({ ok: res.ok, body })))
+                .then(res => {
+                    this.sending = false;
+                    this.state = res.ok ? 'success' : 'error';
+                    this.message = res.body.message;
+                    if (res.ok) setTimeout(() => { this.state = 'idle'; this.message = ''; }, 4000);
+                })
+                .catch(() => {
+                    this.sending = false;
+                    this.state = 'error';
+                    this.message = 'Something went wrong. Please try again.';
+                });
+            }
+         }"
+         style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:14px 16px; margin-bottom:12px;">
         <div style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; color:#94a3b8; margin-bottom:10px;">Email this report</div>
-        <form id="d3-send-report-utility" action="{{ route('statamic.cp.d3-sentinel.send-report') }}" method="POST" style="display:flex; gap:8px; align-items:center;">
+        <form action="{{ route('statamic.cp.d3-sentinel.send-report') }}"
+              method="POST"
+              x-on:submit.prevent="send($event.target)"
+              style="display:flex; gap:8px; align-items:center;">
             @csrf
-            <input type="email"
+            <input type="text"
                    name="email"
                    value="{{ $userEmail }}"
                    required
-                   placeholder="Email address"
+                   placeholder="email@example.com, another@example.com"
                    style="flex:1; font-size:13px; padding:7px 12px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#1e293b; outline:none; min-width:0;">
             <button type="submit"
-                    id="d3-send-btn-utility"
+                    x-bind:disabled="sending"
+                    x-bind:style="{ background: state === 'success' ? '#10b981' : (state === 'error' ? '#ef4444' : '#0f172a') }"
                     style="flex-shrink:0; font-size:13px; font-weight:600; color:#fff; background:#0f172a; border:none; padding:7px 14px; border-radius:6px; cursor:pointer; white-space:nowrap;">
-                Send Report
+                <span x-show="sending" x-cloak>Sending…</span>
+                <span x-show="!sending && state === 'success'" x-cloak>✓ Sent</span>
+                <span x-show="!sending && state === 'error'" x-cloak>✕ Failed</span>
+                <span x-show="!sending && state === 'idle'">Send Report</span>
             </button>
         </form>
-        <div id="d3-send-feedback-utility" style="font-size:13px; margin-top:8px; display:none;"></div>
+        <div x-show="message" x-cloak
+             x-bind:style="{ color: state === 'success' ? '#10b981' : '#ef4444' }"
+             style="font-size:13px; margin-top:8px;"
+             x-text="message"></div>
     </div>
-
-    <script>
-    (function () {
-        var form = document.getElementById('d3-send-report-utility');
-        var btn  = document.getElementById('d3-send-btn-utility');
-        var msg  = document.getElementById('d3-send-feedback-utility');
-
-        if (! form) return;
-
-        form.addEventListener('submit', function (e) {
-            e.preventDefault();
-
-            btn.disabled      = true;
-            btn.textContent   = 'Sending…';
-            msg.style.display = 'none';
-
-            fetch(form.action, {
-                method:  'POST',
-                body:    new FormData(form),
-                headers: { 'X-Requested-With': 'XMLHttpRequest' }
-            })
-            .then(function (res) { return res.json().then(function (j) { return { ok: res.ok, body: j }; }); })
-            .then(function (res) {
-                btn.textContent      = res.ok ? '✓ Sent' : '✕ Failed';
-                btn.style.background = res.ok ? '#10b981' : '#ef4444';
-                msg.style.color      = res.ok ? '#10b981' : '#ef4444';
-                msg.textContent      = res.body.message;
-                msg.style.display    = 'block';
-
-                setTimeout(function () {
-                    btn.disabled         = false;
-                    btn.textContent      = 'Send Report';
-                    btn.style.background = '#0f172a';
-                }, 4000);
-            })
-            .catch(function () {
-                btn.textContent      = '✕ Failed';
-                btn.style.background = '#ef4444';
-                msg.style.color      = '#ef4444';
-                msg.textContent      = 'Something went wrong. Please try again.';
-                msg.style.display    = 'block';
-
-                setTimeout(function () {
-                    btn.disabled         = false;
-                    btn.textContent      = 'Send Report';
-                    btn.style.background = '#0f172a';
-                }, 4000);
-            });
-        });
-    })();
-    </script>
 
     {{-- Package audit sections --}}
     @foreach ([
@@ -178,8 +240,8 @@
                     {{ $d['total_packages'] }} {{ $row['label'] }} scanned
                 @endif
             </span>
-            <span x-data="{ show: false }" x-on:keydown.escape.window="show = false" style="position:relative; display:inline-flex; align-items:center;">
-                <button type="button" x-on:click.stop="show = !show" aria-label="About {{ $row['label'] }}" style="display:inline-flex; align-items:center; justify-content:center; background:transparent; border:0; padding:0; color:#64748b; cursor:pointer; outline:none;">
+            <span x-data="{ show: false }" x-on:keydown.escape.window="show = false" x-on:sentinel-tooltip-open.window="if ($event.detail !== $root) show = false" style="position:relative; display:inline-flex; align-items:center;">
+                <button type="button" x-on:click.stop="show = !show; if (show) $dispatch('sentinel-tooltip-open', $root)" aria-label="About {{ $row['label'] }}" style="display:inline-flex; align-items:center; justify-content:center; background:transparent; border:0; padding:0; color:#64748b; cursor:pointer; outline:none;">
                     <span style="display:inline-flex; align-items:center; justify-content:center; width:16px; height:16px; border:1.3px solid currentColor; border-radius:50%; font-size:11px; font-weight:600; line-height:1; box-sizing:border-box; font-family:inherit;">?</span>
                 </button>
                 <span x-show="show" x-cloak x-on:click.outside="show = false" style="position:absolute; bottom:calc(100% + 10px); left:50%; transform:translateX(-50%); width:300px; background:#fff; border:1px solid #e2e8f0; border-radius:8px; padding:14px 16px; font-size:13px; font-weight:400; color:#1e293b; line-height:1.55; box-shadow:0 8px 24px rgba(15,23,42,0.1); z-index:30; letter-spacing:-0.01em;">
@@ -254,12 +316,97 @@
     </div>
     @endforeach
 
+        </div>
+
+        {{-- History tab --}}
+        <div x-show="tab === 'history'" role="tabpanel" x-cloak>
+
+            @if (empty($history))
+
+                <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:48px 24px; text-align:center;">
+                    <p style="font-size:15px; font-weight:600; color:#0f172a; margin:0 0 6px 0;">No update history yet</p>
+                    <p style="font-size:13px; color:#64748b; margin:0; line-height:1.55; max-width:420px; margin-left:auto; margin-right:auto;">Entries will appear here as your Statamic, Laravel, PHP or package versions change. The next change will be the first row.</p>
+                </div>
+
+            @else
+
+                @php
+                    $cols = [
+                        'statamic'          => ['label' => 'Statamic',       'short' => null],
+                        'laravel'           => ['label' => 'Laravel',        'short' => null],
+                        'php'               => ['label' => 'PHP',            'short' => null],
+                        'composer_outdated' => ['label' => 'Composer',       'short' => 'Updates'],
+                        'npm_outdated'      => ['label' => 'npm',            'short' => 'Updates'],
+                        'composer_vulns'    => ['label' => 'Composer',       'short' => 'Vulns'],
+                        'npm_vulns'         => ['label' => 'npm',            'short' => 'Vulns'],
+                    ];
+
+                    $changedColour = '#b45309';
+                @endphp
+
+                <div style="border:1px solid #e2e8f0; border-radius:8px; overflow:hidden;">
+                    <div style="overflow-x:auto;">
+                        <table style="width:100%; border-collapse:collapse; font-size:13px;">
+                            <thead>
+                                <tr style="background:#f8fafc; border-bottom:1px solid #e2e8f0;">
+                                    <th style="text-align:left; padding:10px 14px; font-weight:600; color:#475569; white-space:nowrap;">Date</th>
+                                    @foreach ($cols as $key => $col)
+                                        <th style="text-align:left; padding:10px 14px; font-weight:600; color:#475569; white-space:nowrap;">
+                                            {{ $col['label'] }}
+                                            @if ($col['short'])
+                                                <span style="display:block; font-size:11px; font-weight:500; color:#94a3b8;">{{ $col['short'] }}</span>
+                                            @endif
+                                        </th>
+                                    @endforeach
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach ($history as $i => $entry)
+                                    @php
+                                        $previous = $history[$i + 1] ?? null;
+
+                                        try {
+                                            $recordedAt = \Carbon\Carbon::parse($entry['recorded_at'])->format('j M Y, H:i');
+                                        } catch (\Throwable $e) {
+                                            $recordedAt = $entry['recorded_at'] ?? '—';
+                                        }
+                                    @endphp
+                                    <tr @if (! $loop->last) style="border-bottom:1px solid #f1f5f9;" @endif>
+                                        <td style="padding:10px 14px; color:#475569; white-space:nowrap;">{{ $recordedAt }}</td>
+                                        @foreach ($cols as $key => $col)
+                                            @php
+                                                $value   = $entry[$key] ?? null;
+                                                $changed = $previous !== null && ($previous[$key] ?? null) !== $value;
+                                                $display = $value === null ? '—' : (string) $value;
+                                            @endphp
+                                            <td style="padding:10px 14px; white-space:nowrap; @if ($changed) color:{{ $changedColour }}; font-weight:600; @else color:#0f172a; @endif">
+                                                {{ $display }}
+                                            </td>
+                                        @endforeach
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <p style="font-size:12px; color:#94a3b8; margin:10px 2px 0 2px;">Newest first. Highlighted cells changed since the previous entry. Retained for {{ \D3Creative\Sentinel\Services\HistoryService::RETENTION_DAYS }} days.</p>
+
+            @endif
+
+        </div>
+
+    </div>
+    {{-- /Tabs --}}
+
     {{-- Footer --}}
     <div style="display:flex; align-items:center; justify-content:flex-start; margin-top:16px; padding-top:14px;">
         <p style="font-size:12px; color:rgb(63 63 71); margin:0; letter-spacing:-0.01em;">
-            Sentinel by <a href="https://d3creative.uk/sentinel" target="_blank" style="color:rgb(63 63 71); text-decoration:underline;">D3 Creative</a>. Daily dependency audits for Statamic sites.
+            Sentinel by <a href="https://d3creative.uk/sentinel" target="_blank" style="color:rgb(63 63 71); text-decoration:underline;">D3 Creative</a>. Security and update alerts for Statamic sites.
         </p>
     </div>
+
+@endif
 
 </div>
 

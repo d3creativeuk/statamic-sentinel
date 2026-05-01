@@ -1,6 +1,6 @@
 {
-    "name": "d3creative/sentinel",
-    "description": "Sentinel by D3 Creative — daily dependency audits for Statamic sites. Sentinel surfaces PHP version, Statamic version, and known package vulnerabilities in the Control Panel.",
+    "name": "d3creative/statamic-sentinel",
+    "description": "Sentinel by D3 Creative — Security and update alerts for Statamic sites. Sentinel surfaces PHP version, Statamic version, and known package vulnerabilities in the Control Panel.",
     "type": "statamic-addon",
     "license": "proprietary",
     "authors": [

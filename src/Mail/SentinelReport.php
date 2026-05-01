@@ -24,7 +24,10 @@ class SentinelReport extends Mailable
     public function build(): static
     {
         return $this->subject('Sentinel Report — ' . request()->getHost())
-                    ->view('d3creative-sentinel::emails.report')
-                    ->with(['audit' => $this->audit]);
+                    ->view('statamic-sentinel::emails.report')
+                    ->with([
+                        'audit'       => $this->audit,
+                        'utility_url' => cp_route('utilities.sentinel'),
+                    ]);
     }
 }

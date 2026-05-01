@@ -11,18 +11,11 @@ class SentinelWidget extends Widget
 
     public function html(): string
     {
-        $audit   = new AuditService();
-        $refresh = request()->has('d3_refresh');
+        $audit = new AuditService();
+        $data  = request()->has('d3_refresh') ? $audit->refresh() : $audit->cached();
 
-        $data = $refresh ? $audit->refresh() : $audit->run();
-
-        return (string) view('d3creative-sentinel::widgets.sentinel', [
-            'statamic'   => $data['statamic'],
-            'laravel'    => $data['laravel'],
-            'php'        => $data['php'],
-            'composer'   => $data['composer'],
-            'npm'        => $data['npm'],
-            'audited_at' => $data['audited_at'],
+        return (string) view('statamic-sentinel::widgets.sentinel', [
+            'audit' => $data,
         ]);
     }
 }

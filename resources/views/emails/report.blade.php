@@ -8,6 +8,12 @@
 <body style="margin:0; padding:0; background:#f1f5f9; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size:14px; color:#1e293b;">
 
 @php
+    $statamic = $audit['statamic'];
+    $laravel  = $audit['laravel'];
+    $php      = $audit['php'];
+    $composer = $audit['composer'];
+    $npm      = $audit['npm'];
+
     $statusColours = [
         'ok'         => '#10b981',
         'active'     => '#10b981',
@@ -17,22 +23,43 @@
         'eol'        => '#ef4444',
         'error'      => '#ef4444',
     ];
-    $severityColours = [
-        'CRITICAL' => '#ef4444',
-        'HIGH'     => '#f97316',
-        'MEDIUM'   => '#f59e0b',
-        'LOW'      => '#3b82f6',
-        'UNKNOWN'  => '#94a3b8',
-    ];
-    $statusColour   = fn($s) => $statusColours[$s]   ?? '#94a3b8';
-    $severityColour = fn($s) => $severityColours[$s] ?? '#94a3b8';
-    $dot            = fn($s) => '<span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:' . ($statusColours[$s] ?? '#94a3b8') . '; margin-left:6px; vertical-align:middle;"></span>';
+    $dotColour = fn($s) => $statusColours[$s] ?? '#94a3b8';
 
-    $s = $audit['statamic'];
-    $l = $audit['laravel'];
-    $p = $audit['php'];
-    $c = $audit['composer'];
-    $n = $audit['npm'];
+    $criticalCount =
+        ($composer['counts']['CRITICAL'] ?? 0) +
+        ($npm['counts']['CRITICAL'] ?? 0);
+
+    $totalVulns =
+        ($composer['total_vulns'] ?? 0) +
+        ($npm['total_vulns'] ?? 0);
+
+    $totalOutdated =
+        ($composer['outdated']['total'] ?? 0) +
+        ($npm['outdated']['total'] ?? 0);
+
+    $overallOk =
+        ($statamic['status'] === 'ok') &&
+        in_array($laravel['status'], ['ok', 'active', 'security']) &&
+        in_array($php['status'], ['ok', 'active', 'security']) &&
+        in_array($composer['status'], ['ok', 'unavailable']) &&
+        in_array($npm['status'], ['ok', 'unavailable']);
+
+    if ($criticalCount > 0) {
+        $statusAccent  = '#ef4444';
+        $statusLine    = $criticalCount . ' critical ' . \Illuminate\Support\Str::plural('vulnerability', $criticalCount) . ' require attention.';
+        $statusPrefix  = '⚠';
+    } elseif ($overallOk && $totalVulns === 0 && $totalOutdated === 0) {
+        $statusAccent  = '#10b981';
+        $statusLine    = 'No issues detected on ' . request()->getHost() . '.';
+        $statusPrefix  = '✓';
+    } else {
+        $statusAccent  = '#f59e0b';
+        $bits = [];
+        if ($totalVulns > 0)    $bits[] = $totalVulns . ' ' . \Illuminate\Support\Str::plural('vulnerability', $totalVulns) . ' found';
+        if ($totalOutdated > 0) $bits[] = $totalOutdated . ' ' . \Illuminate\Support\Str::plural('package', $totalOutdated) . ' need updates';
+        $statusLine    = implode(', ', $bits) . '.';
+        $statusPrefix  = '•';
+    }
 @endphp
 
 <div style="max-width:600px; margin:32px auto; background:#ffffff; border-radius:12px; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,0.1);">
@@ -45,97 +72,40 @@
 
     <div style="padding:28px 32px;">
 
-        {{-- Version summary --}}
-        <div style="margin-bottom:24px;">
-            <div style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.06em; color:#94a3b8; margin-bottom:12px;">Software Versions</div>
-
-            <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
-                {{-- Statamic --}}
-                <tr>
-                    <td style="padding:10px 12px; border-bottom:1px solid #f1f5f9; width:120px; font-weight:600; font-size:13px;">Statamic</td>
-                    <td style="padding:10px 12px; border-bottom:1px solid #f1f5f9; font-size:13px;">
-                        {{ $s['current'] }}
-                        {!! $dot($s['status']) !!}
-                    </td>
-                    <td style="padding:10px 12px; border-bottom:1px solid #f1f5f9; font-size:12px; color:#64748b; text-align:right;">
-                        @if($s['status'] === 'outdated') Latest: {{ $s['latest'] }}
-                        @elseif($s['status'] === 'ok') Up to date
-                        @else Unknown
-                        @endif
-                    </td>
-                </tr>
-                {{-- Laravel --}}
-                <tr>
-                    <td style="padding:10px 12px; border-bottom:1px solid #f1f5f9; font-weight:600; font-size:13px;">Laravel</td>
-                    <td style="padding:10px 12px; border-bottom:1px solid #f1f5f9; font-size:13px;">
-                        {{ $l['version'] }}
-                        {!! $dot($l['status']) !!}
-                    </td>
-                    <td style="padding:10px 12px; border-bottom:1px solid #f1f5f9; font-size:12px; color:#64748b; text-align:right;">
-                        @if(!$l['is_latest'] && $l['latest']) Latest: {{ $l['latest'] }}
-                        @else {{ $l['label'] }}
-                        @endif
-                    </td>
-                </tr>
-                {{-- PHP --}}
-                <tr>
-                    <td style="padding:10px 12px; font-weight:600; font-size:13px;">PHP</td>
-                    <td style="padding:10px 12px; font-size:13px;">
-                        {{ $p['version'] }}
-                        {!! $dot($p['status']) !!}
-                    </td>
-                    <td style="padding:10px 12px; font-size:12px; color:#64748b; text-align:right;">{{ $p['label'] }}</td>
-                </tr>
-            </table>
+        {{-- Status line --}}
+        <div style="background:{{ $statusAccent }}1a; border-left:3px solid {{ $statusAccent }}; padding:14px 16px; border-radius:6px; margin-bottom:20px;">
+            <span style="font-size:14px; font-weight:600; color:{{ $statusAccent }};">{{ $statusPrefix }}</span>
+            <span style="font-size:14px; font-weight:500; color:#0f172a; margin-left:6px;">{{ $statusLine }}</span>
         </div>
 
-        {{-- Package checks --}}
-        @foreach ([['label' => 'Composer Packages', 'data' => $c], ['label' => 'npm Packages', 'data' => $n]] as $row)
-        @php $d = $row['data']; @endphp
-        <div style="margin-bottom:20px;">
-            <div style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.06em; color:#94a3b8; margin-bottom:10px;">
-                {{ $row['label'] }}
-                @if($d['status'] !== 'unavailable' && isset($d['total_packages']))
-                    <span style="font-weight:400; text-transform:none; letter-spacing:0; color:#cbd5e1;">&nbsp;— {{ $d['total_packages'] }} packages scanned</span>
-                @endif
-            </div>
+        {{-- Version pills --}}
+        <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse; margin-bottom:24px;">
+            @foreach ([
+                ['label' => 'Statamic', 'version' => $statamic['current'], 'status' => $statamic['status']],
+                ['label' => 'Laravel',  'version' => $laravel['version'],  'status' => $laravel['status']],
+                ['label' => 'PHP',      'version' => $php['version'],      'status' => $php['status']],
+            ] as $row)
+                <tr>
+                    <td style="padding:8px 12px; {{ ! $loop->last ? 'border-bottom:1px solid #f1f5f9;' : '' }} width:120px; font-weight:600; font-size:13px;">{{ $row['label'] }}</td>
+                    <td style="padding:8px 12px; {{ ! $loop->last ? 'border-bottom:1px solid #f1f5f9;' : '' }} font-size:13px;">
+                        {{ $row['version'] }}
+                        <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:{{ $dotColour($row['status']) }}; margin-left:6px; vertical-align:middle;"></span>
+                    </td>
+                </tr>
+            @endforeach
+        </table>
 
-            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:14px 16px;">
-
-                {{-- Security --}}
-                <div style="font-size:12px; font-weight:600; color:#475569; margin-bottom:8px;">Security</div>
-                @if($d['status'] === 'unavailable')
-                    <p style="margin:0 0 4px; font-size:13px; color:#94a3b8;">Lock file not found — unable to scan.</p>
-                @elseif($d['status'] === 'ok' || ($d['total_vulns'] ?? 0) === 0)
-                    <p style="margin:0 0 4px; font-size:13px; color:#10b981; font-weight:500;">✓ No known vulnerabilities</p>
-                @else
-                    <div style="margin-bottom:4px;">
-                        @foreach(['CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'UNKNOWN'] as $sev)
-                        @php $count = $d['counts'][$sev] ?? 0; @endphp
-                        @if($count > 0)
-                            <span style="display:inline-block; font-size:11px; font-weight:700; color:#fff; background:{{ $severityColour($sev) }}; padding:2px 8px; border-radius:4px; margin-right:4px; margin-bottom:4px;">{{ $count }} {{ $sev }}</span>
-                        @endif
-                        @endforeach
-                    </div>
-                @endif
-
-                {{-- Updates --}}
-                @if(isset($d['outdated']))
-                    <div style="border-top:1px solid #e2e8f0; margin-top:10px; padding-top:10px;">
-                        <div style="font-size:12px; font-weight:600; color:#475569; margin-bottom:8px;">Updates Available</div>
-                        @if($d['outdated']['total'] > 0)
-                            <span style="display:inline-block; font-size:11px; font-weight:600; color:#475569; background:#e2e8f0; padding:2px 8px; border-radius:4px;">
-                                {{ $d['outdated']['total'] }} {{ \Illuminate\Support\Str::plural('package', $d['outdated']['total']) }} out of date
-                            </span>
-                        @else
-                            <p style="margin:0; font-size:13px; color:#10b981; font-weight:500;">✓ All packages up to date</p>
-                        @endif
-                    </div>
-                @endif
-
-            </div>
-        </div>
-        @endforeach
+        {{-- CTA --}}
+        <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+            <tr>
+                <td align="center" style="padding:4px 0 8px;">
+                    <a href="{{ $utility_url }}"
+                       style="display:inline-block; background:#0f172a; color:#ffffff; font-size:14px; font-weight:600; text-decoration:none; padding:12px 28px; border-radius:8px;">
+                        View full report →
+                    </a>
+                </td>
+            </tr>
+        </table>
 
     </div>
 

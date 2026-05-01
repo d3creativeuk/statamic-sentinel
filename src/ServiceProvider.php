@@ -4,10 +4,11 @@ namespace D3Creative\Sentinel;
 
 use Statamic\Providers\AddonServiceProvider;
 use Statamic\Facades\Utility;
-use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Cache;
+use Illuminate\Console\Scheduling\Schedule;
+use D3Creative\Sentinel\Console\Commands\ScanCommand;
 use D3Creative\Sentinel\Http\Controllers\SentinelController;
 use D3Creative\Sentinel\Services\AuditService;
+use D3Creative\Sentinel\Services\HistoryService;
 
 class ServiceProvider extends AddonServiceProvider
 {
@@ -17,7 +18,7 @@ class ServiceProvider extends AddonServiceProvider
 
     public function bootAddon(): void
     {
-        $this->loadViewsFrom(__DIR__ . '/../resources/views', 'd3creative-sentinel');
+        $this->loadViewsFrom(__DIR__ . '/../resources/views', 'statamic-sentinel');
 
         $this->registerCpRoutes(function () {
             \Illuminate\Support\Facades\Route::post(
@@ -33,37 +34,27 @@ class ServiceProvider extends AddonServiceProvider
                     ->navTitle('Sentinel')
                     ->icon('shield')
                     ->description('Full vulnerability and outdated-package report.')
-                    ->view('d3creative-sentinel::utilities.sentinel', function () {
+                    ->view('statamic-sentinel::utilities.sentinel', function () {
                         $service = new AuditService();
-                        return request()->has('d3_refresh') ? $service->refresh() : $service->run();
+                        $data    = request()->has('d3_refresh') ? $service->refresh() : $service->cached();
+
+                        return [
+                            'audit'   => $data,
+                            'history' => app(HistoryService::class)->all(),
+                        ];
                     })
             );
         });
 
-        if (! app()->environment('local')) {
-            $this->phoneHomeOnce();
+        if ($this->app->runningInConsole()) {
+            $this->commands([ScanCommand::class]);
+
+            $this->app->booted(function () {
+                $this->app->make(Schedule::class)
+                    ->command('sentinel:scan')
+                    ->dailyAt('10:00')
+                    ->withoutOverlapping();
+            });
         }
-    }
-
-    protected function phoneHomeOnce(): void
-    {
-        $cacheKey = 'd3creative_sentinel_installed';
-
-        if (Cache::has($cacheKey)) {
-            return;
-        }
-
-        try {
-            Http::timeout(3)->post('https://d3creative.uk/api/sentinel/install', [
-                'domain'       => request()->getHost(),
-                'statamic'     => \Statamic\Statamic::version(),
-                'php'          => PHP_VERSION,
-                'installed_at' => now()->toIso8601String(),
-            ]);
-        } catch (\Throwable $e) {
-            // Silently fail — never block the CP loading
-        }
-
-        Cache::forever($cacheKey, true);
     }
 }
