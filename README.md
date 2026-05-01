@@ -8,21 +8,21 @@ Sentinel surfaces PHP version, Statamic version, and known package vulnerabiliti
 
 ## What it shows
 
-- **Statamic version** — current version vs latest stable release
-- **PHP version** — with lifecycle status (Active / Security Only / End of Life)
-- **Composer vulnerabilities** — packages in `composer.lock` checked against the [OSV vulnerability database](https://osv.dev)
-- **npm vulnerabilities** — packages in `package-lock.json` checked against OSV
-- **Update history** — snapshot of versions and counts is recorded whenever any tracked value changes, viewable in the utility's **History** tab. Retained for 365 days.
-- **Email reports** — send the full audit to any address from the utility page
+- **Statamic version** - current version vs latest stable release
+- **PHP version** - with lifecycle status (Active / Security Only / End of Life)
+- **Composer vulnerabilities** - packages in `composer.lock` checked against the [OSV vulnerability database](https://osv.dev)
+- **npm vulnerabilities** - packages in `package-lock.json` checked against OSV
+- **Update history** - snapshot of versions and counts is recorded whenever any tracked value changes, viewable in the utility's **History** tab. Retained for 365 days.
+- **Email reports** - super admins can send the full audit to up to 10 recipients from the utility page. The endpoint is rate-limited to 6 requests per minute
 
 ## How scanning works
 
-Sentinel does not scan when you load the Control Panel — that would block the dashboard while it talks to several external APIs.
+Sentinel does not scan when you load the Control Panel - that would block the dashboard while it talks to several external APIs.
 
 Instead:
 
 - **First install:** the widget shows a **Scan Now** button. Click it once to run your first scan (10–20 seconds).
-- **Ongoing:** Sentinel registers a daily scheduled scan at **10:00** (host's `app.timezone`). This requires `php artisan schedule:run` to be wired into cron — the standard Laravel/Statamic setup.
+- **Ongoing:** Sentinel registers a daily scheduled scan at **10:00** (host's `app.timezone`). This requires `php artisan schedule:run` to be wired into cron - the standard Laravel/Statamic setup.
 - **Manual refresh:** the **Refresh** link in the widget/utility header forces an immediate re-check at any time.
 - **CLI:** run `php artisan sentinel:scan` to trigger a scan from the terminal.
 

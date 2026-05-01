@@ -15,6 +15,8 @@ class SentinelController extends Controller
 
     public function sendReport(Request $request)
     {
+        abort_unless(auth()->user()?->isSuper(), 403);
+
         $recipients = collect(explode(',', (string) $request->input('email', '')))
             ->map(fn ($e) => trim($e))
             ->filter()

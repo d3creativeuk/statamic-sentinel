@@ -50,7 +50,7 @@
         $statusPrefix  = '⚠';
     } elseif ($overallOk && $totalVulns === 0 && $totalOutdated === 0) {
         $statusAccent  = '#10b981';
-        $statusLine    = 'No issues detected on ' . request()->getHost() . '.';
+        $statusLine    = 'No issues detected on ' . $host . '.';
         $statusPrefix  = '✓';
     } else {
         $statusAccent  = '#f59e0b';
@@ -67,7 +67,7 @@
     {{-- Header --}}
     <div style="background:#0f172a; padding:24px 32px;">
         <div style="font-size:18px; font-weight:700; color:#ffffff; letter-spacing:-0.02em;">Sentinel Report</div>
-        <div style="font-size:13px; color:#94a3b8; margin-top:4px;">{{ request()->getHost() }} &nbsp;·&nbsp; Last scanned: {{ $audit['audited_at'] }}</div>
+        <div style="font-size:13px; color:#94a3b8; margin-top:4px;">{{ $host }} &nbsp;·&nbsp; Last scanned: {{ $audit['audited_at'] }}</div>
     </div>
 
     <div style="padding:28px 32px;">
