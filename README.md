@@ -1,4 +1,4 @@
-![Sentinel by D3 Creative](art/sentinel-hero.jpg)
+![Sentinel by D3 Creative](art/statamic-sentinel-d3creative.jpg)
 
 # Sentinel by D3 Creative
 
@@ -12,6 +12,8 @@ Sentinel surfaces PHP version, Statamic version, and known package vulnerabiliti
 - **PHP version** — with lifecycle status (Active / Security Only / End of Life)
 - **Composer vulnerabilities** — packages in `composer.lock` checked against the [OSV vulnerability database](https://osv.dev)
 - **npm vulnerabilities** — packages in `package-lock.json` checked against OSV
+- **Update history** — snapshot of versions and counts is recorded whenever any tracked value changes, viewable in the utility's **History** tab. Retained for 365 days.
+- **Email reports** — send the full audit to any address from the utility page
 
 ## How scanning works
 
