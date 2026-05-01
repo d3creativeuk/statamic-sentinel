@@ -1,3 +1,5 @@
+![Sentinel by D3 Creative](art/sentinel-hero.jpg)
+
 # Sentinel by D3 Creative
 
 **Security and update alerts for Statamic sites.**
