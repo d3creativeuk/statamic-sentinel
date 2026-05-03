@@ -21,6 +21,8 @@ class HistoryService
         'php',
         'composer_outdated',
         'npm_outdated',
+        'composer_security_updates',
+        'npm_security_updates',
         'composer_vulns',
         'npm_vulns',
     ];
@@ -72,14 +74,16 @@ class HistoryService
     protected function buildSnapshot(array $audit): array
     {
         return [
-            'recorded_at'       => Carbon::now()->toIso8601String(),
-            'statamic'          => $audit['statamic']['current'] ?? null,
-            'laravel'           => $audit['laravel']['version']  ?? null,
-            'php'               => $audit['php']['version']      ?? null,
-            'composer_outdated' => (int) ($audit['composer']['outdated']['total'] ?? 0),
-            'npm_outdated'      => (int) ($audit['npm']['outdated']['total']      ?? 0),
-            'composer_vulns'    => (int) ($audit['composer']['total_vulns']       ?? 0),
-            'npm_vulns'         => (int) ($audit['npm']['total_vulns']            ?? 0),
+            'recorded_at'               => Carbon::now()->toIso8601String(),
+            'statamic'                  => $audit['statamic']['current'] ?? null,
+            'laravel'                   => $audit['laravel']['version']  ?? null,
+            'php'                       => $audit['php']['version']      ?? null,
+            'composer_outdated'         => (int) ($audit['composer']['outdated']['total']                  ?? 0),
+            'npm_outdated'              => (int) ($audit['npm']['outdated']['total']                       ?? 0),
+            'composer_security_updates' => (int) ($audit['composer']['outdated']['security_updates_total'] ?? 0),
+            'npm_security_updates'      => (int) ($audit['npm']['outdated']['security_updates_total']      ?? 0),
+            'composer_vulns'            => (int) ($audit['composer']['total_vulns']                        ?? 0),
+            'npm_vulns'                 => (int) ($audit['npm']['total_vulns']                             ?? 0),
         ];
     }
 

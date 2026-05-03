@@ -115,14 +115,20 @@ class AuditService
      */
     public function refresh(): array
     {
-        $composer = array_merge($this->composerAudit(), ['outdated' => $this->composerOutdated()]);
+        $composer = $this->annotateOutdatedSecurity(
+            array_merge($this->composerAudit(), ['outdated' => $this->composerOutdated()])
+        );
+
+        $npm = $this->annotateOutdatedSecurity(
+            array_merge($this->npmAudit(), ['outdated' => $this->npmOutdated()])
+        );
 
         $result = [
             'statamic'   => $this->statamicInfo($composer),
             'laravel'    => $this->laravelInfo($composer),
             'php'        => $this->phpInfo(),
             'composer'   => $composer,
-            'npm'        => array_merge($this->npmAudit(), ['outdated' => $this->npmOutdated()]),
+            'npm'        => $npm,
             'audited_at' => now()->format('j M Y, H:i'),
         ];
 
@@ -131,6 +137,30 @@ class AuditService
         app(HistoryService::class)->recordIfChanged($result);
 
         return $result;
+    }
+
+    /**
+     * For each package in the ecosystem's `outdated.packages`, set a
+     * `security_update` flag indicating whether updating it would resolve a
+     * known OSV advisory. Adds `outdated.security_updates_total` alongside.
+     */
+    protected function annotateOutdatedSecurity(array $ecosystem): array
+    {
+        $packages = $ecosystem['outdated']['packages'] ?? [];
+        $count    = 0;
+
+        foreach ($packages as $i => $pkg) {
+            $isSecurity = $this->hasSecurityUpdateFor($pkg['name'] ?? '', $ecosystem);
+            $packages[$i]['security_update'] = $isSecurity;
+            if ($isSecurity) {
+                $count++;
+            }
+        }
+
+        $ecosystem['outdated']['packages']                = $packages;
+        $ecosystem['outdated']['security_updates_total']  = $count;
+
+        return $ecosystem;
     }
 
     // -------------------------------------------------------------------------

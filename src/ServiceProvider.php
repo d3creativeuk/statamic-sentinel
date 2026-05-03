@@ -4,7 +4,6 @@ namespace D3Creative\Sentinel;
 
 use Statamic\Providers\AddonServiceProvider;
 use Statamic\Facades\Utility;
-use Illuminate\Console\Scheduling\Schedule;
 use D3Creative\Sentinel\Console\Commands\ScanCommand;
 use D3Creative\Sentinel\Http\Controllers\SentinelController;
 use D3Creative\Sentinel\Services\AuditService;
@@ -48,13 +47,6 @@ class ServiceProvider extends AddonServiceProvider
 
         if ($this->app->runningInConsole()) {
             $this->commands([ScanCommand::class]);
-
-            $this->app->booted(function () {
-                $this->app->make(Schedule::class)
-                    ->command('sentinel:scan')
-                    ->dailyAt('10:00')
-                    ->withoutOverlapping();
-            });
         }
     }
 }

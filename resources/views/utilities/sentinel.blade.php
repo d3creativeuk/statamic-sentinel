@@ -97,9 +97,7 @@
                href="?d3_refresh=1"
                title="Refresh audit results"
                style="display:inline-flex; align-items:center; gap:4px; font-size:12px; color:rgb(63 63 71); text-decoration:none;">
-                <svg data-sentinel-icon xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="currentColor" style="width:14px; height:14px; flex-shrink:0;">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
-                </svg>
+                <span data-sentinel-icon aria-hidden="true" style="display:inline-block; font-size:14px; line-height:1; flex-shrink:0; transform-origin:center;">↻</span>
                 <span data-sentinel-label>Refresh</span>
             </a>
         </div>
@@ -298,7 +296,12 @@
                 <div x-show="open" x-cloak style="margin-top:8px; background:#fff; border:1px solid #e2e8f0; border-radius:6px; overflow:hidden;">
                     @foreach($packages as $i => $pkg)
                         <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; padding:6px 12px; {{ $i < count($packages) - 1 ? 'border-bottom:1px solid #e2e8f0;' : '' }}">
-                            <div style="font-size:13px; font-weight:600; color:#0f172a; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ $pkg['name'] }}</div>
+                            <div style="display:flex; align-items:center; gap:6px; min-width:0;">
+                                @if(!empty($pkg['security_update']))
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="#dc2626" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><title>Security update available</title><rect x="3" y="7" width="10" height="7" rx="1.5"></rect><path d="M5 7V5a3 3 0 0 1 6 0v2"></path></svg>
+                                @endif
+                                <div style="font-size:13px; font-weight:600; color:#0f172a; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ $pkg['name'] }}</div>
+                            </div>
                             <span style="display:inline-flex; align-items:center; font-size:11px; font-weight:500; padding:1px 7px; border-radius:4px; color:#3b82f6; background:#fff; border:1px solid #3b82f6; flex-shrink:0; font-variant-numeric:tabular-nums;">{{ $pkg['current'] }} → {{ $pkg['latest'] }}</span>
                         </div>
                     @endforeach
@@ -332,16 +335,12 @@
 
                 @php
                     $cols = [
-                        'statamic'          => ['label' => 'Statamic',       'short' => null],
-                        'laravel'           => ['label' => 'Laravel',        'short' => null],
-                        'php'               => ['label' => 'PHP',            'short' => null],
-                        'composer_outdated' => ['label' => 'Composer',       'short' => 'Updates'],
-                        'npm_outdated'      => ['label' => 'npm',            'short' => 'Updates'],
-                        'composer_vulns'    => ['label' => 'Composer',       'short' => 'Vulns'],
-                        'npm_vulns'         => ['label' => 'npm',            'short' => 'Vulns'],
+                        'statamic'          => ['label' => 'Statamic', 'short' => null],
+                        'laravel'           => ['label' => 'Laravel',  'short' => null],
+                        'php'               => ['label' => 'PHP',      'short' => null],
+                        'composer_outdated' => ['label' => 'Composer', 'short' => null, 'security_key' => 'composer_security_updates'],
+                        'npm_outdated'      => ['label' => 'npm',      'short' => null, 'security_key' => 'npm_security_updates'],
                     ];
-
-                    $changedColour = '#b45309';
                 @endphp
 
                 <div style="border:1px solid #e2e8f0; border-radius:8px; overflow:hidden;">
@@ -376,11 +375,16 @@
                                         @foreach ($cols as $key => $col)
                                             @php
                                                 $value   = $entry[$key] ?? null;
-                                                $changed = $previous !== null && ($previous[$key] ?? null) !== $value;
                                                 $display = $value === null ? '—' : (string) $value;
+                                                $hasLock = ! empty($col['security_key']) && (int) ($entry[$col['security_key']] ?? 0) > 0;
                                             @endphp
-                                            <td style="padding:10px 14px; white-space:nowrap; @if ($changed) color:{{ $changedColour }}; font-weight:600; @else color:#0f172a; @endif">
-                                                {{ $display }}
+                                            <td style="padding:10px 14px; white-space:nowrap; color:#0f172a;">
+                                                <span style="display:inline-flex; align-items:center; gap:5px;">
+                                                    <span>{{ $display }}</span>
+                                                    @if ($hasLock)
+                                                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="#dc2626" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><title>{{ (int) $entry[$col['security_key']] }} security update{{ ((int) $entry[$col['security_key']]) === 1 ? '' : 's' }} pending</title><rect x="3" y="7" width="10" height="7" rx="1.5"></rect><path d="M5 7V5a3 3 0 0 1 6 0v2"></path></svg>
+                                                    @endif
+                                                </span>
                                             </td>
                                         @endforeach
                                     </tr>
@@ -390,7 +394,7 @@
                     </div>
                 </div>
 
-                <p style="font-size:12px; color:#94a3b8; margin:10px 2px 0 2px;">Newest first. Highlighted cells changed since the previous entry. Retained for {{ \D3Creative\Sentinel\Services\HistoryService::RETENTION_DAYS }} days.</p>
+                <p style="font-size:12px; color:#94a3b8; margin:10px 2px 0 2px;">Newest first. Retained for {{ \D3Creative\Sentinel\Services\HistoryService::RETENTION_DAYS }} days.</p>
 
             @endif
 
