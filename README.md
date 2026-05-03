@@ -12,8 +12,10 @@ Sentinel surfaces PHP version, Statamic version, and known package vulnerabiliti
 - **PHP version** - with lifecycle status (Active / Security Only / End of Life)
 - **Composer vulnerabilities** - packages in `composer.lock` checked against the [OSV vulnerability database](https://osv.dev)
 - **npm vulnerabilities** - packages in `package-lock.json` checked against OSV
-- **Update history** - snapshot of versions and counts is recorded whenever any tracked value changes, viewable in the utility's **History** tab. Retained for 365 days.
-- **Email reports** - super admins can send the full audit to up to 10 recipients from the utility page. The endpoint is rate-limited to 6 requests per minute
+- **Update history** - snapshot of versions and counts is recorded whenever any tracked value changes, viewable in the utility's **History** tab. Retained for 365 days. Each snapshot also stores per-package installed versions so update diffs can be reconstructed later.
+- **Email status report** - super admins can send the full current audit to up to 10 recipients from the utility page.
+- **Email update report** - super admins can send a diff between the two most recent snapshots (platform version changes, packages updated/added/removed, vulnerabilities resolved/introduced). Run an update, click **Send Update Report**, and recipients see exactly what moved. If nothing changed since the last snapshot, you can opt to resend the last meaningful diff via **Send anyway**.
+- Both email endpoints are rate-limited to 6 requests per minute.
 
 ## How scanning works
 

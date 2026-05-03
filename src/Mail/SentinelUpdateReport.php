@@ -6,15 +6,15 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Queue\SerializesModels;
 
-class SentinelReport extends Mailable
+class SentinelUpdateReport extends Mailable
 {
     use Queueable, SerializesModels;
 
-    public array $audit;
+    public array $report;
 
-    public function __construct(array $audit)
+    public function __construct(array $report)
     {
-        $this->audit = $audit;
+        $this->report = $report;
     }
 
     /**
@@ -25,10 +25,10 @@ class SentinelReport extends Mailable
     {
         $host = parse_url(config('app.url'), PHP_URL_HOST) ?: 'site';
 
-        return $this->subject('Statamic Package Status Report — ' . $host)
-                    ->view('statamic-sentinel::emails.report')
+        return $this->subject('Statamic Package Update Report — ' . $host)
+                    ->view('statamic-sentinel::emails.update-report')
                     ->with([
-                        'audit'       => $this->audit,
+                        'report'      => $this->report,
                         'host'        => $host,
                         'utility_url' => cp_route('utilities.sentinel'),
                     ]);

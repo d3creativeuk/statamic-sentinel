@@ -116,11 +116,17 @@ class AuditService
     public function refresh(): array
     {
         $composer = $this->annotateOutdatedSecurity(
-            array_merge($this->composerAudit(), ['outdated' => $this->composerOutdated()])
+            array_merge($this->composerAudit(), [
+                'outdated'  => $this->composerOutdated(),
+                'installed' => $this->composerInstalledDirect(),
+            ])
         );
 
         $npm = $this->annotateOutdatedSecurity(
-            array_merge($this->npmAudit(), ['outdated' => $this->npmOutdated()])
+            array_merge($this->npmAudit(), [
+                'outdated'  => $this->npmOutdated(),
+                'installed' => $this->npmInstalledDirect(),
+            ])
         );
 
         $result = [
@@ -524,41 +530,56 @@ class AuditService
     // Outdated package checks (direct dependencies only)
     // -------------------------------------------------------------------------
 
-    protected function composerOutdated(): array
+    /**
+     * Direct composer dependencies and their installed versions:
+     * `['vendor/pkg' => '1.2.3', ...]`. Empty array on any read failure.
+     * Used both by composerOutdated() and by HistoryService for diffing.
+     */
+    public function composerInstalledDirect(): array
     {
         $manifestPath = base_path('composer.json');
         $lockPath     = base_path('composer.lock');
 
         if (! file_exists($manifestPath) || ! file_exists($lockPath)) {
-            return ['total' => 0, 'packages' => []];
+            return [];
         }
 
         $manifest = json_decode(file_get_contents($manifestPath), true);
         $lock     = json_decode(file_get_contents($lockPath), true);
 
-        // Direct dependencies only — not transitive packages
         $direct = array_keys(array_merge(
             $manifest['require']     ?? [],
             $manifest['require-dev'] ?? []
         ));
 
-        // Strip php, ext-* and anything without a vendor/package format
         $direct = array_values(array_filter($direct, fn($n) =>
             str_contains($n, '/') && ! str_starts_with($n, 'ext-')
         ));
 
-        if (empty($direct)) return ['total' => 0, 'packages' => []];
+        if (empty($direct)) return [];
 
-        // Build installed version map from lock file
         $installed = [];
         foreach (array_merge($lock['packages'] ?? [], $lock['packages-dev'] ?? []) as $pkg) {
             $installed[$pkg['name']] = ltrim($pkg['version'] ?? '', 'v');
         }
 
-        // Only check packages that are actually in the lock file
-        $toCheck = array_values(array_filter($direct, fn($n) => isset($installed[$n])));
+        $result = [];
+        foreach ($direct as $name) {
+            if (isset($installed[$name])) {
+                $result[$name] = $installed[$name];
+            }
+        }
 
-        if (empty($toCheck)) return ['total' => 0, 'packages' => []];
+        return $result;
+    }
+
+    protected function composerOutdated(): array
+    {
+        $installed = $this->composerInstalledDirect();
+
+        if (empty($installed)) return ['total' => 0, 'packages' => []];
+
+        $toCheck = array_keys($installed);
 
         // Fetch latest versions from Packagist concurrently
         try {
@@ -598,27 +619,30 @@ class AuditService
         return ['total' => count($outdated), 'packages' => $outdated];
     }
 
-    protected function npmOutdated(): array
+    /**
+     * Direct npm dependencies and their installed versions:
+     * `['alpinejs' => '3.13.0', ...]`. Empty array on any read failure.
+     * Supports lock v1 (dependencies) and v2/v3 (packages).
+     */
+    public function npmInstalledDirect(): array
     {
         $manifestPath = base_path('package.json');
         $lockPath     = base_path('package-lock.json');
 
         if (! file_exists($manifestPath) || ! file_exists($lockPath)) {
-            return ['total' => 0, 'packages' => []];
+            return [];
         }
 
         $manifest = json_decode(file_get_contents($manifestPath), true);
         $lock     = json_decode(file_get_contents($lockPath), true);
 
-        // Direct dependencies only
         $direct = array_keys(array_merge(
             $manifest['dependencies']    ?? [],
             $manifest['devDependencies'] ?? []
         ));
 
-        if (empty($direct)) return ['total' => 0, 'packages' => []];
+        if (empty($direct)) return [];
 
-        // Build installed version map from lock file (v2/v3 and v1)
         $installed = [];
         if (! empty($lock['packages'])) {
             foreach ($lock['packages'] as $path => $data) {
@@ -632,9 +656,23 @@ class AuditService
             }
         }
 
-        $toCheck = array_values(array_filter($direct, fn($n) => isset($installed[$n])));
+        $result = [];
+        foreach ($direct as $name) {
+            if (isset($installed[$name])) {
+                $result[$name] = $installed[$name];
+            }
+        }
 
-        if (empty($toCheck)) return ['total' => 0, 'packages' => []];
+        return $result;
+    }
+
+    protected function npmOutdated(): array
+    {
+        $installed = $this->npmInstalledDirect();
+
+        if (empty($installed)) return ['total' => 0, 'packages' => []];
+
+        $toCheck = array_keys($installed);
 
         // Fetch latest versions from npm registry concurrently
         // Scoped packages (@scope/name) are supported natively by the registry URL

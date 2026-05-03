@@ -7,9 +7,10 @@ use Carbon\Carbon;
 
 class HistoryService
 {
-    const RELATIVE_PATH   = 'statamic-sentinel/history.json';
-    const TMP_PATH        = 'statamic-sentinel/history.json.tmp';
-    const RETENTION_DAYS  = 365;
+    const RELATIVE_PATH       = 'statamic-sentinel/history.json';
+    const TMP_PATH            = 'statamic-sentinel/history.json.tmp';
+    const LAST_REPORT_PATH    = 'statamic-sentinel/last-update-report.json';
+    const RETENTION_DAYS      = 365;
 
     /**
      * The seven non-timestamp fields used both for change detection and as the
@@ -71,6 +72,41 @@ class HistoryService
         }
     }
 
+    /**
+     * Persist the last successfully-sent non-empty update report so a future
+     * forced resend can replay it. Silent on failure.
+     */
+    public function rememberLastReport(array $report): void
+    {
+        try {
+            Storage::disk('local')->put(
+                self::LAST_REPORT_PATH,
+                json_encode($report, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)
+            );
+        } catch (\Throwable $e) {
+            // Silent fail
+        }
+    }
+
+    /**
+     * The last stored update report, or null if nothing has been remembered.
+     */
+    public function lastReport(): ?array
+    {
+        try {
+            if (! Storage::disk('local')->exists(self::LAST_REPORT_PATH)) {
+                return null;
+            }
+
+            $raw     = Storage::disk('local')->get(self::LAST_REPORT_PATH);
+            $decoded = json_decode($raw, true);
+
+            return is_array($decoded) ? $decoded : null;
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
     protected function buildSnapshot(array $audit): array
     {
         return [
@@ -84,6 +120,11 @@ class HistoryService
             'npm_security_updates'      => (int) ($audit['npm']['outdated']['security_updates_total']      ?? 0),
             'composer_vulns'            => (int) ($audit['composer']['total_vulns']                        ?? 0),
             'npm_vulns'                 => (int) ($audit['npm']['total_vulns']                             ?? 0),
+            // Per-package installed versions, used by the update report to diff
+            // two snapshots (e.g. "statamic/cms 6.15.0 → 6.16.0"). Payload-only
+            // — not part of TRACKED_FIELDS, so doesn't drive change detection.
+            'composer_packages'         => $audit['composer']['installed'] ?? [],
+            'npm_packages'              => $audit['npm']['installed']      ?? [],
         ];
     }
 

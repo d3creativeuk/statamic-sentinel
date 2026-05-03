@@ -220,6 +220,78 @@
              x-text="message"></div>
     </div>
 
+    {{-- Email update report form --}}
+    <div x-data="{
+            sending: false,
+            state: 'idle',
+            message: '',
+            canForce: false,
+            send(form, force = false) {
+                this.sending = true;
+                this.state = 'idle';
+                this.message = '';
+                this.canForce = false;
+                const data = new FormData(form);
+                if (force) data.set('force', '1');
+                fetch(form.action, {
+                    method: 'POST',
+                    body: data,
+                    headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
+                })
+                .then(res => res.json().then(body => ({ ok: res.ok, body })))
+                .then(res => {
+                    this.sending = false;
+                    this.state = res.ok ? 'success' : 'error';
+                    this.message = res.body.message;
+                    this.canForce = res.body.can_force === true;
+                    if (res.ok) setTimeout(() => { this.state = 'idle'; this.message = ''; this.canForce = false; }, 4000);
+                })
+                .catch(() => {
+                    this.sending = false;
+                    this.state = 'error';
+                    this.message = 'Something went wrong. Please try again.';
+                });
+            }
+         }"
+         style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:14px 16px; margin-bottom:12px;">
+        <div style="display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin-bottom:10px;">
+            <div style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; color:#94a3b8;">Email update report</div>
+            <div style="font-size:11px; color:#94a3b8;">Diff vs. previous snapshot</div>
+        </div>
+        <form x-ref="form"
+              action="{{ route('statamic.cp.d3-sentinel.send-update-report') }}"
+              method="POST"
+              x-on:submit.prevent="send($refs.form)"
+              style="display:flex; gap:8px; align-items:center;">
+            @csrf
+            <input type="text"
+                   name="email"
+                   value="{{ $userEmail }}"
+                   required
+                   placeholder="email@example.com, another@example.com"
+                   style="flex:1; font-size:13px; padding:7px 12px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#1e293b; outline:none; min-width:0;">
+            <button type="submit"
+                    x-bind:disabled="sending"
+                    x-bind:style="{ background: state === 'success' ? '#10b981' : (state === 'error' ? '#ef4444' : '#0f172a') }"
+                    style="flex-shrink:0; font-size:13px; font-weight:600; color:#fff; background:#0f172a; border:none; padding:7px 14px; border-radius:6px; cursor:pointer; white-space:nowrap;">
+                <span x-show="sending" x-cloak>Sending…</span>
+                <span x-show="!sending && state === 'success'" x-cloak>✓ Sent</span>
+                <span x-show="!sending && state === 'error'" x-cloak>✕ Failed</span>
+                <span x-show="!sending && state === 'idle'">Send Update Report</span>
+            </button>
+        </form>
+        <div x-show="message" x-cloak
+             style="display:flex; align-items:center; gap:10px; font-size:13px; margin-top:8px;">
+            <span x-text="message" x-bind:style="{ color: state === 'success' ? '#10b981' : '#ef4444' }"></span>
+            <button type="button"
+                    x-show="canForce && !sending"
+                    x-on:click="send($refs.form, true)"
+                    style="font-size:12px; font-weight:600; color:#0f172a; background:#fff; border:1px solid #e2e8f0; padding:3px 10px; border-radius:5px; cursor:pointer; font-family:inherit;">
+                Send anyway
+            </button>
+        </div>
+    </div>
+
     {{-- Package audit sections --}}
     @foreach ([
         ['label' => 'Composer packages', 'data' => $composer, 'tooltip' => "PHP packages that power your site's backend — including Statamic itself, Laravel (the framework it runs on), and any installed add-ons. Keeping these up to date is important for security and stability."],
@@ -258,23 +330,59 @@
                         <span style="display:inline-flex; align-items:center; font-size:12px; font-weight:500; color:#10b981; background:#fff; border:1px solid #10b981; padding:3px 10px; border-radius:5px;">No known vulnerabilities</span>
                     </div>
                 @else
-                    <div style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; color:#94a3b8; margin-bottom:6px;">Security Issues</div>
                     @php
-                        $flatVulns = [];
+                        $sevRank = ['CRITICAL' => 5, 'HIGH' => 4, 'MEDIUM' => 3, 'LOW' => 2, 'UNKNOWN' => 1];
+
+                        // Group vulns by package, tracking the highest severity seen
+                        // for that package so a single-row badge can summarise it.
+                        $byPackage = [];
                         foreach (['CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'UNKNOWN'] as $sev) {
                             foreach ($d['severities'][$sev]['vulns'] ?? [] as $v) {
-                                $flatVulns[] = $v + ['severity' => $sev];
+                                $name = $v['package'];
+                                if (! isset($byPackage[$name])) {
+                                    $byPackage[$name] = ['name' => $name, 'highest' => $sev, 'count' => 0];
+                                }
+                                if ($sevRank[$sev] > $sevRank[$byPackage[$name]['highest']]) {
+                                    $byPackage[$name]['highest'] = $sev;
+                                }
+                                $byPackage[$name]['count']++;
                             }
                         }
+
+                        uasort($byPackage, function($a, $b) use ($sevRank) {
+                            $cmp = $sevRank[$b['highest']] - $sevRank[$a['highest']];
+                            return $cmp !== 0 ? $cmp : strcmp($a['name'], $b['name']);
+                        });
+                        $byPackage = array_values($byPackage);
                     @endphp
-                    <div style="background:#fff; border:1px solid #e2e8f0; border-radius:6px; overflow:hidden;">
-                        @foreach($flatVulns as $i => $vuln)
-                            @php $sevColour = $severityColour($vuln['severity']); @endphp
-                            <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; padding:6px 12px; {{ $i < count($flatVulns) - 1 ? 'border-bottom:1px solid #e2e8f0;' : '' }}">
-                                <a href="{{ $vuln['url'] }}" target="_blank" style="font-size:13px; font-weight:600; color:#0f172a; text-decoration:none; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ $vuln['package'] }}</a>
-                                <span style="display:inline-flex; align-items:center; font-size:11px; font-weight:500; padding:1px 7px; border-radius:4px; color:{{ $sevColour }}; background:#fff; border:1px solid {{ $sevColour }}; flex-shrink:0;">{{ ucfirst(strtolower($vuln['severity'])) }}</span>
-                            </div>
-                        @endforeach
+                    <div x-data="{ open: false }">
+                        <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+                            <div style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; color:#94a3b8;">Security Issues</div>
+                            <button type="button" x-on:click="open = !open" aria-label="Toggle security issues list" style="display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:500; padding:3px 10px; border-radius:5px; color:#dc2626; background:#fff; border:1px solid #dc2626; cursor:pointer; font-family:inherit;">
+                                <span>{{ count($byPackage) }} {{ count($byPackage) === 1 ? 'package' : 'packages' }} affected</span>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" x-bind:style="{ transform: open ? 'rotate(180deg)' : null }" style="display:block; flex-shrink:0; transition:transform 0.15s ease;"><path d="m4 6 4 4 4-4"></path></svg>
+                            </button>
+                        </div>
+                        <div x-show="open" x-cloak style="margin-top:8px; background:#fff; border:1px solid #e2e8f0; border-radius:6px; overflow:hidden;">
+                            @foreach($byPackage as $i => $pkg)
+                                @php
+                                    $sevColour  = $severityColour($pkg['highest']);
+                                    $lockColour = in_array($pkg['highest'], ['CRITICAL', 'HIGH']) ? '#dc2626' : '#94a3b8';
+                                @endphp
+                                <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; padding:6px 12px; {{ $i < count($byPackage) - 1 ? 'border-bottom:1px solid #e2e8f0;' : '' }}">
+                                    <div style="display:flex; align-items:center; gap:6px; min-width:0;">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 20 20" fill="{{ $lockColour }}" style="flex-shrink:0;"><title>Security issue</title><path fill-rule="evenodd" d="M10 1a4.5 4.5 0 0 0-4.5 4.5V9H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-.5V5.5A4.5 4.5 0 0 0 10 1zm3 8V5.5a3 3 0 1 0-6 0V9h6z" clip-rule="evenodd"></path></svg>
+                                        <div style="font-size:13px; font-weight:600; color:#0f172a; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ $pkg['name'] }}</div>
+                                    </div>
+                                    <span style="display:inline-flex; align-items:center; gap:8px; flex-shrink:0;">
+                                        @if ($pkg['count'] > 1)
+                                            <span style="font-size:11px; font-weight:500; color:#94a3b8;">{{ $pkg['count'] }} issues</span>
+                                        @endif
+                                        <span style="display:inline-flex; align-items:center; font-size:11px; font-weight:500; padding:1px 7px; border-radius:4px; color:{{ $sevColour }}; background:#fff; border:1px solid {{ $sevColour }};">{{ ucfirst(strtolower($pkg['highest'])) }}</span>
+                                    </span>
+                                </div>
+                            @endforeach
+                        </div>
                     </div>
                 @endif
             </div>
@@ -298,7 +406,7 @@
                         <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; padding:6px 12px; {{ $i < count($packages) - 1 ? 'border-bottom:1px solid #e2e8f0;' : '' }}">
                             <div style="display:flex; align-items:center; gap:6px; min-width:0;">
                                 @if(!empty($pkg['security_update']))
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="#dc2626" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><title>Security update available</title><rect x="3" y="7" width="10" height="7" rx="1.5"></rect><path d="M5 7V5a3 3 0 0 1 6 0v2"></path></svg>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 20 20" fill="#dc2626" style="flex-shrink:0;"><title>Security update available</title><path fill-rule="evenodd" d="M10 1a4.5 4.5 0 0 0-4.5 4.5V9H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-.5V5.5A4.5 4.5 0 0 0 10 1zm3 8V5.5a3 3 0 1 0-6 0V9h6z" clip-rule="evenodd"></path></svg>
                                 @endif
                                 <div style="font-size:13px; font-weight:600; color:#0f172a; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ $pkg['name'] }}</div>
                             </div>
@@ -338,8 +446,8 @@
                         'statamic'          => ['label' => 'Statamic', 'short' => null],
                         'laravel'           => ['label' => 'Laravel',  'short' => null],
                         'php'               => ['label' => 'PHP',      'short' => null],
-                        'composer_outdated' => ['label' => 'Composer', 'short' => null, 'security_key' => 'composer_security_updates'],
-                        'npm_outdated'      => ['label' => 'npm',      'short' => null, 'security_key' => 'npm_security_updates'],
+                        'composer_outdated' => ['label' => 'Composer', 'short' => null],
+                        'npm_outdated'      => ['label' => 'npm',      'short' => null],
                     ];
                 @endphp
 
@@ -376,15 +484,9 @@
                                             @php
                                                 $value   = $entry[$key] ?? null;
                                                 $display = $value === null ? '—' : (string) $value;
-                                                $hasLock = ! empty($col['security_key']) && (int) ($entry[$col['security_key']] ?? 0) > 0;
                                             @endphp
                                             <td style="padding:10px 14px; white-space:nowrap; color:#0f172a;">
-                                                <span style="display:inline-flex; align-items:center; gap:5px;">
-                                                    <span>{{ $display }}</span>
-                                                    @if ($hasLock)
-                                                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="#dc2626" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><title>{{ (int) $entry[$col['security_key']] }} security update{{ ((int) $entry[$col['security_key']]) === 1 ? '' : 's' }} pending</title><rect x="3" y="7" width="10" height="7" rx="1.5"></rect><path d="M5 7V5a3 3 0 0 1 6 0v2"></path></svg>
-                                                    @endif
-                                                </span>
+                                                {{ $display }}
                                             </td>
                                         @endforeach
                                     </tr>

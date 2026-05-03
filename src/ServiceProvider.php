@@ -24,6 +24,11 @@ class ServiceProvider extends AddonServiceProvider
                 'd3-sentinel/send-report',
                 [SentinelController::class, 'sendReport']
             )->middleware('throttle:6,1')->name('d3-sentinel.send-report');
+
+            \Illuminate\Support\Facades\Route::post(
+                'd3-sentinel/send-update-report',
+                [SentinelController::class, 'sendUpdateReport']
+            )->middleware('throttle:6,1')->name('d3-sentinel.send-update-report');
         });
 
         Utility::extend(function () {
