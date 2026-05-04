@@ -479,9 +479,15 @@
                         .then(res => res.json().then(body => ({ ok: res.ok, body })))
                         .then(res => {
                             this.sending = false;
-                            this.state = res.ok ? 'success' : 'error';
-                            this.message = res.body.message;
                             this.canForce = res.body.can_force === true;
+                            if (res.ok) {
+                                this.state = 'success';
+                            } else if (this.canForce) {
+                                this.state = 'notice';
+                            } else {
+                                this.state = 'error';
+                            }
+                            this.message = res.body.message;
                             if (res.ok) setTimeout(() => { this.state = 'idle'; this.message = ''; this.canForce = false; }, 4000);
                         })
                         .catch(() => {
@@ -510,20 +516,21 @@
                            style="flex:1; font-size:13px; padding:7px 12px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#1e293b; outline:none; min-width:0;">
                     <button type="submit"
                             x-bind:disabled="sending"
-                            x-bind:style="{ background: state === 'success' ? '#10b981' : (state === 'error' ? '#ef4444' : '#0f172a') }"
+                            x-bind:style="{ background: state === 'success' ? '#10b981' : (state === 'notice' ? '#f59e0b' : (state === 'error' ? '#ef4444' : '#0f172a')) }"
                             style="flex-shrink:0; font-size:13px; font-weight:600; color:#fff; background:#0f172a; border:none; padding:7px 14px; border-radius:6px; cursor:pointer; white-space:nowrap;">
                         <span x-show="sending" x-cloak style="display:inline-flex; align-items:center; gap:6px;">
                             <span aria-hidden="true" style="display:inline-block; font-size:14px; line-height:1; transform-origin:center; animation:sentinel-spin 1s linear infinite;">↻</span>
                             Sending…
                         </span>
                         <span x-show="!sending && state === 'success'" x-cloak>✓ Sent</span>
+                        <span x-show="!sending && state === 'notice'" x-cloak>Hang on</span>
                         <span x-show="!sending && state === 'error'" x-cloak>✕ Failed</span>
                         <span x-show="!sending && state === 'idle'">Send Update Report</span>
                     </button>
                 </form>
                 <div x-show="message" x-cloak
                      style="display:flex; align-items:center; gap:10px; font-size:13px; margin-top:8px;">
-                    <span x-text="message" x-bind:style="{ color: state === 'success' ? '#10b981' : '#ef4444' }"></span>
+                    <span x-text="message" x-bind:style="{ color: state === 'success' ? '#10b981' : (state === 'notice' ? '#f59e0b' : '#ef4444') }"></span>
                     <button type="button"
                             x-show="canForce && !sending"
                             x-on:click="send($refs.form, true)"
