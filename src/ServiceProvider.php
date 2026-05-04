@@ -10,6 +10,7 @@ use D3Creative\Sentinel\Http\Controllers\SentinelController;
 use D3Creative\Sentinel\Services\AuditService;
 use D3Creative\Sentinel\Services\HistoryService;
 use D3Creative\Sentinel\Services\ScheduleService;
+use D3Creative\Sentinel\Services\SentMailService;
 
 class ServiceProvider extends AddonServiceProvider
 {
@@ -42,6 +43,11 @@ class ServiceProvider extends AddonServiceProvider
                 [SentinelController::class, 'previewUpdateReport']
             )->middleware('throttle:30,1')->name('d3-sentinel.preview-update-report');
 
+            \Illuminate\Support\Facades\Route::get(
+                'd3-sentinel/preview-sent-report/{id}',
+                [SentinelController::class, 'previewSentReport']
+            )->middleware('throttle:60,1')->where('id', '[A-Za-z0-9]+')->name('d3-sentinel.preview-sent-report');
+
             \Illuminate\Support\Facades\Route::post(
                 'd3-sentinel/save-schedule',
                 [SentinelController::class, 'saveSchedule']
@@ -65,13 +71,16 @@ class ServiceProvider extends AddonServiceProvider
                     ->icon('shield')
                     ->description('Full vulnerability and outdated-package report.')
                     ->view('statamic-sentinel::utilities.sentinel', function () {
-                        $service = new AuditService();
-                        $data    = request()->has('d3_refresh') ? $service->refresh() : $service->cached();
+                        $service  = new AuditService();
+                        $data     = request()->has('d3_refresh') ? $service->refresh() : $service->cached();
+                        $sentMail = app(SentMailService::class);
 
                         return [
-                            'audit'    => $data,
-                            'history'  => app(HistoryService::class)->all(),
-                            'schedule' => app(ScheduleService::class)->all(),
+                            'audit'        => $data,
+                            'history'      => app(HistoryService::class)->all(),
+                            'schedule'     => app(ScheduleService::class)->all(),
+                            'sent_status'  => $sentMail->forKind(SentMailService::KIND_STATUS),
+                            'sent_update'  => $sentMail->forKind(SentMailService::KIND_UPDATE),
                         ];
                     })
             );

@@ -482,6 +482,11 @@
                 'key'    => 'status_report',
                 'config' => $schedule['status_report'],
             ])
+
+            @include('statamic-sentinel::utilities._sent_list', [
+                'kind'    => 'status',
+                'entries' => $sent_status,
+            ])
         </div>
 
         {{-- Update Report tab --}}
@@ -571,6 +576,11 @@
                     </button>
                 </div>
             </div>
+
+            @include('statamic-sentinel::utilities._sent_list', [
+                'kind'    => 'update',
+                'entries' => $sent_update,
+            ])
         </div>
 
     </div>

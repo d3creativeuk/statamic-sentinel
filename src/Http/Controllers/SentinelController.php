@@ -9,6 +9,7 @@ use D3Creative\Sentinel\Services\AuditService;
 use D3Creative\Sentinel\Services\HistoryService;
 use D3Creative\Sentinel\Services\ReportSender;
 use D3Creative\Sentinel\Services\ScheduleService;
+use D3Creative\Sentinel\Services\SentMailService;
 use D3Creative\Sentinel\Services\UpdateReportBuilder;
 
 class SentinelController extends Controller
@@ -202,6 +203,28 @@ class SentinelController extends Controller
             'host'        => parse_url(config('app.url'), PHP_URL_HOST) ?: 'site',
             'utility_url' => cp_route('utilities.sentinel'),
         ])->render());
+    }
+
+    public function previewSentReport(Request $request, string $id)
+    {
+        abort_unless(auth()->user()?->isSuper(), 403);
+
+        $store = app(SentMailService::class);
+        $entry = $store->find($id);
+
+        if (! $entry) {
+            abort(404);
+        }
+
+        $html = $store->html($id);
+
+        if ($html === null || $html === '') {
+            return $this->previewResponse(
+                "<!DOCTYPE html><html><head></head><body style='margin:0;padding:24px;font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;color:#64748b;font-size:14px;'>The HTML snapshot for this send is no longer available.</body></html>"
+            );
+        }
+
+        return $this->previewResponse($html);
     }
 
     /**

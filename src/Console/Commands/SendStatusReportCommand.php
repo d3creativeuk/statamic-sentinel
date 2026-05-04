@@ -6,6 +6,7 @@ use Illuminate\Console\Command;
 use D3Creative\Sentinel\Services\AuditService;
 use D3Creative\Sentinel\Services\ReportSender;
 use D3Creative\Sentinel\Services\ScheduleService;
+use D3Creative\Sentinel\Services\SentMailService;
 
 class SendStatusReportCommand extends Command
 {
@@ -40,7 +41,7 @@ class SendStatusReportCommand extends Command
             $this->warn('Scan failed; sending with last cached audit. ' . $e->getMessage());
         }
 
-        $result = $sender->sendStatus($config['recipients']);
+        $result = $sender->sendStatus($config['recipients'], SentMailService::TRIGGER_SCHEDULED);
 
         if ($result['ok']) {
             $this->info($result['message']);

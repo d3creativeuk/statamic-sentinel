@@ -23,24 +23,32 @@ class ReportSender
     const KIND_NO_CHANGES    = 'no_changes';
     const KIND_MAIL_FAILED   = 'mail_failed';
 
-    public function sendStatus(array $recipients): array
+    public function sendStatus(array $recipients, string $trigger = SentMailService::TRIGGER_MANUAL): array
     {
         if (empty($recipients)) {
             return $this->result(self::KIND_NO_RECIPIENTS, 'No recipients configured.');
         }
 
-        try {
-            $audit = (new AuditService())->run();
+        $html = '';
 
-            Mail::to($recipients)->send(new SentinelReport($audit));
+        try {
+            $audit    = (new AuditService())->run();
+            $mailable = new SentinelReport($audit);
+            $html     = $this->safeRender($mailable);
+
+            Mail::to($recipients)->send($mailable);
+
+            $this->record(SentMailService::KIND_STATUS, $recipients, $trigger, SentMailService::OUTCOME_SENT, $html);
 
             return $this->result(self::KIND_SENT, 'Report sent successfully.');
         } catch (\Throwable $e) {
+            $this->record(SentMailService::KIND_STATUS, $recipients, $trigger, SentMailService::OUTCOME_FAILED, $html, $e->getMessage());
+
             return $this->result(self::KIND_MAIL_FAILED, 'Failed to send report. Please check your mail configuration.');
         }
     }
 
-    public function sendUpdate(array $recipients, bool $force = false): array
+    public function sendUpdate(array $recipients, bool $force = false, string $trigger = SentMailService::TRIGGER_MANUAL): array
     {
         if (empty($recipients)) {
             return $this->result(self::KIND_NO_RECIPIENTS, 'No recipients configured.');
@@ -77,11 +85,17 @@ class ReportSender
             // recipient sees the previous meaningful update rather than a wall
             // of "No change" rows. Falls back to the empty current diff if
             // nothing has been remembered yet.
-            $report = $store->lastReport() ?? $report;
+            $report  = $store->lastReport() ?? $report;
+            $trigger = SentMailService::TRIGGER_FORCED;
         }
 
+        $html = '';
+
         try {
-            Mail::to($recipients)->send(new SentinelUpdateReport($report));
+            $mailable = new SentinelUpdateReport($report);
+            $html     = $this->safeRender($mailable);
+
+            Mail::to($recipients)->send($mailable);
 
             // Remember the report only when it carries real content, so a
             // future force-resend has something meaningful to replay.
@@ -89,9 +103,36 @@ class ReportSender
                 $store->rememberLastReport($report);
             }
 
+            $this->record(SentMailService::KIND_UPDATE, $recipients, $trigger, SentMailService::OUTCOME_SENT, $html);
+
             return $this->result(self::KIND_SENT, 'Update report sent successfully.');
         } catch (\Throwable $e) {
+            $this->record(SentMailService::KIND_UPDATE, $recipients, $trigger, SentMailService::OUTCOME_FAILED, $html, $e->getMessage());
+
             return $this->result(self::KIND_MAIL_FAILED, 'Failed to send update report. Please check your mail configuration.');
+        }
+    }
+
+    /**
+     * Render the mailable to HTML for the sent-mail snapshot. Renders before
+     * send so the preview matches what was queued, even on transient failures.
+     * Render errors must not block the send - fall back to an empty string.
+     */
+    protected function safeRender($mailable): string
+    {
+        try {
+            return $mailable->render();
+        } catch (\Throwable $e) {
+            return '';
+        }
+    }
+
+    protected function record(string $kind, array $recipients, string $trigger, string $outcome, string $html, ?string $error = null): void
+    {
+        try {
+            app(SentMailService::class)->record($kind, $recipients, $trigger, $outcome, $html, $error);
+        } catch (\Throwable $e) {
+            // Silent fail - recording is bookkeeping, not part of the send contract.
         }
     }
 
