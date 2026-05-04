@@ -5,9 +5,12 @@ namespace D3Creative\Sentinel;
 use Statamic\Providers\AddonServiceProvider;
 use Statamic\Facades\Utility;
 use D3Creative\Sentinel\Console\Commands\ScanCommand;
+use D3Creative\Sentinel\Console\Commands\SendStatusReportCommand;
+use D3Creative\Sentinel\Console\Commands\SendUpdateReportCommand;
 use D3Creative\Sentinel\Http\Controllers\SentinelController;
 use D3Creative\Sentinel\Services\AuditService;
 use D3Creative\Sentinel\Services\HistoryService;
+use D3Creative\Sentinel\Services\ScheduleService;
 
 class ServiceProvider extends AddonServiceProvider
 {
@@ -39,6 +42,30 @@ class ServiceProvider extends AddonServiceProvider
                 'd3-sentinel/preview-update-report',
                 [SentinelController::class, 'previewUpdateReport']
             )->middleware('throttle:30,1')->name('d3-sentinel.preview-update-report');
+
+            \Illuminate\Support\Facades\Route::post(
+                'd3-sentinel/save-schedule',
+                [SentinelController::class, 'saveSchedule']
+            )->middleware('throttle:30,1')->name('d3-sentinel.save-schedule');
+        });
+
+        // Auto-register Laravel scheduler entries for any enabled schedules.
+        // Host only needs the standard `* * * * * php artisan schedule:run`
+        // cron entry; everything else is driven by what the user saves in
+        // the Schedule tab.
+        $this->callAfterResolving(\Illuminate\Console\Scheduling\Schedule::class, function ($schedule) {
+            $store = app(ScheduleService::class);
+
+            $jobs = [
+                'status_report' => 'sentinel:send-status-report',
+                'update_report' => 'sentinel:send-update-report',
+            ];
+
+            foreach ($jobs as $key => $command) {
+                if ($cron = $store->cronExpression($key)) {
+                    $schedule->command($command)->cron($cron);
+                }
+            }
         });
 
         Utility::extend(function () {
@@ -53,15 +80,20 @@ class ServiceProvider extends AddonServiceProvider
                         $data    = request()->has('d3_refresh') ? $service->refresh() : $service->cached();
 
                         return [
-                            'audit'   => $data,
-                            'history' => app(HistoryService::class)->all(),
+                            'audit'    => $data,
+                            'history'  => app(HistoryService::class)->all(),
+                            'schedule' => app(ScheduleService::class)->all(),
                         ];
                     })
             );
         });
 
         if ($this->app->runningInConsole()) {
-            $this->commands([ScanCommand::class]);
+            $this->commands([
+                ScanCommand::class,
+                SendStatusReportCommand::class,
+                SendUpdateReportCommand::class,
+            ]);
         }
     }
 }

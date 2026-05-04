@@ -16,6 +16,7 @@ Sentinel surfaces PHP version, Statamic version, and known package vulnerabiliti
 - **Email status report** - super admins can send the full current audit to up to 10 recipients from the utility's **Status Report** tab.
 - **Email update report** - super admins can send a diff between the two most recent snapshots (platform version changes, packages updated/added/removed, vulnerabilities resolved/introduced) from the utility's **Update Report** tab. Run an update, hit **Refresh** to capture a fresh snapshot, then click **Send Update Report** — recipients see exactly what moved. If nothing changed since the last snapshot, you can opt to resend the last meaningful diff via **Send anyway**.
 - **Preview before sending** - both report tabs include a **Preview** button that opens the rendered email in a modal so you can see exactly what recipients will get before clicking Send.
+- **Scheduled sends** - configure recurring Status and Update Reports from the utility's **Schedule** tab. Each report has its own on/off toggle, daily/weekly/monthly cadence, time, and recipient list, and the addon auto-registers the matching Laravel scheduler entries on boot. Requires the standard `* * * * * php artisan schedule:run` cron entry on the host.
 - Both email send endpoints are rate-limited to 6 requests per minute.
 
 ## How scanning works

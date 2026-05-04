@@ -4,12 +4,11 @@ namespace D3Creative\Sentinel\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
-use D3Creative\Sentinel\Mail\SentinelReport;
-use D3Creative\Sentinel\Mail\SentinelUpdateReport;
 use D3Creative\Sentinel\Services\AuditService;
 use D3Creative\Sentinel\Services\HistoryService;
+use D3Creative\Sentinel\Services\ReportSender;
+use D3Creative\Sentinel\Services\ScheduleService;
 use D3Creative\Sentinel\Services\UpdateReportBuilder;
 
 class SentinelController extends Controller
@@ -20,46 +19,101 @@ class SentinelController extends Controller
     {
         abort_unless(auth()->user()?->isSuper(), 403);
 
-        $recipients = $this->parseRecipients($request->input('email', ''));
-
-        if (empty($recipients)) {
-            return response()->json(['message' => 'Please enter at least one email address.'], 422);
+        $recipientResult = $this->validateRecipientsInput($request->input('email', ''));
+        if ($recipientResult instanceof \Illuminate\Http\JsonResponse) {
+            return $recipientResult;
         }
 
-        if (count($recipients) > self::MAX_RECIPIENTS) {
-            return response()->json([
-                'message' => 'Too many recipients (max ' . self::MAX_RECIPIENTS . ').',
-            ], 422);
-        }
+        $result = (new ReportSender())->sendStatus($recipientResult);
 
-        $validator = Validator::make(['recipients' => $recipients], [
-            'recipients.*' => ['email'],
-        ]);
+        $status = match ($result['kind']) {
+            ReportSender::KIND_SENT        => 200,
+            ReportSender::KIND_MAIL_FAILED => 500,
+            default                        => 422,
+        };
 
-        if ($validator->fails()) {
-            $invalid = array_values(array_filter($recipients, fn ($e) => ! filter_var($e, FILTER_VALIDATE_EMAIL)));
-            return response()->json([
-                'message' => 'Invalid address: ' . implode(', ', $invalid),
-            ], 422);
-        }
-
-        try {
-            $audit = (new AuditService())->run();
-
-            Mail::to($recipients)->send(new SentinelReport($audit));
-
-            return response()->json(['message' => 'Report sent successfully.'], 200);
-
-        } catch (\Throwable $e) {
-            return response()->json(['message' => 'Failed to send report. Please check your mail configuration.'], 500);
-        }
+        return response()->json(['message' => $result['message']], $status);
     }
 
     public function sendUpdateReport(Request $request)
     {
         abort_unless(auth()->user()?->isSuper(), 403);
 
-        $recipients = $this->parseRecipients($request->input('email', ''));
+        $recipientResult = $this->validateRecipientsInput($request->input('email', ''));
+        if ($recipientResult instanceof \Illuminate\Http\JsonResponse) {
+            return $recipientResult;
+        }
+
+        $result = (new ReportSender())->sendUpdate($recipientResult, $request->boolean('force'));
+
+        $status = match ($result['kind']) {
+            ReportSender::KIND_SENT        => 200,
+            ReportSender::KIND_MAIL_FAILED => 500,
+            default                        => 422,
+        };
+
+        $payload = ['message' => $result['message']];
+        if (! empty($result['can_force'])) {
+            $payload['can_force'] = true;
+        }
+
+        return response()->json($payload, $status);
+    }
+
+    public function saveSchedule(Request $request)
+    {
+        abort_unless(auth()->user()?->isSuper(), 403);
+
+        $store    = app(ScheduleService::class);
+        $config   = [];
+        $defaults = $store->defaults();
+
+        foreach (ScheduleService::REPORT_KEYS as $key) {
+            $input      = $request->input($key, []);
+            $recipients = $this->parseRecipients($input['recipients'] ?? '');
+
+            $validator = Validator::make([
+                'enabled'      => isset($input['enabled']) ? filter_var($input['enabled'], FILTER_VALIDATE_BOOLEAN) : false,
+                'frequency'    => $input['frequency']    ?? null,
+                'time'         => $input['time']         ?? null,
+                'day_of_week'  => $input['day_of_week']  ?? null,
+                'day_of_month' => $input['day_of_month'] ?? null,
+                'recipients'   => $recipients,
+            ], [
+                'enabled'      => ['required', 'boolean'],
+                'frequency'    => ['required', 'in:' . implode(',', ScheduleService::FREQUENCIES)],
+                'time'         => ['required', 'date_format:H:i'],
+                'day_of_week'  => ['required', 'integer', 'between:0,6'],
+                'day_of_month' => ['required', 'integer', 'between:1,28'],
+                'recipients'   => ['array', 'max:' . self::MAX_RECIPIENTS],
+                'recipients.*' => ['email'],
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'message' => ucfirst(str_replace('_', ' ', $key)) . ': ' . $validator->errors()->first(),
+                ], 422);
+            }
+
+            $config[$key] = array_merge($defaults[$key], $validator->validated(), [
+                'recipients' => $recipients,
+            ]);
+        }
+
+        if (! $store->save($config)) {
+            return response()->json(['message' => 'Failed to save schedule. Check storage permissions.'], 500);
+        }
+
+        return response()->json(['message' => 'Schedule saved.'], 200);
+    }
+
+    /**
+     * Returns either the parsed recipient array or a JsonResponse to short-
+     * circuit the caller with a 422.
+     */
+    protected function validateRecipientsInput(string $raw)
+    {
+        $recipients = $this->parseRecipients($raw);
 
         if (empty($recipients)) {
             return response()->json(['message' => 'Please enter at least one email address.'], 422);
@@ -82,53 +136,7 @@ class SentinelController extends Controller
             ], 422);
         }
 
-        // Use the cached audit (cheap). recordIfChanged() runs inside refresh(),
-        // not run(), so capturing a post-update snapshot is the explicit job of
-        // the Refresh button. run() falls through to refresh() automatically
-        // when the cache is empty (e.g. fresh install), so first-ever sends
-        // still warm the cache and seed history.
-        (new AuditService())->run();
-
-        $history = app(HistoryService::class)->all();
-
-        if (count($history) < 2) {
-            return response()->json([
-                'message' => 'No earlier snapshot to compare against yet. Apply your updates, then click Send Update Report again.',
-            ], 422);
-        }
-
-        $report = UpdateReportBuilder::build($history[0], $history[1]);
-        $store  = app(HistoryService::class);
-
-        if (! $report['has_changes']) {
-            if (! $request->boolean('force')) {
-                return response()->json([
-                    'message'   => 'No changes detected since the previous snapshot.',
-                    'can_force' => true,
-                ], 422);
-            }
-
-            // Forced resend: replay the last stored non-empty report so the
-            // recipient sees the previous meaningful update rather than a wall
-            // of "No change" rows. Falls back to the empty current diff if
-            // nothing has been remembered yet.
-            $report = $store->lastReport() ?? $report;
-        }
-
-        try {
-            Mail::to($recipients)->send(new SentinelUpdateReport($report));
-
-            // Remember the report only when it carries real content, so a
-            // future force-resend has something meaningful to replay.
-            if ($report['has_changes']) {
-                $store->rememberLastReport($report);
-            }
-
-            return response()->json(['message' => 'Update report sent successfully.'], 200);
-
-        } catch (\Throwable $e) {
-            return response()->json(['message' => 'Failed to send update report. Please check your mail configuration.'], 500);
-        }
+        return $recipients;
     }
 
     public function previewReport(Request $request)
