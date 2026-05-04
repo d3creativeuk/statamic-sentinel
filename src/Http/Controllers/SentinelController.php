@@ -131,6 +131,69 @@ class SentinelController extends Controller
         }
     }
 
+    public function previewReport(Request $request)
+    {
+        abort_unless(auth()->user()?->isSuper(), 403);
+
+        $audit = (new AuditService())->run();
+
+        return $this->previewResponse(view('statamic-sentinel::emails.report', [
+            'audit'       => $audit,
+            'host'        => parse_url(config('app.url'), PHP_URL_HOST) ?: 'site',
+            'utility_url' => cp_route('utilities.sentinel'),
+        ])->render());
+    }
+
+    public function previewUpdateReport(Request $request)
+    {
+        abort_unless(auth()->user()?->isSuper(), 403);
+
+        (new AuditService())->run();
+
+        $history = app(HistoryService::class)->all();
+
+        if (count($history) < 2) {
+            return $this->previewResponse(
+                "<!DOCTYPE html><html><head></head><body style='margin:0;padding:24px;font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;color:#64748b;font-size:14px;'>No earlier snapshot to compare against yet. Apply your updates, then come back to preview.</body></html>"
+            );
+        }
+
+        $report = UpdateReportBuilder::build($history[0], $history[1]);
+
+        // Mirror the "Send anyway" replay: when nothing has changed and the
+        // user previews with ?force=1, show the last meaningful report so the
+        // preview matches what the forced send would actually deliver.
+        if (! $report['has_changes'] && $request->boolean('force')) {
+            $report = app(HistoryService::class)->lastReport() ?? $report;
+        }
+
+        return $this->previewResponse(view('statamic-sentinel::emails.update-report', [
+            'report'      => $report,
+            'host'        => parse_url(config('app.url'), PHP_URL_HOST) ?: 'site',
+            'utility_url' => cp_route('utilities.sentinel'),
+        ])->render());
+    }
+
+    /**
+     * Wrap rendered email HTML for in-iframe preview: disable link
+     * interaction so clicks inside the iframe do nothing (the preview is
+     * read-only — the iframe shouldn't navigate, and we shouldn't open
+     * stray tabs to the CP or external sites).
+     */
+    protected function previewResponse(string $html)
+    {
+        $html = str_replace(
+            '<head>',
+            '<head><style>a{pointer-events:none !important;cursor:default !important;}</style>',
+            $html
+        );
+
+        return response($html, 200, [
+            'Content-Type'    => 'text/html; charset=utf-8',
+            'X-Frame-Options' => 'SAMEORIGIN',
+        ]);
+    }
+
     protected function parseRecipients(string $input): array
     {
         return collect(explode(',', $input))

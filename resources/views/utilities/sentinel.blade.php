@@ -437,6 +437,11 @@
                            required
                            placeholder="email@example.com, another@example.com"
                            style="flex:1; font-size:13px; padding:7px 12px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#1e293b; outline:none; min-width:0;">
+                    <button type="button"
+                            x-on:click="$dispatch('sentinel-preview-open', { url: '{{ route('statamic.cp.d3-sentinel.preview-report') }}', title: 'Status report preview' })"
+                            style="flex-shrink:0; font-size:13px; font-weight:600; color:#0f172a; background:#fff; border:1px solid #e2e8f0; padding:7px 12px; border-radius:6px; cursor:pointer; white-space:nowrap;">
+                        Preview
+                    </button>
                     <button type="submit"
                             x-bind:disabled="sending"
                             x-bind:style="{ background: state === 'success' ? '#10b981' : (state === 'error' ? '#ef4444' : '#0f172a') }"
@@ -514,6 +519,11 @@
                            required
                            placeholder="email@example.com, another@example.com"
                            style="flex:1; font-size:13px; padding:7px 12px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#1e293b; outline:none; min-width:0;">
+                    <button type="button"
+                            x-on:click="$dispatch('sentinel-preview-open', { url: '{{ route('statamic.cp.d3-sentinel.preview-update-report') }}', title: 'Update report preview' })"
+                            style="flex-shrink:0; font-size:13px; font-weight:600; color:#0f172a; background:#fff; border:1px solid #e2e8f0; padding:7px 12px; border-radius:6px; cursor:pointer; white-space:nowrap;">
+                        Preview
+                    </button>
                     <button type="submit"
                             x-bind:disabled="sending"
                             x-bind:style="{ background: state === 'success' ? '#10b981' : (state === 'notice' ? '#f59e0b' : (state === 'error' ? '#ef4444' : '#0f172a')) }"
@@ -549,6 +559,34 @@
         <p style="font-size:12px; color:rgb(63 63 71); margin:0; letter-spacing:-0.01em;">
             Sentinel by <a href="https://d3creative.uk/sentinel" target="_blank" style="color:rgb(63 63 71); text-decoration:underline;">D3 Creative</a>. Security and update alerts for Statamic sites.
         </p>
+    </div>
+
+    {{-- Email preview modal (shared between Status Report and Update Report tabs) --}}
+    <div x-data="{ src: '', title: '' }"
+         x-on:sentinel-preview-open.window="
+            title = $event.detail.title;
+            src = $event.detail.url;
+            $refs.dlg.showModal();
+         "
+         x-cloak>
+        <dialog x-ref="dlg"
+                x-on:click.self="$refs.dlg.close()"
+                x-on:close="src = ''"
+                style="width:min(960px,95vw); height:min(820px,90vh); padding:0; border:none; border-radius:10px; overflow:hidden; box-shadow:0 25px 50px -12px rgba(0,0,0,0.25);">
+            <div style="display:flex; align-items:center; justify-content:space-between; padding:10px 14px; border-bottom:1px solid #e2e8f0; background:#f8fafc;">
+                <strong style="font-size:13px; color:#0f172a;" x-text="title"></strong>
+                <button type="button"
+                        x-on:click="$refs.dlg.close()"
+                        style="font-size:12px; font-weight:600; color:#0f172a; background:#fff; border:1px solid #e2e8f0; padding:4px 10px; border-radius:5px; cursor:pointer; font-family:inherit;">
+                    Close
+                </button>
+            </div>
+            <template x-if="src">
+                <iframe x-bind:src="src"
+                        title="Email preview"
+                        style="display:block; width:100%; height:calc(100% - 41px); border:none; background:#fff;"></iframe>
+            </template>
+        </dialog>
     </div>
 
 @endif
