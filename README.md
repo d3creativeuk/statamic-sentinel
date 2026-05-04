@@ -15,7 +15,8 @@ Sentinel surfaces PHP version, Statamic version, and known package vulnerabiliti
 - **Update history** - snapshot of versions and counts is recorded whenever any tracked value changes, viewable in the utility's **History** tab. Retained for 365 days. Each snapshot also stores per-package installed versions so update diffs can be reconstructed later.
 - **Email status report** - super admins can send the full current audit to up to 10 recipients from the utility's **Status Report** tab.
 - **Email update report** - super admins can send a diff between the two most recent snapshots (platform version changes, packages updated/added/removed, vulnerabilities resolved/introduced) from the utility's **Update Report** tab. Run an update, hit **Refresh** to capture a fresh snapshot, then click **Send Update Report** — recipients see exactly what moved. If nothing changed since the last snapshot, you can opt to resend the last meaningful diff via **Send anyway**.
-- Both email endpoints are rate-limited to 6 requests per minute.
+- **Preview before sending** - both report tabs include a **Preview** button that opens the rendered email in a modal so you can see exactly what recipients will get before clicking Send.
+- Both email send endpoints are rate-limited to 6 requests per minute.
 
 ## How scanning works
 
