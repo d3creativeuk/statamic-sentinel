@@ -35,7 +35,7 @@
                 <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
             </svg>
         </a>
-        <p style="font-size:11px; color:#94a3b8; margin:14px 0 0 0;">Takes 10–20 seconds.</p>
+        <p style="font-size:11px; color:#64748b; margin:14px 0 0 0;">Takes 10–20 seconds.</p>
     </div>
     <div style="display:flex; align-items:center; justify-content:flex-start; margin-top:16px; padding-top:14px;">
         <p style="font-size:12px; color:rgb(63 63 71); margin:0; letter-spacing:-0.01em;">
@@ -148,15 +148,6 @@
                         : 'cursor:pointer; background:transparent; border:0; border-bottom:2px solid transparent; padding:10px 14px; margin-bottom:-1px; font-size:13px; font-weight:600; font-family:inherit; color:#64748b;'">
                 Update Report
             </button>
-            <button type="button"
-                    role="tab"
-                    x-on:click="tab = 'schedule'"
-                    x-bind:aria-selected="tab === 'schedule'"
-                    x-bind:style="tab === 'schedule'
-                        ? 'cursor:pointer; background:transparent; border:0; border-bottom:2px solid #0f172a; padding:10px 14px; margin-bottom:-1px; font-size:13px; font-weight:600; font-family:inherit; color:#0f172a;'
-                        : 'cursor:pointer; background:transparent; border:0; border-bottom:2px solid transparent; padding:10px 14px; margin-bottom:-1px; font-size:13px; font-weight:600; font-family:inherit; color:#64748b;'">
-                Schedule
-            </button>
         </div>
 
         {{-- Current tab --}}
@@ -225,7 +216,7 @@
             <div style="margin-bottom:14px;">
                 @if($d['status'] === 'ok')
                     <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
-                        <div style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; color:#94a3b8;">Security Issues</div>
+                        <div style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; color:#64748b;">Security Issues</div>
                         <span style="display:inline-flex; align-items:center; font-size:12px; font-weight:500; color:#10b981; background:#fff; border:1px solid #10b981; padding:3px 10px; border-radius:5px;">No known vulnerabilities</span>
                     </div>
                 @else
@@ -256,7 +247,7 @@
                     @endphp
                     <div x-data="{ open: false }">
                         <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
-                            <div style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; color:#94a3b8;">Security Issues</div>
+                            <div style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; color:#64748b;">Security Issues</div>
                             <button type="button" x-on:click="open = !open" aria-label="Toggle security issues list" style="display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:500; padding:3px 10px; border-radius:5px; color:#dc2626; background:#fff; border:1px solid #dc2626; cursor:pointer; font-family:inherit;">
                                 <span>{{ count($byPackage) }} {{ count($byPackage) === 1 ? 'package' : 'packages' }} affected</span>
                                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" x-bind:style="{ transform: open ? 'rotate(180deg)' : null }" style="display:block; flex-shrink:0; transition:transform 0.15s ease;"><path d="m4 6 4 4 4-4"></path></svg>
@@ -275,7 +266,7 @@
                                     </div>
                                     <span style="display:inline-flex; align-items:center; gap:8px; flex-shrink:0;">
                                         @if ($pkg['count'] > 1)
-                                            <span style="font-size:11px; font-weight:500; color:#94a3b8;">{{ $pkg['count'] }} issues</span>
+                                            <span style="font-size:11px; font-weight:500; color:#64748b;">{{ $pkg['count'] }} issues</span>
                                         @endif
                                         <span style="display:inline-flex; align-items:center; font-size:11px; font-weight:500; padding:1px 7px; border-radius:4px; color:{{ $sevColour }}; background:#fff; border:1px solid {{ $sevColour }};">{{ ucfirst(strtolower($pkg['highest'])) }}</span>
                                     </span>
@@ -292,7 +283,7 @@
             @php $packages = $d['outdated']['packages']; @endphp
             <div x-data="{ open: false }" style="border-top:1px solid #e2e8f0; padding-top:12px;">
                 <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
-                    <div style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; color:#94a3b8;">Updates Available</div>
+                    <div style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; color:#64748b;">Updates Available</div>
                     <button type="button" x-on:click="open = !open" aria-label="Toggle updates list" style="display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:500; padding:3px 10px; border-radius:5px; color:#3b82f6; background:#fff; border:1px solid #3b82f6; cursor:pointer; font-family:inherit;">
                         <span>{{ count($packages) }} {{ count($packages) === 1 ? 'update' : 'updates' }} available</span>
                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" x-bind:style="{ transform: open ? 'rotate(180deg)' : null }" style="display:block; flex-shrink:0; transition:transform 0.15s ease;">
@@ -317,7 +308,7 @@
         @elseif(!empty($d['outdated']) && in_array($d['status'], ['ok', 'vulnerable']))
             <div style="border-top:1px solid #e2e8f0; padding-top:12px;">
                 <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
-                    <div style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; color:#94a3b8;">Updates Available</div>
+                    <div style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; color:#64748b;">Updates Available</div>
                     <span style="display:inline-flex; align-items:center; font-size:12px; font-weight:500; padding:3px 10px; border-radius:5px; color:#10b981; background:#fff; border:1px solid #10b981;">All packages up to date</span>
                 </div>
             </div>
@@ -360,7 +351,7 @@
                                         <th style="text-align:left; padding:10px 14px; font-weight:600; color:#475569; white-space:nowrap;">
                                             {{ $col['label'] }}
                                             @if ($col['short'])
-                                                <span style="display:block; font-size:11px; font-weight:500; color:#94a3b8;">{{ $col['short'] }}</span>
+                                                <span style="display:block; font-size:11px; font-weight:500; color:#64748b;">{{ $col['short'] }}</span>
                                             @endif
                                         </th>
                                     @endforeach
@@ -395,7 +386,7 @@
                     </div>
                 </div>
 
-                <p style="font-size:12px; color:#94a3b8; margin:10px 2px 0 2px;">Newest first. Retained for {{ \D3Creative\Sentinel\Services\HistoryService::RETENTION_DAYS }} days.</p>
+                <p style="font-size:12px; color:#64748b; margin:10px 2px 0 2px;">Newest first. Retained for {{ \D3Creative\Sentinel\Services\HistoryService::RETENTION_DAYS }} days.</p>
 
             @endif
 
@@ -432,8 +423,8 @@
                  }"
                  style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:14px 16px;">
                 <div style="display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin-bottom:10px;">
-                    <div style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; color:#94a3b8;">Email status report</div>
-                    <div style="font-size:11px; color:#94a3b8;">Snapshot of current versions, vulnerabilities, and updates</div>
+                    <div style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; color:#64748b;">Email status report</div>
+                    <div style="font-size:11px; color:#64748b;">Snapshot of current versions, vulnerabilities, and updates</div>
                 </div>
                 <form action="{{ route('statamic.cp.d3-sentinel.send-report') }}"
                       method="POST"
@@ -469,6 +460,11 @@
                      style="font-size:13px; margin-top:8px;"
                      x-text="message"></div>
             </div>
+
+            @include('statamic-sentinel::utilities._schedule_card', [
+                'key'    => 'status_report',
+                'config' => $schedule['status_report'],
+            ])
         </div>
 
         {{-- Update Report tab --}}
@@ -513,8 +509,8 @@
                  }"
                  style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:14px 16px;">
                 <div style="display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin-bottom:10px;">
-                    <div style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; color:#94a3b8;">Email update report</div>
-                    <div style="font-size:11px; color:#94a3b8;">Diff vs. previous snapshot</div>
+                    <div style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; color:#64748b;">Email update report</div>
+                    <div style="font-size:11px; color:#64748b;">Diff vs. previous snapshot</div>
                 </div>
                 <form x-ref="form"
                       action="{{ route('statamic.cp.d3-sentinel.send-update-report') }}"
@@ -557,157 +553,6 @@
                         Send anyway
                     </button>
                 </div>
-            </div>
-        </div>
-
-        {{-- Schedule tab --}}
-        <div x-show="tab === 'schedule'" role="tabpanel" x-cloak>
-            @php
-                $sched = $schedule;
-                foreach (['status_report', 'update_report'] as $k) {
-                    $sched[$k]['recipients'] = implode(', ', $sched[$k]['recipients'] ?? []);
-                }
-            @endphp
-            <div x-data='{
-                    forms: @json($sched),
-                    sending: false,
-                    state: "idle",
-                    message: "",
-                    save(form) {
-                        this.sending = true;
-                        this.state = "idle";
-                        this.message = "";
-                        fetch(form.action, {
-                            method: "POST",
-                            body: new FormData(form),
-                            headers: { "X-Requested-With": "XMLHttpRequest", "Accept": "application/json" }
-                        })
-                        .then(res => res.json().then(body => ({ ok: res.ok, body })))
-                        .then(res => {
-                            this.sending = false;
-                            this.state = res.ok ? "success" : "error";
-                            this.message = res.body.message;
-                            if (res.ok) setTimeout(() => { this.state = "idle"; this.message = ""; }, 4000);
-                        })
-                        .catch(() => {
-                            this.sending = false;
-                            this.state = "error";
-                            this.message = "Something went wrong. Please try again.";
-                        });
-                    }
-                }'>
-                <form x-ref="form"
-                      action="{{ route('statamic.cp.d3-sentinel.save-schedule') }}"
-                      method="POST"
-                      x-on:submit.prevent="save($refs.form)">
-                    @csrf
-
-                    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); gap:14px;">
-                        @foreach (['status_report' => ['label' => 'Status Report', 'desc' => 'Full current audit'], 'update_report' => ['label' => 'Update Report', 'desc' => 'Diff vs. previous snapshot']] as $key => $meta)
-                            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:14px 16px;">
-                                <div style="display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin-bottom:12px;">
-                                    <div style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; color:#94a3b8;">{{ $meta['label'] }}</div>
-                                    <div style="font-size:11px; color:#94a3b8;">{{ $meta['desc'] }}</div>
-                                </div>
-
-                                <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:#0f172a; cursor:pointer; margin-bottom:12px;">
-                                    <input type="checkbox"
-                                           name="{{ $key }}[enabled]"
-                                           value="1"
-                                           x-model="forms.{{ $key }}.enabled"
-                                           style="width:16px; height:16px; cursor:pointer;">
-                                    <span style="font-weight:600;">Enabled</span>
-                                </label>
-
-                                <div style="display:flex; flex-direction:column; gap:10px;" x-bind:style="forms.{{ $key }}.enabled ? '' : 'opacity:0.5; pointer-events:none;'">
-                                    <label style="display:block; font-size:12px; color:#475569; font-weight:600;">
-                                        Frequency
-                                        <select name="{{ $key }}[frequency]"
-                                                x-model="forms.{{ $key }}.frequency"
-                                                style="margin-top:4px; display:block; width:100%; font-size:13px; padding:7px 10px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#1e293b; font-family:inherit;">
-                                            <option value="daily">Daily</option>
-                                            <option value="weekly">Weekly</option>
-                                            <option value="monthly">Monthly</option>
-                                        </select>
-                                    </label>
-
-                                    <label x-show="forms.{{ $key }}.frequency === 'weekly'" x-cloak style="display:block; font-size:12px; color:#475569; font-weight:600;">
-                                        Day of week
-                                        <select name="{{ $key }}[day_of_week]"
-                                                x-model.number="forms.{{ $key }}.day_of_week"
-                                                style="margin-top:4px; display:block; width:100%; font-size:13px; padding:7px 10px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#1e293b; font-family:inherit;">
-                                            <option value="0">Sunday</option>
-                                            <option value="1">Monday</option>
-                                            <option value="2">Tuesday</option>
-                                            <option value="3">Wednesday</option>
-                                            <option value="4">Thursday</option>
-                                            <option value="5">Friday</option>
-                                            <option value="6">Saturday</option>
-                                        </select>
-                                    </label>
-
-                                    <label x-show="forms.{{ $key }}.frequency === 'monthly'" x-cloak style="display:block; font-size:12px; color:#475569; font-weight:600;">
-                                        Day of month
-                                        <select name="{{ $key }}[day_of_month]"
-                                                x-model.number="forms.{{ $key }}.day_of_month"
-                                                style="margin-top:4px; display:block; width:100%; font-size:13px; padding:7px 10px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#1e293b; font-family:inherit;">
-                                            @for ($d = 1; $d <= 28; $d++)
-                                                <option value="{{ $d }}">{{ $d }}</option>
-                                            @endfor
-                                        </select>
-                                        <span style="display:block; margin-top:4px; font-size:11px; font-weight:400; color:#94a3b8;">1st through 28th only — months don't all have a 29th–31st.</span>
-                                    </label>
-
-                                    {{-- The day-of-week and day-of-month <select>s above are always in the DOM and always POST their value. x-show only hides the wrapper visually; the form still submits both fields, so the controller's validator (which requires both regardless of frequency) is happy. --}}
-
-                                    <label style="display:block; font-size:12px; color:#475569; font-weight:600;">
-                                        Time
-                                        <input type="time"
-                                               name="{{ $key }}[time]"
-                                               x-model="forms.{{ $key }}.time"
-                                               required
-                                               style="margin-top:4px; display:block; width:100%; font-size:13px; padding:7px 10px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#1e293b; font-family:inherit;">
-                                    </label>
-
-                                    <label style="display:block; font-size:12px; color:#475569; font-weight:600;">
-                                        Recipients
-                                        <textarea name="{{ $key }}[recipients]"
-                                                  x-model="forms.{{ $key }}.recipients"
-                                                  rows="2"
-                                                  placeholder="email@example.com, another@example.com"
-                                                  style="margin-top:4px; display:block; width:100%; font-size:13px; padding:7px 10px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#1e293b; font-family:inherit; resize:vertical;"></textarea>
-                                        <span style="display:block; margin-top:4px; font-size:11px; font-weight:400; color:#94a3b8;">Comma-separated, max 10 addresses.</span>
-                                    </label>
-                                </div>
-                            </div>
-                        @endforeach
-                    </div>
-
-                    <div style="display:flex; align-items:center; gap:12px; margin-top:14px;">
-                        <button type="submit"
-                                x-bind:disabled="sending"
-                                x-bind:style="{ background: state === 'success' ? '#10b981' : (state === 'error' ? '#ef4444' : '#0f172a') }"
-                                style="font-size:13px; font-weight:600; color:#fff; background:#0f172a; border:none; padding:7px 14px; border-radius:6px; cursor:pointer; white-space:nowrap;">
-                            <span x-show="sending" x-cloak style="display:inline-flex; align-items:center; gap:6px;">
-                                <span aria-hidden="true" style="display:inline-block; font-size:14px; line-height:1; transform-origin:center; animation:sentinel-spin 1s linear infinite;">↻</span>
-                                Saving…
-                            </span>
-                            <span x-show="!sending && state === 'success'" x-cloak>✓ Saved</span>
-                            <span x-show="!sending && state === 'error'" x-cloak>✕ Failed</span>
-                            <span x-show="!sending && state === 'idle'">Save Schedule</span>
-                        </button>
-                        <span x-show="message" x-cloak
-                              x-text="message"
-                              x-bind:style="{ color: state === 'success' ? '#10b981' : '#ef4444' }"
-                              style="font-size:13px;"></span>
-                    </div>
-                </form>
-
-                <p style="margin:14px 2px 0 2px; font-size:12px; color:#94a3b8; line-height:1.5;">
-                    Scheduled sends require Laravel's scheduler to be wired into your server's cron. Add
-                    <code style="font-size:11px; background:#f1f5f9; padding:1px 5px; border-radius:3px; color:#475569;">* * * * * cd /path/to/site &amp;&amp; php artisan schedule:run &gt;&gt; /dev/null 2&gt;&amp;1</code>
-                    to your crontab. Verify with <code style="font-size:11px; background:#f1f5f9; padding:1px 5px; border-radius:3px; color:#475569;">php artisan schedule:list</code>.
-                </p>
             </div>
         </div>
 

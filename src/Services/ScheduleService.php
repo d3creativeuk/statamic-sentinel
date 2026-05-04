@@ -9,23 +9,23 @@ class ScheduleService
     const RELATIVE_PATH = 'statamic-sentinel/schedule.json';
     const TMP_PATH      = 'statamic-sentinel/schedule.json.tmp';
 
-    const REPORT_KEYS = ['status_report', 'update_report'];
+    // Only status_report has a scheduled send. The update report is a
+    // post-update verification artifact — it only makes sense after a
+    // manual update + scan, so there's nothing to schedule.
+    const REPORT_KEYS = ['status_report'];
     const FREQUENCIES = ['daily', 'weekly', 'monthly'];
 
     public function defaults(): array
     {
-        $base = [
-            'enabled'      => false,
-            'frequency'    => 'daily',
-            'day_of_week'  => 1,
-            'day_of_month' => 1,
-            'time'         => '09:00',
-            'recipients'   => [],
-        ];
-
         return [
-            'status_report' => $base,
-            'update_report' => $base,
+            'status_report' => [
+                'enabled'      => false,
+                'frequency'    => 'daily',
+                'day_of_week'  => 1,
+                'day_of_month' => 1,
+                'time'         => '09:00',
+                'recipients'   => [],
+            ],
         ];
     }
 

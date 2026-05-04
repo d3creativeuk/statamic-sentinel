@@ -65,10 +65,20 @@ class SentinelController extends Controller
         abort_unless(auth()->user()?->isSuper(), 403);
 
         $store    = app(ScheduleService::class);
-        $config   = [];
+        $config   = $store->all();
         $defaults = $store->defaults();
+        $touched  = false;
 
+        // Each tab posts only its own report key; the other report's saved
+        // config stays untouched. Skip keys not present in the request so
+        // saving the Status Report schedule doesn't wipe the Update Report
+        // schedule (and vice versa).
         foreach (ScheduleService::REPORT_KEYS as $key) {
+            if (! $request->has($key)) {
+                continue;
+            }
+
+            $touched    = true;
             $input      = $request->input($key, []);
             $recipients = $this->parseRecipients($input['recipients'] ?? '');
 
@@ -91,13 +101,25 @@ class SentinelController extends Controller
 
             if ($validator->fails()) {
                 return response()->json([
-                    'message' => ucfirst(str_replace('_', ' ', $key)) . ': ' . $validator->errors()->first(),
+                    'message' => $validator->errors()->first(),
                 ], 422);
             }
 
-            $config[$key] = array_merge($defaults[$key], $validator->validated(), [
+            $validated = $validator->validated();
+
+            if ($validated['enabled'] && empty($recipients)) {
+                return response()->json([
+                    'message' => 'Add at least one recipient before enabling scheduled sends.',
+                ], 422);
+            }
+
+            $config[$key] = array_merge($defaults[$key], $validated, [
                 'recipients' => $recipients,
             ]);
+        }
+
+        if (! $touched) {
+            return response()->json(['message' => 'No schedule data submitted.'], 422);
         }
 
         if (! $store->save($config)) {

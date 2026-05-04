@@ -6,7 +6,6 @@ use Statamic\Providers\AddonServiceProvider;
 use Statamic\Facades\Utility;
 use D3Creative\Sentinel\Console\Commands\ScanCommand;
 use D3Creative\Sentinel\Console\Commands\SendStatusReportCommand;
-use D3Creative\Sentinel\Console\Commands\SendUpdateReportCommand;
 use D3Creative\Sentinel\Http\Controllers\SentinelController;
 use D3Creative\Sentinel\Services\AuditService;
 use D3Creative\Sentinel\Services\HistoryService;
@@ -49,22 +48,12 @@ class ServiceProvider extends AddonServiceProvider
             )->middleware('throttle:30,1')->name('d3-sentinel.save-schedule');
         });
 
-        // Auto-register Laravel scheduler entries for any enabled schedules.
-        // Host only needs the standard `* * * * * php artisan schedule:run`
-        // cron entry; everything else is driven by what the user saves in
-        // the Schedule tab.
+        // Auto-register the status-report scheduler entry when the user has
+        // saved an enabled schedule. Host only needs the standard
+        // `* * * * * php artisan schedule:run` cron entry.
         $this->callAfterResolving(\Illuminate\Console\Scheduling\Schedule::class, function ($schedule) {
-            $store = app(ScheduleService::class);
-
-            $jobs = [
-                'status_report' => 'sentinel:send-status-report',
-                'update_report' => 'sentinel:send-update-report',
-            ];
-
-            foreach ($jobs as $key => $command) {
-                if ($cron = $store->cronExpression($key)) {
-                    $schedule->command($command)->cron($cron);
-                }
+            if ($cron = app(ScheduleService::class)->cronExpression('status_report')) {
+                $schedule->command('sentinel:send-status-report')->cron($cron);
             }
         });
 
@@ -92,7 +81,6 @@ class ServiceProvider extends AddonServiceProvider
             $this->commands([
                 ScanCommand::class,
                 SendStatusReportCommand::class,
-                SendUpdateReportCommand::class,
             ]);
         }
     }
