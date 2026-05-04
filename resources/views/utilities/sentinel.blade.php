@@ -249,7 +249,7 @@
                         <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
                             <div style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; color:#64748b;">Security Issues</div>
                             <button type="button" x-on:click="open = !open" aria-label="Toggle security issues list" style="display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:500; padding:3px 10px; border-radius:5px; color:#dc2626; background:#fff; border:1px solid #dc2626; cursor:pointer; font-family:inherit;">
-                                <span>{{ count($byPackage) }} {{ count($byPackage) === 1 ? 'package' : 'packages' }} affected</span>
+                                <span>{{ $d['total_vulns'] }} security {{ $d['total_vulns'] === 1 ? 'issue' : 'issues' }}</span>
                                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" x-bind:style="{ transform: open ? 'rotate(180deg)' : null }" style="display:block; flex-shrink:0; transition:transform 0.15s ease;"><path d="m4 6 4 4 4-4"></path></svg>
                             </button>
                         </div>
@@ -332,13 +332,25 @@
             @else
 
                 @php
-                    $cols = [
-                        'statamic'          => ['label' => 'Statamic', 'short' => null],
-                        'laravel'           => ['label' => 'Laravel',  'short' => null],
-                        'php'               => ['label' => 'PHP',      'short' => null],
-                        'composer_outdated' => ['label' => 'Composer', 'short' => null],
-                        'npm_outdated'      => ['label' => 'npm',      'short' => null],
+                    $versionCols = [
+                        'statamic' => 'Statamic',
+                        'laravel'  => 'Laravel',
+                        'php'      => 'PHP',
                     ];
+
+                    $ecosystemLines = function (int $vulns, int $outdated) {
+                        $lines = [];
+                        if ($vulns > 0) {
+                            $lines[] = $vulns . ' security ' . \Illuminate\Support\Str::plural('issue', $vulns);
+                        }
+                        if ($outdated > 0) {
+                            $lines[] = $outdated . ' ' . \Illuminate\Support\Str::plural('update', $outdated) . ' available';
+                        }
+                        if (empty($lines)) {
+                            $lines[] = 'Up to date';
+                        }
+                        return $lines;
+                    };
                 @endphp
 
                 <div style="border:1px solid #e2e8f0; border-radius:8px; overflow:hidden;">
@@ -347,36 +359,41 @@
                             <thead>
                                 <tr style="background:#f8fafc; border-bottom:1px solid #e2e8f0;">
                                     <th style="text-align:left; padding:10px 14px; font-weight:600; color:#475569; white-space:nowrap;">Date</th>
-                                    @foreach ($cols as $key => $col)
-                                        <th style="text-align:left; padding:10px 14px; font-weight:600; color:#475569; white-space:nowrap;">
-                                            {{ $col['label'] }}
-                                            @if ($col['short'])
-                                                <span style="display:block; font-size:11px; font-weight:500; color:#64748b;">{{ $col['short'] }}</span>
-                                            @endif
-                                        </th>
+                                    @foreach ($versionCols as $key => $label)
+                                        <th style="text-align:left; padding:10px 14px; font-weight:600; color:#475569; white-space:nowrap;">{{ $label }}</th>
                                     @endforeach
+                                    <th style="text-align:left; padding:10px 14px; font-weight:600; color:#475569; white-space:nowrap;">Composer</th>
+                                    <th style="text-align:left; padding:10px 14px; font-weight:600; color:#475569; white-space:nowrap;">npm</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @foreach ($history as $i => $entry)
                                     @php
-                                        $previous = $history[$i + 1] ?? null;
-
                                         try {
                                             $recordedAt = \Carbon\Carbon::parse($entry['recorded_at'])->format('j M Y, H:i');
                                         } catch (\Throwable $e) {
                                             $recordedAt = $entry['recorded_at'] ?? '—';
                                         }
+
+                                        $composerLines = $ecosystemLines(
+                                            (int) ($entry['composer_vulns']    ?? 0),
+                                            (int) ($entry['composer_outdated'] ?? 0)
+                                        );
+                                        $npmLines = $ecosystemLines(
+                                            (int) ($entry['npm_vulns']    ?? 0),
+                                            (int) ($entry['npm_outdated'] ?? 0)
+                                        );
                                     @endphp
                                     <tr @if (! $loop->last) style="border-bottom:1px solid #f1f5f9;" @endif>
                                         <td style="padding:10px 14px; color:#475569; white-space:nowrap;">{{ $recordedAt }}</td>
-                                        @foreach ($cols as $key => $col)
-                                            @php
-                                                $value   = $entry[$key] ?? null;
-                                                $display = $value === null ? '—' : (string) $value;
-                                            @endphp
-                                            <td style="padding:10px 14px; white-space:nowrap; color:#0f172a;">
-                                                {{ $display }}
+                                        @foreach ($versionCols as $key => $label)
+                                            <td style="padding:10px 14px; white-space:nowrap; color:#0f172a;">{{ $entry[$key] ?? '—' }}</td>
+                                        @endforeach
+                                        @foreach ([$composerLines, $npmLines] as $lines)
+                                            <td style="padding:10px 14px; white-space:nowrap; color:#0f172a; line-height:1.45;">
+                                                @foreach ($lines as $line)
+                                                    <div>{{ $line }}</div>
+                                                @endforeach
                                             </td>
                                         @endforeach
                                     </tr>

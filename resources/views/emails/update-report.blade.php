@@ -33,17 +33,7 @@
     $statusLine   = $hasAnyChange ? implode(', ', $bits) . '.' : 'No changes detected since the previous snapshot.';
     $statusAccent = $vulnsIntro > 0 ? '#ef4444' : ($hasAnyChange ? '#10b981' : '#94a3b8');
 
-    try {
-        $fromDate = $report['from_recorded_at']
-            ? \Carbon\Carbon::parse($report['from_recorded_at'])->format('j M Y')
-            : null;
-        $toDate = $report['to_recorded_at']
-            ? \Carbon\Carbon::parse($report['to_recorded_at'])->format('j M Y')
-            : null;
-    } catch (\Throwable $e) {
-        $fromDate = $report['from_recorded_at'] ?? null;
-        $toDate   = $report['to_recorded_at']   ?? null;
-    }
+    $sentDate = now()->format('j M Y, H:i');
 
     // Inline helpers — keep email template self-contained
     $platformRow = function (string $label, array $p) {
@@ -82,13 +72,8 @@
 
     {{-- Header --}}
     <div style="background:#0f172a; padding:24px 32px;">
-        <div style="font-size:18px; font-weight:700; color:#ffffff; letter-spacing:-0.02em;">Statamic Package Update Report</div>
-        <div style="font-size:13px; color:#94a3b8; margin-top:4px;">
-            {{ $host }}
-            @if ($fromDate && $toDate)
-                &nbsp;·&nbsp; {{ $fromDate }} → {{ $toDate }}
-            @endif
-        </div>
+        <div style="font-size:18px; font-weight:700; color:#ffffff; letter-spacing:-0.02em;">{{ $host }}</div>
+        <div style="font-size:13px; color:#cbd5e1; margin-top:4px;">Statamic Package Update Report &nbsp;·&nbsp; {{ $sentDate }}</div>
     </div>
 
     <div style="padding:28px 32px;">
