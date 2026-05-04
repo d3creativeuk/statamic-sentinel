@@ -24,7 +24,7 @@
     </header>
     <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:48px 24px; text-align:center;">
         <p style="font-size:18px; font-weight:600; color:#0f172a; margin:0 0 6px 0;">No scan yet</p>
-        <p style="font-size:13px; color:#64748b; margin:0 0 20px 0; line-height:1.55; max-width:420px; margin-left:auto; margin-right:auto;">Run your first scan to see Statamic, Laravel, PHP and dependency status. Future scans run automatically each day at 10:00.</p>
+        <p style="font-size:13px; color:#64748b; margin:0 0 20px 0; line-height:1.55; max-width:420px; margin-left:auto; margin-right:auto;">Run your first scan to see Statamic, Laravel, PHP and dependency status. Re-run any time using the Refresh button.</p>
         <a x-data
            x-init="if (! document.getElementById('sentinel-keyframes')) { var s = document.createElement('style'); s.id = 'sentinel-keyframes'; s.textContent = '@keyframes sentinel-spin { to { transform: rotate(360deg); } }'; document.head.appendChild(s); }"
            x-on:click.prevent="$el.querySelector('[data-sentinel-label]').textContent = 'Scanning…'; $el.querySelector('[data-sentinel-icon]').style.animation = 'sentinel-spin 1s linear infinite'; requestAnimationFrame(() => requestAnimationFrame(() => location.href = $el.href))"
@@ -208,7 +208,10 @@
                     x-bind:disabled="sending"
                     x-bind:style="{ background: state === 'success' ? '#10b981' : (state === 'error' ? '#ef4444' : '#0f172a') }"
                     style="flex-shrink:0; font-size:13px; font-weight:600; color:#fff; background:#0f172a; border:none; padding:7px 14px; border-radius:6px; cursor:pointer; white-space:nowrap;">
-                <span x-show="sending" x-cloak>Sending…</span>
+                <span x-show="sending" x-cloak style="display:inline-flex; align-items:center; gap:6px;">
+                    <span aria-hidden="true" style="display:inline-block; font-size:14px; line-height:1; transform-origin:center; animation:sentinel-spin 1s linear infinite;">↻</span>
+                    Sending…
+                </span>
                 <span x-show="!sending && state === 'success'" x-cloak>✓ Sent</span>
                 <span x-show="!sending && state === 'error'" x-cloak>✕ Failed</span>
                 <span x-show="!sending && state === 'idle'">Send Report</span>
@@ -274,7 +277,10 @@
                     x-bind:disabled="sending"
                     x-bind:style="{ background: state === 'success' ? '#10b981' : (state === 'error' ? '#ef4444' : '#0f172a') }"
                     style="flex-shrink:0; font-size:13px; font-weight:600; color:#fff; background:#0f172a; border:none; padding:7px 14px; border-radius:6px; cursor:pointer; white-space:nowrap;">
-                <span x-show="sending" x-cloak>Sending…</span>
+                <span x-show="sending" x-cloak style="display:inline-flex; align-items:center; gap:6px;">
+                    <span aria-hidden="true" style="display:inline-block; font-size:14px; line-height:1; transform-origin:center; animation:sentinel-spin 1s linear infinite;">↻</span>
+                    Sending…
+                </span>
                 <span x-show="!sending && state === 'success'" x-cloak>✓ Sent</span>
                 <span x-show="!sending && state === 'error'" x-cloak>✕ Failed</span>
                 <span x-show="!sending && state === 'idle'">Send Update Report</span>

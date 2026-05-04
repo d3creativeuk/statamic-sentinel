@@ -82,10 +82,12 @@ class SentinelController extends Controller
             ], 422);
         }
 
-        // Snapshot the current state before diffing. recordIfChanged() only
-        // appends to history when something has changed since the previous
-        // snapshot, so this is a no-op when nothing's moved.
-        (new AuditService())->refresh();
+        // Use the cached audit (cheap). recordIfChanged() runs inside refresh(),
+        // not run(), so capturing a post-update snapshot is the explicit job of
+        // the Refresh button. run() falls through to refresh() automatically
+        // when the cache is empty (e.g. fresh install), so first-ever sends
+        // still warm the cache and seed history.
+        (new AuditService())->run();
 
         $history = app(HistoryService::class)->all();
 
