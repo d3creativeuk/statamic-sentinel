@@ -79,6 +79,8 @@
     $hasCritical =
         ($composer['counts']['CRITICAL'] ?? 0) > 0 ||
         ($npm['counts']['CRITICAL'] ?? 0) > 0;
+
+    $userEmail = auth()->user()?->email ?? '';
 @endphp
 
     {{-- Header --}}
@@ -128,6 +130,24 @@
                     <span style="display:inline-block; margin-left:6px; padding:1px 7px; border-radius:9px; background:#e2e8f0; color:#475569; font-size:11px; font-weight:600;">{{ count($history) }}</span>
                 @endif
             </button>
+            <button type="button"
+                    role="tab"
+                    x-on:click="tab = 'status-report'"
+                    x-bind:aria-selected="tab === 'status-report'"
+                    x-bind:style="tab === 'status-report'
+                        ? 'cursor:pointer; background:transparent; border:0; border-bottom:2px solid #0f172a; padding:10px 14px; margin-bottom:-1px; font-size:13px; font-weight:600; font-family:inherit; color:#0f172a;'
+                        : 'cursor:pointer; background:transparent; border:0; border-bottom:2px solid transparent; padding:10px 14px; margin-bottom:-1px; font-size:13px; font-weight:600; font-family:inherit; color:#64748b;'">
+                Status Report
+            </button>
+            <button type="button"
+                    role="tab"
+                    x-on:click="tab = 'update-report'"
+                    x-bind:aria-selected="tab === 'update-report'"
+                    x-bind:style="tab === 'update-report'
+                        ? 'cursor:pointer; background:transparent; border:0; border-bottom:2px solid #0f172a; padding:10px 14px; margin-bottom:-1px; font-size:13px; font-weight:600; font-family:inherit; color:#0f172a;'
+                        : 'cursor:pointer; background:transparent; border:0; border-bottom:2px solid transparent; padding:10px 14px; margin-bottom:-1px; font-size:13px; font-weight:600; font-family:inherit; color:#64748b;'">
+                Update Report
+            </button>
         </div>
 
         {{-- Current tab --}}
@@ -160,142 +180,6 @@
                 </span>
             </div>
         @endforeach
-    </div>
-
-    {{-- Email report form --}}
-    @php $userEmail = auth()->user()?->email ?? ''; @endphp
-    <div x-data="{
-            sending: false,
-            state: 'idle',
-            message: '',
-            send(form) {
-                this.sending = true;
-                this.state = 'idle';
-                this.message = '';
-                fetch(form.action, {
-                    method: 'POST',
-                    body: new FormData(form),
-                    headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
-                })
-                .then(res => res.json().then(body => ({ ok: res.ok, body })))
-                .then(res => {
-                    this.sending = false;
-                    this.state = res.ok ? 'success' : 'error';
-                    this.message = res.body.message;
-                    if (res.ok) setTimeout(() => { this.state = 'idle'; this.message = ''; }, 4000);
-                })
-                .catch(() => {
-                    this.sending = false;
-                    this.state = 'error';
-                    this.message = 'Something went wrong. Please try again.';
-                });
-            }
-         }"
-         style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:14px 16px; margin-bottom:12px;">
-        <div style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; color:#94a3b8; margin-bottom:10px;">Email this report</div>
-        <form action="{{ route('statamic.cp.d3-sentinel.send-report') }}"
-              method="POST"
-              x-on:submit.prevent="send($event.target)"
-              style="display:flex; gap:8px; align-items:center;">
-            @csrf
-            <input type="text"
-                   name="email"
-                   value="{{ $userEmail }}"
-                   required
-                   placeholder="email@example.com, another@example.com"
-                   style="flex:1; font-size:13px; padding:7px 12px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#1e293b; outline:none; min-width:0;">
-            <button type="submit"
-                    x-bind:disabled="sending"
-                    x-bind:style="{ background: state === 'success' ? '#10b981' : (state === 'error' ? '#ef4444' : '#0f172a') }"
-                    style="flex-shrink:0; font-size:13px; font-weight:600; color:#fff; background:#0f172a; border:none; padding:7px 14px; border-radius:6px; cursor:pointer; white-space:nowrap;">
-                <span x-show="sending" x-cloak style="display:inline-flex; align-items:center; gap:6px;">
-                    <span aria-hidden="true" style="display:inline-block; font-size:14px; line-height:1; transform-origin:center; animation:sentinel-spin 1s linear infinite;">↻</span>
-                    Sending…
-                </span>
-                <span x-show="!sending && state === 'success'" x-cloak>✓ Sent</span>
-                <span x-show="!sending && state === 'error'" x-cloak>✕ Failed</span>
-                <span x-show="!sending && state === 'idle'">Send Report</span>
-            </button>
-        </form>
-        <div x-show="message" x-cloak
-             x-bind:style="{ color: state === 'success' ? '#10b981' : '#ef4444' }"
-             style="font-size:13px; margin-top:8px;"
-             x-text="message"></div>
-    </div>
-
-    {{-- Email update report form --}}
-    <div x-data="{
-            sending: false,
-            state: 'idle',
-            message: '',
-            canForce: false,
-            send(form, force = false) {
-                this.sending = true;
-                this.state = 'idle';
-                this.message = '';
-                this.canForce = false;
-                const data = new FormData(form);
-                if (force) data.set('force', '1');
-                fetch(form.action, {
-                    method: 'POST',
-                    body: data,
-                    headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
-                })
-                .then(res => res.json().then(body => ({ ok: res.ok, body })))
-                .then(res => {
-                    this.sending = false;
-                    this.state = res.ok ? 'success' : 'error';
-                    this.message = res.body.message;
-                    this.canForce = res.body.can_force === true;
-                    if (res.ok) setTimeout(() => { this.state = 'idle'; this.message = ''; this.canForce = false; }, 4000);
-                })
-                .catch(() => {
-                    this.sending = false;
-                    this.state = 'error';
-                    this.message = 'Something went wrong. Please try again.';
-                });
-            }
-         }"
-         style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:14px 16px; margin-bottom:12px;">
-        <div style="display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin-bottom:10px;">
-            <div style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; color:#94a3b8;">Email update report</div>
-            <div style="font-size:11px; color:#94a3b8;">Diff vs. previous snapshot</div>
-        </div>
-        <form x-ref="form"
-              action="{{ route('statamic.cp.d3-sentinel.send-update-report') }}"
-              method="POST"
-              x-on:submit.prevent="send($refs.form)"
-              style="display:flex; gap:8px; align-items:center;">
-            @csrf
-            <input type="text"
-                   name="email"
-                   value="{{ $userEmail }}"
-                   required
-                   placeholder="email@example.com, another@example.com"
-                   style="flex:1; font-size:13px; padding:7px 12px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#1e293b; outline:none; min-width:0;">
-            <button type="submit"
-                    x-bind:disabled="sending"
-                    x-bind:style="{ background: state === 'success' ? '#10b981' : (state === 'error' ? '#ef4444' : '#0f172a') }"
-                    style="flex-shrink:0; font-size:13px; font-weight:600; color:#fff; background:#0f172a; border:none; padding:7px 14px; border-radius:6px; cursor:pointer; white-space:nowrap;">
-                <span x-show="sending" x-cloak style="display:inline-flex; align-items:center; gap:6px;">
-                    <span aria-hidden="true" style="display:inline-block; font-size:14px; line-height:1; transform-origin:center; animation:sentinel-spin 1s linear infinite;">↻</span>
-                    Sending…
-                </span>
-                <span x-show="!sending && state === 'success'" x-cloak>✓ Sent</span>
-                <span x-show="!sending && state === 'error'" x-cloak>✕ Failed</span>
-                <span x-show="!sending && state === 'idle'">Send Update Report</span>
-            </button>
-        </form>
-        <div x-show="message" x-cloak
-             style="display:flex; align-items:center; gap:10px; font-size:13px; margin-top:8px;">
-            <span x-text="message" x-bind:style="{ color: state === 'success' ? '#10b981' : '#ef4444' }"></span>
-            <button type="button"
-                    x-show="canForce && !sending"
-                    x-on:click="send($refs.form, true)"
-                    style="font-size:12px; font-weight:600; color:#0f172a; background:#fff; border:1px solid #e2e8f0; padding:3px 10px; border-radius:5px; cursor:pointer; font-family:inherit;">
-                Send anyway
-            </button>
-        </div>
     </div>
 
     {{-- Package audit sections --}}
@@ -506,6 +390,148 @@
 
             @endif
 
+        </div>
+
+        {{-- Status Report tab --}}
+        <div x-show="tab === 'status-report'" role="tabpanel" x-cloak>
+            <div x-data="{
+                    sending: false,
+                    state: 'idle',
+                    message: '',
+                    send(form) {
+                        this.sending = true;
+                        this.state = 'idle';
+                        this.message = '';
+                        fetch(form.action, {
+                            method: 'POST',
+                            body: new FormData(form),
+                            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
+                        })
+                        .then(res => res.json().then(body => ({ ok: res.ok, body })))
+                        .then(res => {
+                            this.sending = false;
+                            this.state = res.ok ? 'success' : 'error';
+                            this.message = res.body.message;
+                            if (res.ok) setTimeout(() => { this.state = 'idle'; this.message = ''; }, 4000);
+                        })
+                        .catch(() => {
+                            this.sending = false;
+                            this.state = 'error';
+                            this.message = 'Something went wrong. Please try again.';
+                        });
+                    }
+                 }"
+                 style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:14px 16px;">
+                <div style="display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin-bottom:10px;">
+                    <div style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; color:#94a3b8;">Email status report</div>
+                    <div style="font-size:11px; color:#94a3b8;">Snapshot of current versions, vulnerabilities, and updates</div>
+                </div>
+                <form action="{{ route('statamic.cp.d3-sentinel.send-report') }}"
+                      method="POST"
+                      x-on:submit.prevent="send($event.target)"
+                      style="display:flex; gap:8px; align-items:center;">
+                    @csrf
+                    <input type="text"
+                           name="email"
+                           value="{{ $userEmail }}"
+                           required
+                           placeholder="email@example.com, another@example.com"
+                           style="flex:1; font-size:13px; padding:7px 12px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#1e293b; outline:none; min-width:0;">
+                    <button type="submit"
+                            x-bind:disabled="sending"
+                            x-bind:style="{ background: state === 'success' ? '#10b981' : (state === 'error' ? '#ef4444' : '#0f172a') }"
+                            style="flex-shrink:0; font-size:13px; font-weight:600; color:#fff; background:#0f172a; border:none; padding:7px 14px; border-radius:6px; cursor:pointer; white-space:nowrap;">
+                        <span x-show="sending" x-cloak style="display:inline-flex; align-items:center; gap:6px;">
+                            <span aria-hidden="true" style="display:inline-block; font-size:14px; line-height:1; transform-origin:center; animation:sentinel-spin 1s linear infinite;">↻</span>
+                            Sending…
+                        </span>
+                        <span x-show="!sending && state === 'success'" x-cloak>✓ Sent</span>
+                        <span x-show="!sending && state === 'error'" x-cloak>✕ Failed</span>
+                        <span x-show="!sending && state === 'idle'">Send Status Report</span>
+                    </button>
+                </form>
+                <div x-show="message" x-cloak
+                     x-bind:style="{ color: state === 'success' ? '#10b981' : '#ef4444' }"
+                     style="font-size:13px; margin-top:8px;"
+                     x-text="message"></div>
+            </div>
+        </div>
+
+        {{-- Update Report tab --}}
+        <div x-show="tab === 'update-report'" role="tabpanel" x-cloak>
+            <div x-data="{
+                    sending: false,
+                    state: 'idle',
+                    message: '',
+                    canForce: false,
+                    send(form, force = false) {
+                        this.sending = true;
+                        this.state = 'idle';
+                        this.message = '';
+                        this.canForce = false;
+                        const data = new FormData(form);
+                        if (force) data.set('force', '1');
+                        fetch(form.action, {
+                            method: 'POST',
+                            body: data,
+                            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
+                        })
+                        .then(res => res.json().then(body => ({ ok: res.ok, body })))
+                        .then(res => {
+                            this.sending = false;
+                            this.state = res.ok ? 'success' : 'error';
+                            this.message = res.body.message;
+                            this.canForce = res.body.can_force === true;
+                            if (res.ok) setTimeout(() => { this.state = 'idle'; this.message = ''; this.canForce = false; }, 4000);
+                        })
+                        .catch(() => {
+                            this.sending = false;
+                            this.state = 'error';
+                            this.message = 'Something went wrong. Please try again.';
+                        });
+                    }
+                 }"
+                 style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:14px 16px;">
+                <div style="display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin-bottom:10px;">
+                    <div style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; color:#94a3b8;">Email update report</div>
+                    <div style="font-size:11px; color:#94a3b8;">Diff vs. previous snapshot</div>
+                </div>
+                <form x-ref="form"
+                      action="{{ route('statamic.cp.d3-sentinel.send-update-report') }}"
+                      method="POST"
+                      x-on:submit.prevent="send($refs.form)"
+                      style="display:flex; gap:8px; align-items:center;">
+                    @csrf
+                    <input type="text"
+                           name="email"
+                           value="{{ $userEmail }}"
+                           required
+                           placeholder="email@example.com, another@example.com"
+                           style="flex:1; font-size:13px; padding:7px 12px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#1e293b; outline:none; min-width:0;">
+                    <button type="submit"
+                            x-bind:disabled="sending"
+                            x-bind:style="{ background: state === 'success' ? '#10b981' : (state === 'error' ? '#ef4444' : '#0f172a') }"
+                            style="flex-shrink:0; font-size:13px; font-weight:600; color:#fff; background:#0f172a; border:none; padding:7px 14px; border-radius:6px; cursor:pointer; white-space:nowrap;">
+                        <span x-show="sending" x-cloak style="display:inline-flex; align-items:center; gap:6px;">
+                            <span aria-hidden="true" style="display:inline-block; font-size:14px; line-height:1; transform-origin:center; animation:sentinel-spin 1s linear infinite;">↻</span>
+                            Sending…
+                        </span>
+                        <span x-show="!sending && state === 'success'" x-cloak>✓ Sent</span>
+                        <span x-show="!sending && state === 'error'" x-cloak>✕ Failed</span>
+                        <span x-show="!sending && state === 'idle'">Send Update Report</span>
+                    </button>
+                </form>
+                <div x-show="message" x-cloak
+                     style="display:flex; align-items:center; gap:10px; font-size:13px; margin-top:8px;">
+                    <span x-text="message" x-bind:style="{ color: state === 'success' ? '#10b981' : '#ef4444' }"></span>
+                    <button type="button"
+                            x-show="canForce && !sending"
+                            x-on:click="send($refs.form, true)"
+                            style="font-size:12px; font-weight:600; color:#0f172a; background:#fff; border:1px solid #e2e8f0; padding:3px 10px; border-radius:5px; cursor:pointer; font-family:inherit;">
+                        Send anyway
+                    </button>
+                </div>
+            </div>
         </div>
 
     </div>
