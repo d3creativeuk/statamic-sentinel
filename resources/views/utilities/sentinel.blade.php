@@ -3,6 +3,16 @@
     Mirrors the widget data, expanded: full vulnerability list + full outdated list.
 --}}
 
+@php
+    $_devName = $sentinelDevName ?? null;
+    $_devUrl  = $sentinelDevUrl ?? null;
+    $sentinelBrandSuffix = $_devName
+        ? ' by ' . ($_devUrl
+            ? '<a href="' . e($_devUrl) . '" target="_blank" style="color:rgb(63 63 71); text-decoration:underline;">' . e($_devName) . '</a>'
+            : e($_devName))
+        : '';
+@endphp
+
 @extends('statamic::layout')
 
 @section('title', 'Sentinel')
@@ -39,7 +49,7 @@
     </div>
     <div style="display:flex; align-items:center; justify-content:flex-start; margin-top:16px; padding-top:14px;">
         <p style="font-size:12px; color:rgb(63 63 71); margin:0; letter-spacing:-0.01em;">
-            Sentinel by <a href="https://d3creative.uk/sentinel" target="_blank" style="color:rgb(63 63 71); text-decoration:underline;">D3 Creative</a>. Security and update alerts for Statamic sites.
+            Sentinel{!! $sentinelBrandSuffix !!}. Security and update alerts for Statamic sites.
         </p>
     </div>
 
@@ -605,7 +615,7 @@
     {{-- Footer --}}
     <div style="display:flex; align-items:center; justify-content:flex-start; margin-top:16px; padding-top:14px;">
         <p style="font-size:12px; color:rgb(63 63 71); margin:0; letter-spacing:-0.01em;">
-            Sentinel by <a href="https://d3creative.uk/sentinel" target="_blank" style="color:rgb(63 63 71); text-decoration:underline;">D3 Creative</a>. Security and update alerts for Statamic sites.
+            Sentinel{!! $sentinelBrandSuffix !!}. Security and update alerts for Statamic sites.
         </p>
     </div>
 

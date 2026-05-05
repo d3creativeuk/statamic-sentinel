@@ -33,13 +33,10 @@ class ServiceProvider extends AddonServiceProvider
         ], 'sentinel-config');
 
         View::composer('statamic-sentinel::*', function ($view) {
-            $name = config('sentinel.developer.name');
-            $url  = config('sentinel.developer.url');
-
-            $view->with('sentinelDeveloper', $name ? [
-                'name' => $name,
-                'url'  => $url ?: null,
-            ] : null);
+            $view->with([
+                'sentinelDevName' => config('sentinel.developer.name') ?: null,
+                'sentinelDevUrl'  => config('sentinel.developer.url') ?: null,
+            ]);
         });
 
         $this->registerCpRoutes(function () {

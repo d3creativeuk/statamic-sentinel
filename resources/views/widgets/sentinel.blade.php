@@ -3,6 +3,16 @@
     Statamic version, Laravel version, PHP version, and vulnerability counts by severity.
 --}}
 
+@php
+    $_devName = $sentinelDevName ?? null;
+    $_devUrl  = $sentinelDevUrl ?? null;
+    $sentinelBrandSuffix = $_devName
+        ? ' by ' . ($_devUrl
+            ? '<a href="' . e($_devUrl) . '" target="_blank" style="color:#64748b; text-decoration:underline;">' . e($_devName) . '</a>'
+            : e($_devName))
+        : '';
+@endphp
+
 <div style="background:#fff; border:1px solid #e4e4e7; border-radius:8px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #1e293b;">
 
 @if (! $audit)
@@ -33,7 +43,7 @@
     </div>
     <div style="padding:10px 18px; border-top:1px solid #e4e4e7; background:#fafafa; border-radius:0 0 8px 8px;">
         <p style="font-size:11px; color:#64748b; margin:0; letter-spacing:-0.01em;">
-            Sentinel by <a href="https://d3creative.uk/sentinel" target="_blank" style="color:#64748b; text-decoration:underline;">D3 Creative</a>. Security and update alerts for Statamic sites.
+            Sentinel{!! $sentinelBrandSuffix !!}. Security and update alerts for Statamic sites.
         </p>
     </div>
 
@@ -197,7 +207,7 @@
     {{-- Card footer --}}
     <div style="padding:10px 18px; border-top:1px solid #e4e4e7; background:#fafafa; border-radius:0 0 8px 8px;">
         <p style="font-size:11px; color:#64748b; margin:0; letter-spacing:-0.01em;">
-            Sentinel by <a href="https://d3creative.uk/sentinel" target="_blank" style="color:#64748b; text-decoration:underline;">D3 Creative</a>. Security and update alerts for Statamic sites.
+            Sentinel{!! $sentinelBrandSuffix !!}. Security and update alerts for Statamic sites.
         </p>
     </div>
 

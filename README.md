@@ -57,6 +57,23 @@ Then add the widget to your CP dashboard by adding `sentinel` to the widgets arr
 ],
 ```
 
+## Branding (optional)
+
+Sentinel ships unbranded by default - the widget, utility, and report emails just say "Sentinel". If you'd like to attribute the addon to your agency or yourself, set two env vars in the host app's `.env`:
+
+```env
+SENTINEL_DEV_NAME='Your Agency'
+SENTINEL_DEV_URL='https://your-agency.example/sentinel'
+```
+
+When set, the CP widget/utility footers and email footers add a `Sentinel by <name>` link. Setting only `SENTINEL_DEV_NAME` (no URL) renders the name as plain text.
+
+To override the bundled config file directly, publish it:
+
+```bash
+php artisan vendor:publish --tag=sentinel-config
+```
+
 ## Requirements
 
 - PHP 8.0+
