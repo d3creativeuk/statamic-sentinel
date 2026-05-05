@@ -3,6 +3,7 @@
 namespace D3Creative\Sentinel\Services;
 
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Carbon\Carbon;
 
 class HistoryService
@@ -32,7 +33,7 @@ class HistoryService
      * Build a snapshot from the audit array and append it to the history file
      * if any tracked field differs from the most recent stored snapshot.
      *
-     * Silent on failure — file-system errors must never break CP rendering.
+     * Silent on failure - file-system errors must never break CP rendering.
      */
     public function recordIfChanged(array $audit): void
     {
@@ -69,6 +70,34 @@ class HistoryService
             return is_array($decoded) ? $decoded : [];
         } catch (\Throwable $e) {
             return [];
+        }
+    }
+
+    /**
+     * Remove a single history entry by `id` (or `recorded_at` for legacy
+     * entries written before ids existed). Returns true if a row was removed,
+     * false if the key matched nothing or the write failed.
+     */
+    public function delete(string $key): bool
+    {
+        try {
+            $entries = $this->all();
+            $before  = count($entries);
+
+            $entries = array_values(array_filter(
+                $entries,
+                fn ($e) => ($e['id'] ?? null) !== $key && ($e['recorded_at'] ?? null) !== $key
+            ));
+
+            if (count($entries) === $before) {
+                return false;
+            }
+
+            $this->write($entries);
+
+            return true;
+        } catch (\Throwable $e) {
+            return false;
         }
     }
 
@@ -110,6 +139,7 @@ class HistoryService
     protected function buildSnapshot(array $audit): array
     {
         return [
+            'id'                        => Str::random(16),
             'recorded_at'               => Carbon::now()->toIso8601String(),
             'statamic'                  => $audit['statamic']['current'] ?? null,
             'laravel'                   => $audit['laravel']['version']  ?? null,
@@ -122,7 +152,7 @@ class HistoryService
             'npm_vulns'                 => (int) ($audit['npm']['total_vulns']                             ?? 0),
             // Per-package installed versions, used by the update report to diff
             // two snapshots (e.g. "statamic/cms 6.15.0 → 6.16.0"). Payload-only
-            // — not part of TRACKED_FIELDS, so doesn't drive change detection.
+            // - not part of TRACKED_FIELDS, so doesn't drive change detection.
             'composer_packages'         => $audit['composer']['installed'] ?? [],
             'npm_packages'              => $audit['npm']['installed']      ?? [],
         ];

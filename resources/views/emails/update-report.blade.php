@@ -33,9 +33,17 @@
     $statusLine   = $hasAnyChange ? implode(', ', $bits) . '.' : 'No changes detected since the previous snapshot.';
     $statusAccent = $vulnsIntro > 0 ? '#ef4444' : ($hasAnyChange ? '#10b981' : '#94a3b8');
 
+    if ($vulnsIntro > 0) {
+        $intro = 'Your Statamic website has been updated, but new security issues need attention.';
+    } elseif ($hasAnyChange) {
+        $intro = 'Your Statamic website has been updated and is in good health.';
+    } else {
+        $intro = 'No updates have been applied to your Statamic website since the last report.';
+    }
+
     $sentDate = now()->format('j M Y, H:i');
 
-    // Inline helpers — keep email template self-contained
+    // Inline helpers - keep email template self-contained
     $platformRow = function (string $label, array $p) {
         $changed = $p['changed'] ?? false;
         $from    = $p['from'] ?? null;
@@ -47,7 +55,7 @@
             'colour'  => $changed ? '#10b981' : '#94a3b8',
             'detail'  => $changed
                 ? ($from . ' → ' . $to)
-                : ($to ?? $from ?? '—'),
+                : ($to ?? $from ?? '-'),
             'changed' => $changed,
         ];
     };
@@ -80,7 +88,8 @@
 
         {{-- Status banner --}}
         <div style="background:{{ $statusAccent }}1a; border-left:3px solid {{ $statusAccent }}; padding:14px 16px; border-radius:6px; margin-bottom:24px;">
-            <span style="font-size:14px; font-weight:500; color:#0f172a;">{{ $statusLine }}</span>
+            <div style="font-size:15px; font-weight:600; color:#0f172a; line-height:1.4;">{{ $intro }}</div>
+            <div style="font-size:13px; color:#475569; margin-top:6px;">{{ $statusLine }}</div>
         </div>
 
         {{-- Platform rows: Statamic / Laravel / PHP --}}
@@ -201,7 +210,7 @@
                 <td align="center" style="padding:4px 0 8px;">
                     <a href="{{ $utility_url }}"
                        style="display:inline-block; background:#0f172a; color:#ffffff; font-size:14px; font-weight:600; text-decoration:none; padding:12px 28px; border-radius:8px;">
-                        View full report →
+                        View current status →
                     </a>
                 </td>
             </tr>

@@ -25,7 +25,7 @@ class SentinelUpdateReport extends Mailable
     {
         $host = parse_url(config('app.url'), PHP_URL_HOST) ?: 'site';
 
-        return $this->subject('Statamic Package Update Report — ' . $host)
+        return $this->subject('Statamic Package Update Report - ' . $host)
                     ->view('statamic-sentinel::emails.update-report')
                     ->with([
                         'report'      => $this->report,

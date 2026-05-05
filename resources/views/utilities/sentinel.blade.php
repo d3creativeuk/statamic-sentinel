@@ -1,5 +1,5 @@
 {{--
-    D3 Creative — Sentinel Utility (full report)
+    D3 Creative - Sentinel Utility (full report)
     Mirrors the widget data, expanded: full vulnerability list + full outdated list.
 --}}
 
@@ -35,7 +35,7 @@
                 <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
             </svg>
         </a>
-        <p style="font-size:11px; color:#64748b; margin:14px 0 0 0;">Takes 10–20 seconds.</p>
+        <p style="font-size:11px; color:#64748b; margin:14px 0 0 0;">Takes 10-20 seconds.</p>
     </div>
     <div style="display:flex; align-items:center; justify-content:flex-start; margin-top:16px; padding-top:14px;">
         <p style="font-size:12px; color:rgb(63 63 71); margin:0; letter-spacing:-0.01em;">
@@ -49,8 +49,8 @@
     extract($audit);
 
     $statusColours = [
-        'ok'         => '#10b981',
-        'active'     => '#10b981',
+        'ok'         => '#047857',
+        'active'     => '#047857',
         'outdated'   => '#f59e0b',
         'security'   => '#f59e0b',
         'vulnerable' => '#ef4444',
@@ -62,7 +62,7 @@
         'CRITICAL' => '#ef4444',
         'HIGH'     => '#f97316',
         'MEDIUM'   => '#f59e0b',
-        'LOW'      => '#3b82f6',
+        'LOW'      => '#1d4ed8',
         'UNKNOWN'  => '#94a3b8',
     ];
 
@@ -163,7 +163,7 @@
             @php
                 $outdated   = ! empty($card['latest']) && version_compare($card['version'], $card['latest'], '<');
                 $isEol      = $card['status'] === 'eol';
-                $pillColour = ($card['security'] || $isEol) ? '#dc2626' : ($outdated ? '#3b82f6' : '#10b981');
+                $pillColour = ($card['security'] || $isEol) ? '#dc2626' : ($outdated ? '#1d4ed8' : '#047857');
             @endphp
             <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; padding:8px 14px; {{ ! $loop->last ? 'border-bottom:1px solid #e2e8f0;' : '' }}">
                 <span style="font-size:13px; font-weight:600; color:#0f172a;">{{ $card['label'] }}</span>
@@ -184,8 +184,8 @@
 
     {{-- Package audit sections --}}
     @foreach ([
-        ['label' => 'Composer packages', 'data' => $composer, 'tooltip' => "PHP packages that power your site's backend — including Statamic itself, Laravel (the framework it runs on), and any installed add-ons. Keeping these up to date is important for security and stability."],
-        ['label' => 'npm packages',      'data' => $npm,      'tooltip' => "JavaScript packages used to build your site's frontend — things like scripts and styles that run in your visitors' browsers. Updates often include security fixes and improvements."],
+        ['label' => 'Composer packages', 'data' => $composer, 'tooltip' => "PHP packages that power your site's backend - including Statamic itself, Laravel (the framework it runs on), and any installed add-ons. Keeping these up to date is important for security and stability."],
+        ['label' => 'npm packages',      'data' => $npm,      'tooltip' => "JavaScript packages used to build your site's frontend - things like scripts and styles that run in your visitors' browsers. Updates often include security fixes and improvements."],
     ] as $row)
     @php $d = $row['data']; @endphp
     <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:14px 16px; margin-bottom:12px;">
@@ -193,9 +193,9 @@
         <div style="display:flex; align-items:center; gap:6px; margin-bottom:12px;">
             <span style="font-weight:600; font-size:14px;">
                 @if($d['status'] === 'unavailable')
-                    {{ $row['label'] }} — lock file not found
+                    {{ $row['label'] }} - lock file not found
                 @elseif($d['status'] === 'error')
-                    {{ $row['label'] }} — <span style="color:#ef4444;">⚠ check failed</span>
+                    {{ $row['label'] }} - <span style="color:#ef4444;">⚠ check failed</span>
                 @else
                     {{ $d['total_packages'] }} {{ $row['label'] }} scanned
                 @endif
@@ -217,7 +217,7 @@
                 @if($d['status'] === 'ok')
                     <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
                         <div style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; color:#64748b;">Security Issues</div>
-                        <span style="display:inline-flex; align-items:center; font-size:12px; font-weight:500; color:#10b981; background:#fff; border:1px solid #10b981; padding:3px 10px; border-radius:5px;">No known vulnerabilities</span>
+                        <span style="display:inline-flex; align-items:center; font-size:12px; font-weight:500; color:#047857; background:#fff; border:1px solid #047857; padding:3px 10px; border-radius:5px;">No known vulnerabilities</span>
                     </div>
                 @else
                     @php
@@ -284,7 +284,7 @@
             <div x-data="{ open: false }" style="border-top:1px solid #e2e8f0; padding-top:12px;">
                 <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
                     <div style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; color:#64748b;">Updates Available</div>
-                    <button type="button" x-on:click="open = !open" aria-label="Toggle updates list" style="display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:500; padding:3px 10px; border-radius:5px; color:#3b82f6; background:#fff; border:1px solid #3b82f6; cursor:pointer; font-family:inherit;">
+                    <button type="button" x-on:click="open = !open" aria-label="Toggle updates list" style="display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:500; padding:3px 10px; border-radius:5px; color:#1d4ed8; background:#fff; border:1px solid #1d4ed8; cursor:pointer; font-family:inherit;">
                         <span>{{ count($packages) }} {{ count($packages) === 1 ? 'update' : 'updates' }} available</span>
                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" x-bind:style="{ transform: open ? 'rotate(180deg)' : null }" style="display:block; flex-shrink:0; transition:transform 0.15s ease;">
                             <path d="m4 6 4 4 4-4" />
@@ -300,7 +300,7 @@
                                 @endif
                                 <div style="font-size:13px; font-weight:600; color:#0f172a; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ $pkg['name'] }}</div>
                             </div>
-                            <span style="display:inline-flex; align-items:center; font-size:11px; font-weight:500; padding:1px 7px; border-radius:4px; color:#3b82f6; background:#fff; border:1px solid #3b82f6; flex-shrink:0; font-variant-numeric:tabular-nums;">{{ $pkg['current'] }} → {{ $pkg['latest'] }}</span>
+                            <span style="display:inline-flex; align-items:center; font-size:11px; font-weight:500; padding:1px 7px; border-radius:4px; color:#1d4ed8; background:#fff; border:1px solid #1d4ed8; flex-shrink:0; font-variant-numeric:tabular-nums;">{{ $pkg['current'] }} → {{ $pkg['latest'] }}</span>
                         </div>
                     @endforeach
                 </div>
@@ -309,7 +309,7 @@
             <div style="border-top:1px solid #e2e8f0; padding-top:12px;">
                 <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
                     <div style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; color:#64748b;">Updates Available</div>
-                    <span style="display:inline-flex; align-items:center; font-size:12px; font-weight:500; padding:3px 10px; border-radius:5px; color:#10b981; background:#fff; border:1px solid #10b981;">All packages up to date</span>
+                    <span style="display:inline-flex; align-items:center; font-size:12px; font-weight:500; padding:3px 10px; border-radius:5px; color:#047857; background:#fff; border:1px solid #047857;">All packages up to date</span>
                 </div>
             </div>
         @endif
@@ -364,6 +364,7 @@
                                     @endforeach
                                     <th style="text-align:left; padding:10px 14px; font-weight:600; color:#475569; white-space:nowrap;">Composer</th>
                                     <th style="text-align:left; padding:10px 14px; font-weight:600; color:#475569; white-space:nowrap;">npm</th>
+                                    <th style="text-align:right; padding:10px 14px; font-weight:600; color:#475569; white-space:nowrap;">&nbsp;</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -372,7 +373,7 @@
                                         try {
                                             $recordedAt = \Carbon\Carbon::parse($entry['recorded_at'])->format('j M Y, H:i');
                                         } catch (\Throwable $e) {
-                                            $recordedAt = $entry['recorded_at'] ?? '—';
+                                            $recordedAt = $entry['recorded_at'] ?? '-';
                                         }
 
                                         $composerLines = $ecosystemLines(
@@ -383,11 +384,16 @@
                                             (int) ($entry['npm_vulns']    ?? 0),
                                             (int) ($entry['npm_outdated'] ?? 0)
                                         );
+
+                                        $deleteKey = $entry['id'] ?? ($entry['recorded_at'] ?? '');
+                                        $confirmText = $loop->index < 2
+                                            ? "Delete this snapshot? The next Update Report will compare against an earlier snapshot."
+                                            : "Delete this snapshot? This won't affect the audit cache, only the history row.";
                                     @endphp
                                     <tr @if (! $loop->last) style="border-bottom:1px solid #f1f5f9;" @endif>
                                         <td style="padding:10px 14px; color:#475569; white-space:nowrap;">{{ $recordedAt }}</td>
                                         @foreach ($versionCols as $key => $label)
-                                            <td style="padding:10px 14px; white-space:nowrap; color:#0f172a;">{{ $entry[$key] ?? '—' }}</td>
+                                            <td style="padding:10px 14px; white-space:nowrap; color:#0f172a;">{{ $entry[$key] ?? '-' }}</td>
                                         @endforeach
                                         @foreach ([$composerLines, $npmLines] as $lines)
                                             <td style="padding:10px 14px; white-space:nowrap; color:#0f172a; line-height:1.45;">
@@ -396,6 +402,16 @@
                                                 @endforeach
                                             </td>
                                         @endforeach
+                                        <td style="padding:10px 14px; text-align:right; white-space:nowrap;">
+                                            @if ($deleteKey !== '')
+                                                @include('statamic-sentinel::utilities._delete_row_button', [
+                                                    'action'  => route('statamic.cp.d3-sentinel.delete-history'),
+                                                    'field'   => 'key',
+                                                    'value'   => $deleteKey,
+                                                    'confirm' => $confirmText,
+                                                ])
+                                            @endif
+                                        </td>
                                     </tr>
                                 @endforeach
                             </tbody>
@@ -461,7 +477,7 @@
                     </button>
                     <button type="submit"
                             x-bind:disabled="sending"
-                            x-bind:style="{ background: state === 'success' ? '#10b981' : (state === 'error' ? '#ef4444' : '#0f172a') }"
+                            x-bind:style="{ background: state === 'success' ? '#047857' : (state === 'error' ? '#ef4444' : '#0f172a') }"
                             style="flex-shrink:0; font-size:13px; font-weight:600; color:#fff; background:#0f172a; border:none; padding:7px 14px; border-radius:6px; cursor:pointer; white-space:nowrap;">
                         <span x-show="sending" x-cloak style="display:inline-flex; align-items:center; gap:6px;">
                             <span aria-hidden="true" style="display:inline-block; font-size:14px; line-height:1; transform-origin:center; animation:sentinel-spin 1s linear infinite;">↻</span>
@@ -473,7 +489,7 @@
                     </button>
                 </form>
                 <div x-show="message" x-cloak
-                     x-bind:style="{ color: state === 'success' ? '#10b981' : '#ef4444' }"
+                     x-bind:style="{ color: state === 'success' ? '#047857' : '#ef4444' }"
                      style="font-size:13px; margin-top:8px;"
                      x-text="message"></div>
             </div>
@@ -553,7 +569,7 @@
                     </button>
                     <button type="submit"
                             x-bind:disabled="sending"
-                            x-bind:style="{ background: state === 'success' ? '#10b981' : (state === 'notice' ? '#f59e0b' : (state === 'error' ? '#ef4444' : '#0f172a')) }"
+                            x-bind:style="{ background: state === 'success' ? '#047857' : (state === 'notice' ? '#f59e0b' : (state === 'error' ? '#ef4444' : '#0f172a')) }"
                             style="flex-shrink:0; font-size:13px; font-weight:600; color:#fff; background:#0f172a; border:none; padding:7px 14px; border-radius:6px; cursor:pointer; white-space:nowrap;">
                         <span x-show="sending" x-cloak style="display:inline-flex; align-items:center; gap:6px;">
                             <span aria-hidden="true" style="display:inline-block; font-size:14px; line-height:1; transform-origin:center; animation:sentinel-spin 1s linear infinite;">↻</span>
@@ -567,7 +583,7 @@
                 </form>
                 <div x-show="message" x-cloak
                      style="display:flex; align-items:center; gap:10px; font-size:13px; margin-top:8px;">
-                    <span x-text="message" x-bind:style="{ color: state === 'success' ? '#10b981' : (state === 'notice' ? '#f59e0b' : '#ef4444') }"></span>
+                    <span x-text="message" x-bind:style="{ color: state === 'success' ? '#047857' : (state === 'notice' ? '#f59e0b' : '#ef4444') }"></span>
                     <button type="button"
                             x-show="canForce && !sending"
                             x-on:click="send($refs.form, true)"
@@ -604,7 +620,7 @@
         <dialog x-ref="dlg"
                 x-on:click.self="$refs.dlg.close()"
                 x-on:close="src = ''"
-                style="width:min(960px,95vw); height:min(820px,90vh); padding:0; border:none; border-radius:10px; overflow:hidden; box-shadow:0 25px 50px -12px rgba(0,0,0,0.25);">
+                style="position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); width:min(960px,95vw); height:min(820px,90vh); margin:0; padding:0; border:none; border-radius:10px; overflow:hidden; box-shadow:0 25px 50px -12px rgba(0,0,0,0.25);">
             <div style="display:flex; align-items:center; justify-content:space-between; padding:10px 14px; border-bottom:1px solid #e2e8f0; background:#f8fafc;">
                 <strong style="font-size:13px; color:#0f172a;" x-text="title"></strong>
                 <button type="button"
@@ -613,11 +629,48 @@
                     Close
                 </button>
             </div>
-            <template x-if="src">
-                <iframe x-bind:src="src"
-                        title="Email preview"
-                        style="display:block; width:100%; height:calc(100% - 41px); border:none; background:#fff;"></iframe>
-            </template>
+            <iframe x-bind:src="src"
+                    title="Email preview"
+                    style="display:block; width:100%; height:calc(100% - 41px); border:none; background:#fff;"></iframe>
+        </dialog>
+    </div>
+
+    {{-- Confirm modal (shared by row-delete buttons in History and Sent Emails tables) --}}
+    <div x-data="{
+            message: '',
+            confirmLabel: 'Delete',
+            onConfirm: null
+         }"
+         x-on:sentinel-confirm-open.window="
+            message      = $event.detail.message      || 'Are you sure?';
+            confirmLabel = $event.detail.confirmLabel || 'Delete';
+            onConfirm    = $event.detail.onConfirm    || null;
+            $refs.cdlg.showModal();
+         "
+         x-cloak>
+        <dialog x-ref="cdlg"
+                x-on:click.self="$refs.cdlg.close()"
+                x-on:close="onConfirm = null"
+                style="position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); width:min(440px,90vw); margin:0; padding:0; border:none; border-radius:10px; overflow:hidden; box-shadow:0 25px 50px -12px rgba(0,0,0,0.25);">
+            <div style="padding:20px 24px;">
+                <h2 style="font-size:15px; font-weight:600; color:#0f172a; margin:0 0 8px 0;">Confirm delete</h2>
+                <p style="font-size:13px; color:#475569; margin:0; line-height:1.55;" x-text="message"></p>
+            </div>
+            <div style="display:flex; align-items:center; justify-content:flex-end; gap:8px; padding:12px 24px; background:#f8fafc; border-top:1px solid #e2e8f0;">
+                <button type="button"
+                        x-on:click="$refs.cdlg.close()"
+                        style="font-size:13px; font-weight:600; color:#0f172a; background:#fff; border:1px solid #e2e8f0; padding:7px 14px; border-radius:6px; cursor:pointer; font-family:inherit;">
+                    Cancel
+                </button>
+                <button type="button"
+                        x-on:click="(() => {
+                            const cb = onConfirm;
+                            $refs.cdlg.close();
+                            if (cb) cb();
+                        })()"
+                        x-text="confirmLabel"
+                        style="font-size:13px; font-weight:600; color:#fff; background:#dc2626; border:none; padding:7px 14px; border-radius:6px; cursor:pointer; font-family:inherit;"></button>
+            </div>
         </dialog>
     </div>
 

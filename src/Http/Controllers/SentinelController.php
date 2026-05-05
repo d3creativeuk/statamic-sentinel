@@ -205,6 +205,44 @@ class SentinelController extends Controller
         ])->render());
     }
 
+    public function deleteHistoryEntry(Request $request)
+    {
+        abort_unless(auth()->user()?->isSuper(), 403);
+
+        $key = (string) $request->input('key', '');
+
+        if ($key === '') {
+            return response()->json(['message' => 'Missing history key.'], 422);
+        }
+
+        $deleted = app(HistoryService::class)->delete($key);
+
+        if (! $deleted) {
+            return response()->json(['message' => 'History entry not found.'], 404);
+        }
+
+        return response()->json(['message' => 'History entry deleted.'], 200);
+    }
+
+    public function deleteSentEntry(Request $request)
+    {
+        abort_unless(auth()->user()?->isSuper(), 403);
+
+        $id = (string) $request->input('id', '');
+
+        if ($id === '') {
+            return response()->json(['message' => 'Missing record id.'], 422);
+        }
+
+        $deleted = app(SentMailService::class)->delete($id);
+
+        if (! $deleted) {
+            return response()->json(['message' => 'Sent record not found.'], 404);
+        }
+
+        return response()->json(['message' => 'Sent record deleted.'], 200);
+    }
+
     public function previewSentReport(Request $request, string $id)
     {
         abort_unless(auth()->user()?->isSuper(), 403);
@@ -230,7 +268,7 @@ class SentinelController extends Controller
     /**
      * Wrap rendered email HTML for in-iframe preview: disable link
      * interaction so clicks inside the iframe do nothing (the preview is
-     * read-only — the iframe shouldn't navigate, and we shouldn't open
+     * read-only - the iframe shouldn't navigate, and we shouldn't open
      * stray tabs to the CP or external sites).
      */
     protected function previewResponse(string $html)

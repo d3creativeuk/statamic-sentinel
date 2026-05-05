@@ -5,7 +5,7 @@
     Required vars:
       - $key    string  'status_report' or 'update_report'
       - $config array   schedule slice (enabled, frequency, day_of_week,
-                        day_of_month, time, recipients[]) — recipients is an
+                        day_of_month, time, recipients[]) - recipients is an
                         array; this partial joins it for the textarea.
 --}}
 @php
@@ -141,7 +141,7 @@
             </div>
 
             {{-- Day-of-month note: lives below the grid so it doesn't squash the row. --}}
-            <p x-show="form.frequency === 'monthly'" x-cloak style="margin:6px 2px 0 2px; font-size:12px; color:#64748b;">1st through 28th only — months don't all have a 29th–31st.</p>
+            <p x-show="form.frequency === 'monthly'" x-cloak style="margin:6px 2px 0 2px; font-size:12px; color:#64748b;">1st through 28th only - months don't all have a 29th-31st.</p>
 
             <div style="margin-top:12px;">
                 <label style="display:block; font-size:12px; color:#475569; font-weight:600;">Recipients</label>
@@ -163,7 +163,7 @@
         {{-- Off state but a schedule is currently active: warn that the toggle alone hasn't stopped it. --}}
         <div x-show="!form.enabled && savedEnabled" x-cloak
              style="margin-top:12px; padding:10px 12px; border:1px solid #fcd34d; border-radius:6px; background:#fffbeb; font-size:13px; color:#92400e;">
-            A schedule is currently active. Toggling off doesn't stop it — click <strong>Cancel schedule</strong> below.
+            A schedule is currently active. Toggling off doesn't stop it - click <strong>Cancel schedule</strong> below.
         </div>
 
         {{-- Action row: visible whenever the toggle is on, OR there's an active saved schedule that may need cancelling. --}}
@@ -172,7 +172,7 @@
                     x-show="form.enabled"
                     x-cloak
                     x-bind:disabled="sending"
-                    x-bind:style="{ background: state === 'success' ? '#10b981' : (state === 'error' ? '#ef4444' : '#0f172a') }"
+                    x-bind:style="{ background: state === 'success' ? '#047857' : (state === 'error' ? '#ef4444' : '#0f172a') }"
                     style="font-size:13px; font-weight:600; color:#fff; background:#0f172a; border:none; padding:7px 14px; border-radius:6px; cursor:pointer; white-space:nowrap;">
                 <span x-show="sending" x-cloak style="display:inline-flex; align-items:center; gap:6px;">
                     <span aria-hidden="true" style="display:inline-block; font-size:14px; line-height:1; transform-origin:center; animation:sentinel-spin 1s linear infinite;">↻</span>
@@ -194,12 +194,8 @@
 
             <span x-show="message" x-cloak
                   x-text="message"
-                  x-bind:style="{ color: state === 'success' ? '#10b981' : '#ef4444' }"
+                  x-bind:style="{ color: state === 'success' ? '#047857' : '#ef4444' }"
                   style="font-size:13px;"></span>
         </div>
     </form>
-
-    <p x-show="form.enabled || savedEnabled" x-cloak style="margin:12px 2px 0 2px; font-size:12px; color:#64748b; line-height:1.5;">
-        Requires <code style="font-size:11px; background:#f1f5f9; padding:1px 5px; border-radius:3px; color:#475569;">* * * * * php artisan schedule:run</code> in the host's crontab. Verify with <code style="font-size:11px; background:#f1f5f9; padding:1px 5px; border-radius:3px; color:#475569;">php artisan schedule:list</code>.
-    </p>
 </div>

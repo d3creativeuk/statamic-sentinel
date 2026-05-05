@@ -17,7 +17,7 @@
 
     $triggerColour = [
         'manual'    => '#475569',
-        'scheduled' => '#3b82f6',
+        'scheduled' => '#1d4ed8',
         'forced'    => '#f59e0b',
     ];
 @endphp
@@ -67,7 +67,7 @@
                                 $tColour    = $triggerColour[$trigger] ?? '#475569';
                                 $tLabel     = $triggerLabel[$trigger]  ?? ucfirst($trigger);
                                 $isFailed   = $outcome === 'failed';
-                                $oColour    = $isFailed ? '#ef4444' : '#10b981';
+                                $oColour    = $isFailed ? '#ef4444' : '#047857';
                                 $oLabel     = $isFailed ? 'Failed' : 'Sent';
                                 $previewUrl = route('statamic.cp.d3-sentinel.preview-sent-report', ['id' => $entry['id']]);
                                 $previewTitle = ucfirst($kindLabel) . ' sent ' . $recordedAt;
@@ -93,11 +93,21 @@
                                     @endif
                                 </td>
                                 <td style="padding:10px 14px; text-align:right; white-space:nowrap; vertical-align:top;">
-                                    <button type="button"
-                                            x-on:click="$dispatch('sentinel-preview-open', { url: '{{ $previewUrl }}', title: '{{ addslashes($previewTitle) }}' })"
-                                            style="font-size:12px; font-weight:600; color:#0f172a; background:#fff; border:1px solid #e2e8f0; padding:4px 10px; border-radius:5px; cursor:pointer; font-family:inherit;">
-                                        Preview
-                                    </button>
+                                    <div style="display:inline-flex; align-items:center; gap:6px;">
+                                        <button type="button"
+                                                x-on:click="$dispatch('sentinel-preview-open', { url: '{{ $previewUrl }}', title: '{{ addslashes($previewTitle) }}' })"
+                                                style="font-size:12px; font-weight:600; color:#0f172a; background:#fff; border:1px solid #e2e8f0; padding:4px 10px; border-radius:5px; cursor:pointer; font-family:inherit;">
+                                            Preview
+                                        </button>
+                                        @if (! empty($entry['id']))
+                                            @include('statamic-sentinel::utilities._delete_row_button', [
+                                                'action'  => route('statamic.cp.d3-sentinel.delete-sent'),
+                                                'field'   => 'id',
+                                                'value'   => $entry['id'],
+                                                'confirm' => 'Delete this sent record? The HTML preview will also be removed.',
+                                            ])
+                                        @endif
+                                    </div>
                                 </td>
                             </tr>
                         @endforeach

@@ -4,6 +4,7 @@ namespace D3Creative\Sentinel;
 
 use Statamic\Providers\AddonServiceProvider;
 use Statamic\Facades\Utility;
+use Illuminate\Support\Facades\View;
 use D3Creative\Sentinel\Console\Commands\ScanCommand;
 use D3Creative\Sentinel\Console\Commands\SendStatusReportCommand;
 use D3Creative\Sentinel\Http\Controllers\SentinelController;
@@ -18,9 +19,28 @@ class ServiceProvider extends AddonServiceProvider
         Widgets\SentinelWidget::class,
     ];
 
+    public function register(): void
+    {
+        $this->mergeConfigFrom(__DIR__ . '/../config/sentinel.php', 'sentinel');
+    }
+
     public function bootAddon(): void
     {
         $this->loadViewsFrom(__DIR__ . '/../resources/views', 'statamic-sentinel');
+
+        $this->publishes([
+            __DIR__ . '/../config/sentinel.php' => config_path('sentinel.php'),
+        ], 'sentinel-config');
+
+        View::composer('statamic-sentinel::*', function ($view) {
+            $name = config('sentinel.developer.name');
+            $url  = config('sentinel.developer.url');
+
+            $view->with('sentinelDeveloper', $name ? [
+                'name' => $name,
+                'url'  => $url ?: null,
+            ] : null);
+        });
 
         $this->registerCpRoutes(function () {
             \Illuminate\Support\Facades\Route::post(
@@ -52,6 +72,16 @@ class ServiceProvider extends AddonServiceProvider
                 'd3-sentinel/save-schedule',
                 [SentinelController::class, 'saveSchedule']
             )->middleware('throttle:30,1')->name('d3-sentinel.save-schedule');
+
+            \Illuminate\Support\Facades\Route::post(
+                'd3-sentinel/delete-history',
+                [SentinelController::class, 'deleteHistoryEntry']
+            )->middleware('throttle:30,1')->name('d3-sentinel.delete-history');
+
+            \Illuminate\Support\Facades\Route::post(
+                'd3-sentinel/delete-sent',
+                [SentinelController::class, 'deleteSentEntry']
+            )->middleware('throttle:30,1')->name('d3-sentinel.delete-sent');
         });
 
         // Auto-register the status-report scheduler entry when the user has

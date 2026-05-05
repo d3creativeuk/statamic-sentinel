@@ -151,6 +151,35 @@ class SentMailService
     }
 
     /**
+     * Remove a single sent-email record by id, plus its HTML snapshot file.
+     * Returns true if a row was removed, false if the id matched nothing or
+     * the write failed.
+     */
+    public function delete(string $id): bool
+    {
+        try {
+            $entries = $this->all();
+            $before  = count($entries);
+
+            $entries = array_values(array_filter(
+                $entries,
+                fn ($e) => ($e['id'] ?? null) !== $id
+            ));
+
+            if (count($entries) === $before) {
+                return false;
+            }
+
+            $this->writeIndex($entries);
+            $this->deleteHtml($id);
+
+            return true;
+        } catch (\Throwable $e) {
+            return false;
+        }
+    }
+
+    /**
      * Trim each kind to MAX_PER_KIND records, deleting the HTML files for
      * anything that drops off. Order is preserved (newest first).
      */
@@ -172,19 +201,31 @@ class SentMailService
             $kept[] = $entry;
         }
 
-        $disk = Storage::disk('local');
         foreach ($dropped as $entry) {
-            $path = self::DIR . '/' . ($entry['id'] ?? '') . '.html';
-            try {
-                if (! empty($entry['id']) && $disk->exists($path)) {
-                    $disk->delete($path);
-                }
-            } catch (\Throwable $e) {
-                // Silent fail - leftover HTML is harmless.
+            if (! empty($entry['id'])) {
+                $this->deleteHtml($entry['id']);
             }
         }
 
         return $kept;
+    }
+
+    /**
+     * Unlink the per-send HTML snapshot for `$id`. Silent on failure -
+     * leftover HTML is harmless and never blocks the calling operation.
+     */
+    protected function deleteHtml(string $id): void
+    {
+        try {
+            $disk = Storage::disk('local');
+            $path = self::DIR . '/' . $id . '.html';
+
+            if ($disk->exists($path)) {
+                $disk->delete($path);
+            }
+        } catch (\Throwable $e) {
+            // Silent fail
+        }
     }
 
     protected function writeIndex(array $entries): void

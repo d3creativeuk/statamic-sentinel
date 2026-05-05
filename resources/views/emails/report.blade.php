@@ -35,7 +35,7 @@
         if ($status === 'eol')       return ['text' => 'End of life',     'colour' => '#dc2626', 'detail' => $current];
         if ($status === 'security')  return ['text' => 'Security only',   'colour' => '#b45309', 'detail' => $current];
         if ($outdated) {
-            // Patch-only bumps (e.g. 8.4.18 → 8.4.20) get no pill — the
+            // Patch-only bumps (e.g. 8.4.18 → 8.4.20) get no pill - the
             // version arrow conveys the change without sounding the alarm.
             if ($isPatchOnly($current, $latest)) {
                 return ['text' => null, 'colour' => null, 'detail' => $current . ' → ' . $latest];
@@ -44,7 +44,7 @@
         }
         if (in_array($status, ['ok', 'active'])) return ['text' => 'Up to date', 'colour' => '#10b981', 'detail' => $current];
 
-        return ['text' => 'Unknown', 'colour' => '#94a3b8', 'detail' => $current ?? '—'];
+        return ['text' => 'Unknown', 'colour' => '#94a3b8', 'detail' => $current ?? '-'];
     };
 
     $ecosystemBadge = function (array $eco) {
@@ -79,6 +79,34 @@
         ['kind' => 'eco',      'label' => 'Composer', 'data' => $composer],
         ['kind' => 'eco',      'label' => 'npm',      'data' => $npm],
     ];
+
+    $totalVulns    = ($composer['total_vulns']        ?? 0) + ($npm['total_vulns']        ?? 0);
+    $totalOutdated = ($composer['outdated']['total']  ?? 0) + ($npm['outdated']['total']  ?? 0);
+
+    $platformEol = in_array($statamic['status'] ?? '', ['eol'])
+                || in_array($laravel['status']  ?? '', ['eol'])
+                || in_array($php['status']      ?? '', ['eol']);
+
+    $securityUpdate = ($statamic['security_update_available'] ?? false)
+                   || ($laravel['security_update_available']  ?? false);
+
+    $needsAttention = $totalVulns > 0 || $platformEol || $securityUpdate;
+
+    if ($needsAttention) {
+        $intro        = 'Your Statamic website needs attention - security or platform issues were found.';
+        $statusAccent = '#ef4444';
+    } elseif ($totalOutdated > 0) {
+        $intro        = 'Your Statamic website is in good health, with some routine updates available.';
+        $statusAccent = '#3b82f6';
+    } else {
+        $intro        = 'Your Statamic website is fully up to date and in good health.';
+        $statusAccent = '#10b981';
+    }
+
+    $bits = [];
+    if ($totalVulns > 0)    $bits[] = $totalVulns    . ' security ' . \Illuminate\Support\Str::plural('issue', $totalVulns);
+    if ($totalOutdated > 0) $bits[] = $totalOutdated . ' ' . \Illuminate\Support\Str::plural('update', $totalOutdated) . ' available';
+    $statusLine = empty($bits) ? 'All checks passed.' : implode(', ', $bits) . '.';
 @endphp
 
 <div style="max-width:640px; margin:32px auto; background:#ffffff; border-radius:12px; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,0.1);">
@@ -90,6 +118,12 @@
     </div>
 
     <div style="padding:28px 32px;">
+
+        {{-- Status banner --}}
+        <div style="background:{{ $statusAccent }}1a; border-left:3px solid {{ $statusAccent }}; padding:14px 16px; border-radius:6px; margin-bottom:24px;">
+            <div style="font-size:15px; font-weight:600; color:#0f172a; line-height:1.4;">{{ $intro }}</div>
+            <div style="font-size:13px; color:#475569; margin-top:6px;">{{ $statusLine }}</div>
+        </div>
 
         {{-- Always-visible rows: Statamic / Laravel / PHP / Composer / npm --}}
         @foreach ($rows as $row)

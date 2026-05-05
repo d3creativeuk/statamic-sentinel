@@ -1,5 +1,5 @@
 {{--
-    D3 Creative — Sentinel Widget
+    D3 Creative - Sentinel Widget
     Statamic version, Laravel version, PHP version, and vulnerability counts by severity.
 --}}
 
@@ -29,7 +29,7 @@
                 <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
             </svg>
         </a>
-        <p style="font-size:11px; color:#64748b; margin:10px 0 0 0;">Takes 10–20 seconds.</p>
+        <p style="font-size:11px; color:#64748b; margin:10px 0 0 0;">Takes 10-20 seconds.</p>
     </div>
     <div style="padding:10px 18px; border-top:1px solid #e4e4e7; background:#fafafa; border-radius:0 0 8px 8px;">
         <p style="font-size:11px; color:#64748b; margin:0; letter-spacing:-0.01em;">
@@ -43,8 +43,8 @@
     extract($audit);
 
     $statusColours = [
-        'ok'         => '#10b981',
-        'active'     => '#10b981',
+        'ok'         => '#047857',
+        'active'     => '#047857',
         'outdated'   => '#f59e0b',
         'security'   => '#f59e0b',
         'vulnerable' => '#ef4444',
@@ -56,7 +56,7 @@
         'CRITICAL' => '#ef4444',
         'HIGH'     => '#f97316',
         'MEDIUM'   => '#f59e0b',
-        'LOW'      => '#3b82f6',
+        'LOW'      => '#1d4ed8',
         'UNKNOWN'  => '#94a3b8',
     ];
 
@@ -99,7 +99,7 @@
             @php
                 $outdated   = ! empty($card['latest']) && version_compare($card['version'], $card['latest'], '<');
                 $isEol      = $card['status'] === 'eol';
-                $pillColour = ($card['security'] || $isEol) ? '#dc2626' : ($outdated ? '#3b82f6' : '#10b981');
+                $pillColour = ($card['security'] || $isEol) ? '#dc2626' : ($outdated ? '#1d4ed8' : '#047857');
             @endphp
             <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; padding:6px 12px; {{ ! $loop->last ? 'border-bottom:1px solid #e2e8f0;' : '' }}">
                 <span style="font-size:11px; font-weight:600; color:#0f172a;">{{ $card['label'] }}</span>
@@ -118,8 +118,8 @@
 
     {{-- Package audit rows --}}
     @foreach ([
-        ['label' => 'Composer packages', 'data' => $composer, 'tooltip' => "PHP packages that power your site's backend — including Statamic itself, Laravel (the framework it runs on), and any installed add-ons. Keeping these up to date is important for security and stability."],
-        ['label' => 'npm packages',      'data' => $npm,      'tooltip' => "JavaScript packages used to build your site's frontend — things like scripts and styles that run in your visitors' browsers. Updates often include security fixes and improvements."],
+        ['label' => 'Composer packages', 'data' => $composer, 'tooltip' => "PHP packages that power your site's backend - including Statamic itself, Laravel (the framework it runs on), and any installed add-ons. Keeping these up to date is important for security and stability."],
+        ['label' => 'npm packages',      'data' => $npm,      'tooltip' => "JavaScript packages used to build your site's frontend - things like scripts and styles that run in your visitors' browsers. Updates often include security fixes and improvements."],
     ] as $row)
     @php
         $d            = $row['data'];
@@ -133,9 +133,9 @@
         <div style="display:flex; align-items:center; gap:5px; padding:8px 12px; {{ $hasData ? 'border-bottom:1px solid #e2e8f0;' : '' }}">
             <span style="font-weight:600; font-size:12px;">
                 @if($d['status'] === 'unavailable')
-                    {{ $row['label'] }} — lock file not found
+                    {{ $row['label'] }} - lock file not found
                 @elseif($d['status'] === 'error')
-                    {{ $row['label'] }} — <span style="color:#ef4444;">⚠ check failed</span>
+                    {{ $row['label'] }} - <span style="color:#ef4444;">⚠ check failed</span>
                 @else
                     {{ $d['total_packages'] }} {{ $row['label'] }} scanned
                 @endif
@@ -158,7 +158,7 @@
                 @if($totalVulns > 0)
                     <span style="display:inline-flex; align-items:center; font-size:10px; font-weight:500; padding:1px 7px; border-radius:4px; color:#dc2626; background:#fff; border:1px solid #dc2626; flex-shrink:0; font-variant-numeric:tabular-nums;">{{ $totalVulns }}</span>
                 @else
-                    <span style="display:inline-flex; align-items:center; font-size:10px; font-weight:500; padding:1px 7px; border-radius:4px; color:#10b981; background:#fff; border:1px solid #10b981; flex-shrink:0; font-variant-numeric:tabular-nums;">0</span>
+                    <span style="display:inline-flex; align-items:center; font-size:10px; font-weight:500; padding:1px 7px; border-radius:4px; color:#047857; background:#fff; border:1px solid #047857; flex-shrink:0; font-variant-numeric:tabular-nums;">0</span>
                 @endif
             </div>
 
@@ -166,9 +166,9 @@
             <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; padding:6px 12px;">
                 <span style="font-size:11px; font-weight:600; color:#0f172a;">Updates available</span>
                 @if($updatesTotal > 0)
-                    <span style="display:inline-flex; align-items:center; font-size:10px; font-weight:500; padding:1px 7px; border-radius:4px; color:#3b82f6; background:#fff; border:1px solid #3b82f6; flex-shrink:0; font-variant-numeric:tabular-nums;">{{ $updatesTotal }}</span>
+                    <span style="display:inline-flex; align-items:center; font-size:10px; font-weight:500; padding:1px 7px; border-radius:4px; color:#1d4ed8; background:#fff; border:1px solid #1d4ed8; flex-shrink:0; font-variant-numeric:tabular-nums;">{{ $updatesTotal }}</span>
                 @else
-                    <span style="display:inline-flex; align-items:center; font-size:10px; font-weight:500; padding:1px 7px; border-radius:4px; color:#10b981; background:#fff; border:1px solid #10b981; flex-shrink:0; font-variant-numeric:tabular-nums;">0</span>
+                    <span style="display:inline-flex; align-items:center; font-size:10px; font-weight:500; padding:1px 7px; border-radius:4px; color:#047857; background:#fff; border:1px solid #047857; flex-shrink:0; font-variant-numeric:tabular-nums;">0</span>
                 @endif
             </div>
         @endif

@@ -8,7 +8,7 @@ use D3Creative\Sentinel\Mail\SentinelUpdateReport;
 
 /**
  * Shared send logic used by both the HTTP controller and the scheduled
- * artisan commands. Trusts the recipient list it receives — input parsing
+ * artisan commands. Trusts the recipient list it receives - input parsing
  * and address validation belong to the caller (HTTP layer).
  */
 class ReportSender

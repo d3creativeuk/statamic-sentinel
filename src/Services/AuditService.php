@@ -111,7 +111,7 @@ class AuditService
     /**
      * Run a scan and overwrite the cache. Used by the scheduler, the
      * sentinel:scan command, and the manual "Scan now" / "Refresh" buttons.
-     * Cached forever — the scheduler owns freshness.
+     * Cached forever - the scheduler owns freshness.
      */
     public function refresh(): array
     {
@@ -192,7 +192,7 @@ class AuditService
     /**
      * Does the given package have at least one OSV advisory with a fix available?
      * OSV only catalogs security advisories, so any hit here is by definition
-     * a security update — never a cosmetic/bug-fix upgrade.
+     * a security update - never a cosmetic/bug-fix upgrade.
      */
     protected function hasSecurityUpdateFor(string $packageName, array $composerAudit): bool
     {
@@ -464,7 +464,7 @@ class AuditService
 
     /**
      * Fetch full vulnerability details for the given IDs, concurrently.
-     * Failed lookups are silently omitted — those vulns fall back to UNKNOWN.
+     * Failed lookups are silently omitted - those vulns fall back to UNKNOWN.
      */
     protected function fetchVulnDetails(array $ids): array
     {
@@ -509,7 +509,7 @@ class AuditService
             if (is_numeric($score)) {
                 return $this->cvssScoreToSeverity((float) $score);
             }
-            // CVSS vector string — extract base score via regex
+            // CVSS vector string - extract base score via regex
             if (preg_match('/\/(\d+\.\d+)$/', $score, $m)) {
                 return $this->cvssScoreToSeverity((float) $m[1]);
             }

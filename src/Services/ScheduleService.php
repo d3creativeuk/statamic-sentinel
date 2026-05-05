@@ -10,7 +10,7 @@ class ScheduleService
     const TMP_PATH      = 'statamic-sentinel/schedule.json.tmp';
 
     // Only status_report has a scheduled send. The update report is a
-    // post-update verification artifact — it only makes sense after a
+    // post-update verification artifact - it only makes sense after a
     // manual update + scan, so there's nothing to schedule.
     const REPORT_KEYS = ['status_report'];
     const FREQUENCIES = ['daily', 'weekly', 'monthly'];
@@ -31,7 +31,7 @@ class ScheduleService
 
     /**
      * Saved schedule merged with defaults for any missing slice. Silent on
-     * read failure — file-system errors must never break CP rendering.
+     * read failure - file-system errors must never break CP rendering.
      */
     public function all(): array
     {

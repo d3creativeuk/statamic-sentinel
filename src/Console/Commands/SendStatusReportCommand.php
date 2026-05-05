@@ -33,7 +33,7 @@ class SendStatusReportCommand extends Command
         // updates the CP's cached audit + history snapshot, so a scheduled
         // report doubles as a background scan. On failure (transient OSV /
         // Packagist outage), fall through and send with the cached audit so
-        // the recipient still gets an email — better stale than silent.
+        // the recipient still gets an email - better stale than silent.
         try {
             $audit->refresh();
             $this->info('Refreshed audit data.');
