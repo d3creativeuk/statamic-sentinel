@@ -49,7 +49,7 @@
     </div>
     <div style="display:flex; align-items:center; justify-content:flex-start; margin-top:16px; padding-top:14px;">
         <p style="font-size:12px; color:rgb(63 63 71); margin:0; letter-spacing:-0.01em;">
-            Sentinel{!! $sentinelBrandSuffix !!}. Security and update alerts for Statamic sites.
+            Sentinel{!! $sentinelBrandSuffix !!}. Platform and dependency audits for Statamic sites.
         </p>
     </div>
 
@@ -596,7 +596,7 @@
     {{-- Footer --}}
     <div style="display:flex; align-items:center; justify-content:flex-start; margin-top:16px; padding-top:14px;">
         <p style="font-size:12px; color:rgb(63 63 71); margin:0; letter-spacing:-0.01em;">
-            Sentinel{!! $sentinelBrandSuffix !!}. Security and update alerts for Statamic sites.
+            Sentinel{!! $sentinelBrandSuffix !!}. Platform and dependency audits for Statamic sites.
         </p>
     </div>
 

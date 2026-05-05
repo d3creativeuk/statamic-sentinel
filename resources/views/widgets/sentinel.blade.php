@@ -43,7 +43,7 @@
     </div>
     <div style="padding:10px 18px; border-top:1px solid #e4e4e7; background:#fafafa; border-radius:0 0 8px 8px;">
         <p style="font-size:11px; color:#64748b; margin:0; letter-spacing:-0.01em;">
-            Sentinel{!! $sentinelBrandSuffix !!}. Security and update alerts for Statamic sites.
+            Sentinel{!! $sentinelBrandSuffix !!}. Platform and dependency audits for Statamic sites.
         </p>
     </div>
 
@@ -207,7 +207,7 @@
     {{-- Card footer --}}
     <div style="padding:10px 18px; border-top:1px solid #e4e4e7; background:#fafafa; border-radius:0 0 8px 8px;">
         <p style="font-size:11px; color:#64748b; margin:0; letter-spacing:-0.01em;">
-            Sentinel{!! $sentinelBrandSuffix !!}. Security and update alerts for Statamic sites.
+            Sentinel{!! $sentinelBrandSuffix !!}. Platform and dependency audits for Statamic sites.
         </p>
     </div>
 

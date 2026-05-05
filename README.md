@@ -2,9 +2,9 @@
 
 # Sentinel by D3 Creative
 
-**Security and update alerts for Statamic sites.**
+**Platform and dependency audits for Statamic sites.**
 
-Sentinel surfaces PHP version, Statamic version, and known package vulnerabilities in the Control Panel.
+Sentinel cross-references your installed versions against the OSV vulnerability database, endoflife.date, Packagist, and the npm registry, then surfaces ranked findings (vulnerabilities by severity, packages past EOL, available updates) directly in the Statamic Control Panel. It tracks a rolling 365-day history so you can diff snapshots and see exactly what moved between updates, and email reports can be sent on demand or on a daily, weekly, or monthly schedule.
 
 ## What it shows
 
