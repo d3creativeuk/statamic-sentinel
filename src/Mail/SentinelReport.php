@@ -25,12 +25,13 @@ class SentinelReport extends Mailable
     {
         $host = parse_url(config('app.url'), PHP_URL_HOST) ?: 'site';
 
-        return $this->subject('Statamic Package Status Report - ' . $host)
+        return $this->subject($host . ' status')
                     ->view('statamic-sentinel::emails.report')
                     ->with([
                         'audit'       => $this->audit,
                         'host'        => $host,
                         'utility_url' => cp_route('utilities.sentinel'),
+                        'preheader'   => 'Statamic Package Status Report',
                     ]);
     }
 }

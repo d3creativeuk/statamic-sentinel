@@ -172,6 +172,7 @@ class SentinelController extends Controller
             'audit'       => $audit,
             'host'        => parse_url(config('app.url'), PHP_URL_HOST) ?: 'site',
             'utility_url' => cp_route('utilities.sentinel'),
+            'preheader'   => 'Statamic Package Status Report',
         ])->render());
     }
 
@@ -202,6 +203,7 @@ class SentinelController extends Controller
             'report'      => $report,
             'host'        => parse_url(config('app.url'), PHP_URL_HOST) ?: 'site',
             'utility_url' => cp_route('utilities.sentinel'),
+            'preheader'   => 'Statamic Package Update Report',
         ])->render());
     }
 

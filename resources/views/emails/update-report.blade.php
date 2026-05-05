@@ -3,9 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="x-apple-disable-message-reformatting">
+    <meta name="format-detection" content="telephone=no,address=no,email=no,date=no,url=no">
     <title>Statamic Package Update Report</title>
 </head>
 <body style="margin:0; padding:0; background:#f1f5f9; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size:14px; color:#1e293b;">
+
+<div style="display:none; max-height:0; overflow:hidden; mso-hide:all; font-size:1px; line-height:1px; color:#f1f5f9;">
+    {{ $preheader }}
+</div>
+<div style="display:none; max-height:0; overflow:hidden;">
+    &#847; &zwnj; &nbsp; &#847; &zwnj; &nbsp; &#847; &zwnj; &nbsp; &#847; &zwnj; &nbsp;
+</div>
 
 @php
     $platform = $report['platform'];
@@ -76,11 +85,17 @@
     };
 @endphp
 
-<div style="max-width:640px; margin:32px auto; background:#ffffff; border-radius:12px; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f1f5f9;">
+<tr>
+<td align="center" style="padding:32px 16px;">
+<table role="presentation" width="640" cellpadding="0" cellspacing="0" border="0" style="max-width:640px; width:100%; background:#ffffff; border-radius:12px; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+<tr><td>
 
     {{-- Header --}}
     <div style="background:#0f172a; padding:24px 32px;">
-        <div style="font-size:18px; font-weight:700; color:#ffffff; letter-spacing:-0.02em;">{{ $host }}</div>
+        <div style="font-size:18px; font-weight:700; letter-spacing:-0.02em;">
+            <a href="https://{{ $host }}" style="color:#ffffff; text-decoration:none;">{{ $host }}</a>
+        </div>
         <div style="font-size:13px; color:#cbd5e1; margin-top:4px;">Statamic Package Update Report &nbsp;·&nbsp; {{ $sentDate }}</div>
     </div>
 
@@ -210,7 +225,7 @@
                 <td align="center" style="padding:4px 0 8px;">
                     <a href="{{ $utility_url }}"
                        style="display:inline-block; background:#0f172a; color:#ffffff; font-size:14px; font-weight:600; text-decoration:none; padding:12px 28px; border-radius:8px;">
-                        View current status →
+                        Current Status
                     </a>
                 </td>
             </tr>
@@ -234,7 +249,11 @@
         </div>
     </div>
 
-</div>
+</td></tr>
+</table>
+</td>
+</tr>
+</table>
 
 </body>
 </html>
