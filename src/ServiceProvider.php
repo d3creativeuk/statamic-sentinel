@@ -83,12 +83,15 @@ class ServiceProvider extends AddonServiceProvider
 
         // Auto-register the status-report scheduler entry when the user has
         // saved an enabled schedule. Host only needs the standard
-        // `* * * * * php artisan schedule:run` cron entry.
-        $this->callAfterResolving(\Illuminate\Console\Scheduling\Schedule::class, function ($schedule) {
-            if ($cron = app(ScheduleService::class)->cronExpression('status_report')) {
-                $schedule->command('sentinel:send-status-report')->cron($cron);
-            }
-        });
+        // `* * * * * php artisan schedule:run` cron entry. Console-only so
+        // web requests never resolve the Schedule singleton on our behalf.
+        if ($this->app->runningInConsole()) {
+            $this->callAfterResolving(\Illuminate\Console\Scheduling\Schedule::class, function ($schedule) {
+                if ($cron = app(ScheduleService::class)->cronExpression('status_report')) {
+                    $schedule->command('sentinel:send-status-report')->cron($cron);
+                }
+            });
+        }
 
         Utility::extend(function () {
             Utility::register(

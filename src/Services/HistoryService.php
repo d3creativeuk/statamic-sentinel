@@ -182,6 +182,11 @@ class HistoryService
         }));
     }
 
+    /**
+     * Atomically replace the history file. On POSIX, rename overwrites in one
+     * step (no readers see a missing file). On Windows, rename can't replace,
+     * so we fall back to delete-then-move only if the first move fails.
+     */
     protected function write(array $entries): void
     {
         $disk = Storage::disk('local');
@@ -189,10 +194,9 @@ class HistoryService
 
         $disk->put(self::TMP_PATH, $json);
 
-        if ($disk->exists(self::RELATIVE_PATH)) {
+        if (! $disk->move(self::TMP_PATH, self::RELATIVE_PATH)) {
             $disk->delete(self::RELATIVE_PATH);
+            $disk->move(self::TMP_PATH, self::RELATIVE_PATH);
         }
-
-        $disk->move(self::TMP_PATH, self::RELATIVE_PATH);
     }
 }

@@ -230,8 +230,8 @@ class SentinelController extends Controller
 
         $id = (string) $request->input('id', '');
 
-        if ($id === '') {
-            return response()->json(['message' => 'Missing record id.'], 422);
+        if (! preg_match(SentMailService::ID_PATTERN, $id)) {
+            return response()->json(['message' => 'Invalid record id.'], 422);
         }
 
         $deleted = app(SentMailService::class)->delete($id);

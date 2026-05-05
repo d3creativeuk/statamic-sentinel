@@ -50,7 +50,7 @@
 @else
 
 @php
-    extract($audit);
+    extract($audit, EXTR_SKIP);
 
     $statusColours = [
         'ok'         => '#047857',

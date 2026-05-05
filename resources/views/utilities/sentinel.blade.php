@@ -56,7 +56,7 @@
 @else
 
 @php
-    extract($audit);
+    extract($audit, EXTR_SKIP);
 
     $statusColours = [
         'ok'         => '#047857',
@@ -231,29 +231,10 @@
                     </div>
                 @else
                     @php
-                        $sevRank = ['CRITICAL' => 5, 'HIGH' => 4, 'MEDIUM' => 3, 'LOW' => 2, 'UNKNOWN' => 1];
-
-                        // Group vulns by package, tracking the highest severity seen
-                        // for that package so a single-row badge can summarise it.
-                        $byPackage = [];
-                        foreach (['CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'UNKNOWN'] as $sev) {
-                            foreach ($d['severities'][$sev]['vulns'] ?? [] as $v) {
-                                $name = $v['package'];
-                                if (! isset($byPackage[$name])) {
-                                    $byPackage[$name] = ['name' => $name, 'highest' => $sev, 'count' => 0];
-                                }
-                                if ($sevRank[$sev] > $sevRank[$byPackage[$name]['highest']]) {
-                                    $byPackage[$name]['highest'] = $sev;
-                                }
-                                $byPackage[$name]['count']++;
-                            }
-                        }
-
-                        uasort($byPackage, function($a, $b) use ($sevRank) {
-                            $cmp = $sevRank[$b['highest']] - $sevRank[$a['highest']];
-                            return $cmp !== 0 ? $cmp : strcmp($a['name'], $b['name']);
-                        });
-                        $byPackage = array_values($byPackage);
+                        // by_package is computed in AuditService::queryOsv() at scan time;
+                        // fall back to live grouping for snapshots cached before that field existed.
+                        $byPackage = $d['by_package']
+                            ?? \D3Creative\Sentinel\Services\AuditService::groupBySeverity($d['severities'] ?? []);
                     @endphp
                     <div x-data="{ open: false }">
                         <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
@@ -481,7 +462,7 @@
                            placeholder="email@example.com, another@example.com"
                            style="flex:1; font-size:13px; padding:7px 12px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#1e293b; outline:none; min-width:0;">
                     <button type="button"
-                            x-on:click="$dispatch('sentinel-preview-open', { url: '{{ route('statamic.cp.d3-sentinel.preview-report') }}', title: 'Status report preview' })"
+                            x-on:click="$dispatch('sentinel-preview-open', { url: @js(route('statamic.cp.d3-sentinel.preview-report')), title: 'Status report preview' })"
                             style="flex-shrink:0; font-size:13px; font-weight:600; color:#0f172a; background:#fff; border:1px solid #e2e8f0; padding:7px 12px; border-radius:6px; cursor:pointer; white-space:nowrap;">
                         Preview
                     </button>
@@ -573,7 +554,7 @@
                            placeholder="email@example.com, another@example.com"
                            style="flex:1; font-size:13px; padding:7px 12px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#1e293b; outline:none; min-width:0;">
                     <button type="button"
-                            x-on:click="$dispatch('sentinel-preview-open', { url: '{{ route('statamic.cp.d3-sentinel.preview-update-report') }}', title: 'Update report preview' })"
+                            x-on:click="$dispatch('sentinel-preview-open', { url: @js(route('statamic.cp.d3-sentinel.preview-update-report')), title: 'Update report preview' })"
                             style="flex-shrink:0; font-size:13px; font-weight:600; color:#0f172a; background:#fff; border:1px solid #e2e8f0; padding:7px 12px; border-radius:6px; cursor:pointer; white-space:nowrap;">
                         Preview
                     </button>

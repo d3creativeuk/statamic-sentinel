@@ -71,11 +71,10 @@ class ScheduleService
 
             $disk->put(self::TMP_PATH, $json);
 
-            if ($disk->exists(self::RELATIVE_PATH)) {
+            if (! $disk->move(self::TMP_PATH, self::RELATIVE_PATH)) {
                 $disk->delete(self::RELATIVE_PATH);
+                $disk->move(self::TMP_PATH, self::RELATIVE_PATH);
             }
-
-            $disk->move(self::TMP_PATH, self::RELATIVE_PATH);
 
             return true;
         } catch (\Throwable $e) {

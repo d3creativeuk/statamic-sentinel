@@ -95,7 +95,7 @@
                                 <td style="padding:10px 14px; text-align:right; white-space:nowrap; vertical-align:top;">
                                     <div style="display:inline-flex; align-items:center; gap:6px;">
                                         <button type="button"
-                                                x-on:click="$dispatch('sentinel-preview-open', { url: '{{ $previewUrl }}', title: '{{ addslashes($previewTitle) }}' })"
+                                                x-on:click="$dispatch('sentinel-preview-open', { url: @js($previewUrl), title: @js($previewTitle) })"
                                                 style="font-size:12px; font-weight:600; color:#0f172a; background:#fff; border:1px solid #e2e8f0; padding:4px 10px; border-radius:5px; cursor:pointer; font-family:inherit;">
                                             Preview
                                         </button>

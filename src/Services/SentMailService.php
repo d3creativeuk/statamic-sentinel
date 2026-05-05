@@ -42,6 +42,23 @@ class SentMailService
     const MAX_PER_KIND = 25;
 
     /**
+     * IDs are produced by Str::random(16). Anything else is rejected before
+     * touching the filesystem - defends against path traversal in $id.
+     */
+    const ID_PATTERN = '/^[A-Za-z0-9]{16}$/';
+
+    /**
+     * Per-instance memo of the index file so a single request that calls
+     * forKind() / find() multiple times doesn't re-read + re-decode the JSON.
+     */
+    protected ?array $cachedAll = null;
+
+    protected static function isValidId(string $id): bool
+    {
+        return (bool) preg_match(self::ID_PATTERN, $id);
+    }
+
+    /**
      * Persist a sent-email record. Stores the manifest entry plus the HTML
      * snapshot; returns the new id (or null on failure).
      */
@@ -85,23 +102,29 @@ class SentMailService
     }
 
     /**
-     * All records, newest first. Returns [] on any read failure.
+     * All records, newest first. Returns [] on any read failure. Memoized
+     * per request so repeated callers (e.g. forKind('status') + forKind('update'))
+     * share a single decode.
      */
     public function all(): array
     {
+        if ($this->cachedAll !== null) {
+            return $this->cachedAll;
+        }
+
         try {
             $disk = Storage::disk('local');
 
             if (! $disk->exists(self::INDEX_PATH)) {
-                return [];
+                return $this->cachedAll = [];
             }
 
             $raw     = $disk->get(self::INDEX_PATH);
             $decoded = json_decode($raw, true);
 
-            return is_array($decoded) ? $decoded : [];
+            return $this->cachedAll = is_array($decoded) ? $decoded : [];
         } catch (\Throwable $e) {
-            return [];
+            return $this->cachedAll = [];
         }
     }
 
@@ -117,10 +140,14 @@ class SentMailService
     }
 
     /**
-     * Look up a single record by id. Null if not found.
+     * Look up a single record by id. Null if not found or id is malformed.
      */
     public function find(string $id): ?array
     {
+        if (! self::isValidId($id)) {
+            return null;
+        }
+
         foreach ($this->all() as $entry) {
             if (($entry['id'] ?? null) === $id) {
                 return $entry;
@@ -132,10 +159,14 @@ class SentMailService
 
     /**
      * Read the stored HTML snapshot for a record. Null if the file is gone
-     * (e.g. pruned, or send failed before render).
+     * (e.g. pruned, or send failed before render) or id is malformed.
      */
     public function html(string $id): ?string
     {
+        if (! self::isValidId($id)) {
+            return null;
+        }
+
         try {
             $disk = Storage::disk('local');
             $path = self::DIR . '/' . $id . '.html';
@@ -157,6 +188,10 @@ class SentMailService
      */
     public function delete(string $id): bool
     {
+        if (! self::isValidId($id)) {
+            return false;
+        }
+
         try {
             $entries = $this->all();
             $before  = count($entries);
@@ -213,9 +248,15 @@ class SentMailService
     /**
      * Unlink the per-send HTML snapshot for `$id`. Silent on failure -
      * leftover HTML is harmless and never blocks the calling operation.
+     * Refuses anything that isn't a valid Sentinel id, defending against
+     * path traversal even if a malformed id ever made it into the index.
      */
     protected function deleteHtml(string $id): void
     {
+        if (! self::isValidId($id)) {
+            return;
+        }
+
         try {
             $disk = Storage::disk('local');
             $path = self::DIR . '/' . $id . '.html';
@@ -228,6 +269,11 @@ class SentMailService
         }
     }
 
+    /**
+     * Atomically replace the index file. On POSIX, rename overwrites in one
+     * step (no readers see a missing file). On Windows, rename can't replace,
+     * so we fall back to delete-then-move only if the first move fails.
+     */
     protected function writeIndex(array $entries): void
     {
         $disk = Storage::disk('local');
@@ -235,10 +281,11 @@ class SentMailService
 
         $disk->put(self::TMP_PATH, $json);
 
-        if ($disk->exists(self::INDEX_PATH)) {
+        if (! $disk->move(self::TMP_PATH, self::INDEX_PATH)) {
             $disk->delete(self::INDEX_PATH);
+            $disk->move(self::TMP_PATH, self::INDEX_PATH);
         }
 
-        $disk->move(self::TMP_PATH, self::INDEX_PATH);
+        $this->cachedAll = $entries;
     }
 }

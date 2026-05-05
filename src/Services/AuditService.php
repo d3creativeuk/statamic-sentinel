@@ -15,6 +15,33 @@ class AuditService
     const EOL_DATE_PHP_API = 'https://endoflife.date/api/php.json';
 
     /**
+     * Per-instance lockfile cache. Each scan reads composer.lock /
+     * package-lock.json from several methods (audit + installed-direct +
+     * outdated); decoding once and reusing keeps a multi-MB JSON parse from
+     * running 3x per refresh.
+     */
+    protected array $lockfileCache = [];
+
+    /**
+     * Read + decode a JSON file once per service instance. Returns null if
+     * the file is missing or malformed. Internal use only.
+     */
+    protected function readJsonFile(string $absolutePath): ?array
+    {
+        if (array_key_exists($absolutePath, $this->lockfileCache)) {
+            return $this->lockfileCache[$absolutePath];
+        }
+
+        if (! file_exists($absolutePath)) {
+            return $this->lockfileCache[$absolutePath] = null;
+        }
+
+        $decoded = json_decode((string) file_get_contents($absolutePath), true);
+
+        return $this->lockfileCache[$absolutePath] = is_array($decoded) ? $decoded : null;
+    }
+
+    /**
      * Last cached audit result, or null if nothing is cached yet.
      * Never triggers a scan.
      */
@@ -295,13 +322,12 @@ class AuditService
 
     protected function composerAudit(): array
     {
-        $lockPath = base_path('composer.lock');
+        $lock = $this->readJsonFile(base_path('composer.lock'));
 
-        if (! file_exists($lockPath)) {
+        if ($lock === null) {
             return ['status' => 'unavailable', 'message' => 'composer.lock not found.', 'severities' => [], 'counts' => [], 'total_packages' => 0, 'total_vulns' => 0];
         }
 
-        $lock     = json_decode(file_get_contents($lockPath), true);
         $packages = array_merge(
             $lock['packages']         ?? [],
             $lock['packages-dev']     ?? []
@@ -325,13 +351,11 @@ class AuditService
 
     protected function npmAudit(): array
     {
-        $lockPath = base_path('package-lock.json');
+        $lock = $this->readJsonFile(base_path('package-lock.json'));
 
-        if (! file_exists($lockPath)) {
+        if ($lock === null) {
             return ['status' => 'unavailable', 'message' => 'package-lock.json not found.', 'severities' => [], 'counts' => [], 'total_packages' => 0, 'total_vulns' => 0];
         }
-
-        $lock = json_decode(file_get_contents($lockPath), true);
 
         // Support both lockfile v1 (dependencies) and v2/v3 (packages)
         $packages = [];
@@ -459,7 +483,41 @@ class AuditService
             'counts'         => array_map(fn($s) => $s['count'], $severities),
             'total_packages' => $totalPackages,
             'total_vulns'    => $totalVulns,
+            'by_package'     => self::groupBySeverity($severities),
         ];
+    }
+
+    /**
+     * Roll up the per-severity vuln list into a per-package summary, sorted
+     * by highest severity then name. Computed at scan time so the utility
+     * view can render a cached snapshot without re-grouping on every load.
+     * Public + static so views can fall back to it for cache rows written
+     * before this method existed.
+     */
+    public static function groupBySeverity(array $severities): array
+    {
+        $rank = ['CRITICAL' => 5, 'HIGH' => 4, 'MEDIUM' => 3, 'LOW' => 2, 'UNKNOWN' => 1];
+
+        $byPackage = [];
+        foreach (['CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'UNKNOWN'] as $sev) {
+            foreach ($severities[$sev]['vulns'] ?? [] as $v) {
+                $name = $v['package'];
+                if (! isset($byPackage[$name])) {
+                    $byPackage[$name] = ['name' => $name, 'highest' => $sev, 'count' => 0];
+                }
+                if ($rank[$sev] > $rank[$byPackage[$name]['highest']]) {
+                    $byPackage[$name]['highest'] = $sev;
+                }
+                $byPackage[$name]['count']++;
+            }
+        }
+
+        uasort($byPackage, function ($a, $b) use ($rank) {
+            $cmp = $rank[$b['highest']] - $rank[$a['highest']];
+            return $cmp !== 0 ? $cmp : strcmp($a['name'], $b['name']);
+        });
+
+        return array_values($byPackage);
     }
 
     /**
@@ -474,7 +532,7 @@ class AuditService
             try {
                 $responses = Http::pool(function ($pool) use ($chunk) {
                     return array_map(
-                        fn($id) => $pool->timeout(10)->get('https://api.osv.dev/v1/vulns/' . $id),
+                        fn($id) => $pool->as($id)->timeout(10)->get('https://api.osv.dev/v1/vulns/' . $id),
                         $chunk
                     );
                 });
@@ -482,8 +540,8 @@ class AuditService
                 continue;
             }
 
-            foreach ($chunk as $i => $id) {
-                $response = $responses[$i] ?? null;
+            foreach ($chunk as $id) {
+                $response = $responses[$id] ?? null;
                 if (! $response || ! $response->ok()) continue;
 
                 $details[$id] = $response->json() ?? [];
@@ -537,15 +595,12 @@ class AuditService
      */
     public function composerInstalledDirect(): array
     {
-        $manifestPath = base_path('composer.json');
-        $lockPath     = base_path('composer.lock');
+        $manifest = $this->readJsonFile(base_path('composer.json'));
+        $lock     = $this->readJsonFile(base_path('composer.lock'));
 
-        if (! file_exists($manifestPath) || ! file_exists($lockPath)) {
+        if ($manifest === null || $lock === null) {
             return [];
         }
-
-        $manifest = json_decode(file_get_contents($manifestPath), true);
-        $lock     = json_decode(file_get_contents($lockPath), true);
 
         $direct = array_keys(array_merge(
             $manifest['require']     ?? [],
@@ -585,7 +640,7 @@ class AuditService
         try {
             $responses = Http::pool(function ($pool) use ($toCheck) {
                 return array_map(
-                    fn($name) => $pool->timeout(5)->get("https://repo.packagist.org/p2/{$name}.json"),
+                    fn($name) => $pool->as($name)->timeout(5)->get("https://repo.packagist.org/p2/{$name}.json"),
                     $toCheck
                 );
             });
@@ -595,8 +650,8 @@ class AuditService
 
         $outdated = [];
 
-        foreach ($toCheck as $i => $name) {
-            $response = $responses[$i] ?? null;
+        foreach ($toCheck as $name) {
+            $response = $responses[$name] ?? null;
             if (! $response || ! $response->ok()) continue;
 
             $latest = null;
@@ -626,15 +681,12 @@ class AuditService
      */
     public function npmInstalledDirect(): array
     {
-        $manifestPath = base_path('package.json');
-        $lockPath     = base_path('package-lock.json');
+        $manifest = $this->readJsonFile(base_path('package.json'));
+        $lock     = $this->readJsonFile(base_path('package-lock.json'));
 
-        if (! file_exists($manifestPath) || ! file_exists($lockPath)) {
+        if ($manifest === null || $lock === null) {
             return [];
         }
-
-        $manifest = json_decode(file_get_contents($manifestPath), true);
-        $lock     = json_decode(file_get_contents($lockPath), true);
 
         $direct = array_keys(array_merge(
             $manifest['dependencies']    ?? [],
@@ -679,7 +731,7 @@ class AuditService
         try {
             $responses = Http::pool(function ($pool) use ($toCheck) {
                 return array_map(
-                    fn($name) => $pool->timeout(5)->get("https://registry.npmjs.org/{$name}/latest"),
+                    fn($name) => $pool->as($name)->timeout(5)->get("https://registry.npmjs.org/{$name}/latest"),
                     $toCheck
                 );
             });
@@ -689,8 +741,8 @@ class AuditService
 
         $outdated = [];
 
-        foreach ($toCheck as $i => $name) {
-            $response = $responses[$i] ?? null;
+        foreach ($toCheck as $name) {
+            $response = $responses[$name] ?? null;
             if (! $response || ! $response->ok()) continue;
 
             $latest  = $response->json('version');
