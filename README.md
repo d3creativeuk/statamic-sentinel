@@ -68,12 +68,6 @@ SENTINEL_DEV_URL='https://your-agency.example/sentinel'
 
 When set, the CP widget/utility footers and email footers add a `Sentinel by <name>` link. Setting only `SENTINEL_DEV_NAME` (no URL) renders the name as plain text.
 
-To override the bundled config file directly, publish it:
-
-```bash
-php artisan vendor:publish --tag=sentinel-config
-```
-
 ## Requirements
 
 - PHP 8.0+

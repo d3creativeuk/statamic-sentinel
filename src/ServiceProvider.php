@@ -28,10 +28,6 @@ class ServiceProvider extends AddonServiceProvider
     {
         $this->loadViewsFrom(__DIR__ . '/../resources/views', 'statamic-sentinel');
 
-        $this->publishes([
-            __DIR__ . '/../config/sentinel.php' => config_path('sentinel.php'),
-        ], 'sentinel-config');
-
         View::composer('statamic-sentinel::*', function ($view) {
             $view->with([
                 'sentinelDevName' => config('sentinel.developer.name') ?: null,
