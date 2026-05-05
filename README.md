@@ -75,7 +75,7 @@ When set, the CP widget/utility footers and email footers add a `Sentinel by <na
 
 ## Support
 
-This addon is maintained by [D3 Creative](https://d3creative.uk). For enquiries about managed Statamic maintenance, visit [d3creative.uk/services/support-and-maintenance](https://d3creative.uk/services/support-and-maintenance).
+This addon is maintained by [D3 Creative](https://d3creative.uk). For enquiries about managed Statamic maintenance, visit [d3creative.uk/d3creative.uk/services/statamic-maintenance](https://d3creative.uk/d3creative.uk/services/statamic-maintenance).
 
 ## License
 
