@@ -33,7 +33,14 @@
         return ($c[0] ?? null) === ($l[0] ?? null) && ($c[1] ?? null) === ($l[1] ?? null);
     };
 
-    $platformBadge = function (array $p) use ($isPatchOnly) {
+    $isMajorBehind = function ($current, $latest) {
+        if (! $current || ! $latest) return false;
+        $c = explode('.', $current);
+        $l = explode('.', $latest);
+        return ($c[0] ?? null) !== ($l[0] ?? null);
+    };
+
+    $platformBadge = function (array $p) use ($isPatchOnly, $isMajorBehind) {
         $status   = $p['status'] ?? 'unknown';
         $security = ! empty($p['security_update_available']);
         $current  = $p['current'] ?? $p['version'] ?? null;
@@ -49,7 +56,13 @@
             if ($isPatchOnly($current, $latest)) {
                 return ['text' => null, 'colour' => null, 'detail' => $current . ' → ' . $latest];
             }
-            return ['text' => 'Outdated', 'colour' => '#b45309', 'detail' => $current . ' → ' . $latest];
+            // Only a different major earns "Outdated"; minor bumps are
+            // routine updates and read as "Update available" in blue,
+            // matching the ecosystem badges.
+            if ($isMajorBehind($current, $latest)) {
+                return ['text' => 'Outdated', 'colour' => '#b45309', 'detail' => $current . ' → ' . $latest];
+            }
+            return ['text' => 'Update available', 'colour' => '#3b82f6', 'detail' => $current . ' → ' . $latest];
         }
         if (in_array($status, ['ok', 'active'])) return ['text' => 'Up to date', 'colour' => '#10b981', 'detail' => $current];
 
