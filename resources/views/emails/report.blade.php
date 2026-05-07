@@ -114,9 +114,25 @@
 
     $needsAttention = $totalVulns > 0 || $platformEol || $securityUpdate;
 
+    // Mirror the row-level "Outdated" amber pill at the banner: any platform
+    // a full major behind earns its own tier between needs-attention (red)
+    // and routine updates (blue).
+    $platformMajorBehind = false;
+    foreach ([$statamic, $laravel, $php] as $_p) {
+        $_current = $_p['current'] ?? $_p['version'] ?? null;
+        $_latest  = $_p['latest']  ?? null;
+        if ($_latest && $_current && version_compare($_current, $_latest, '<') && $isMajorBehind($_current, $_latest)) {
+            $platformMajorBehind = true;
+            break;
+        }
+    }
+
     if ($needsAttention) {
         $intro        = 'Your Statamic website needs attention - security or platform issues were found.';
         $statusAccent = '#ef4444';
+    } elseif ($platformMajorBehind) {
+        $intro        = 'One or more platforms a major version behind.';
+        $statusAccent = '#b45309';
     } elseif ($totalOutdated > 0) {
         $intro        = 'Your Statamic website is in good health, routine updates available.';
         $statusAccent = '#3b82f6';
