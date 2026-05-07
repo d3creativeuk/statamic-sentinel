@@ -33,14 +33,21 @@
         return ($c[0] ?? null) === ($l[0] ?? null) && ($c[1] ?? null) === ($l[1] ?? null);
     };
 
-    $isMajorBehind = function ($current, $latest) {
+    $isMajorBehind = function ($current, $latest, $platform = null) {
         if (! $current || ! $latest) return false;
         $c = explode('.', $current);
         $l = explode('.', $latest);
+        // PHP ships each X.Y as a distinct release branch with its own EOL
+        // window, so 8.4 → 8.5 is effectively a major bump even though both
+        // share a leading "8". Treat any X.Y change as major-behind for PHP.
+        if ($platform === 'PHP') {
+            return ($c[0] ?? null) !== ($l[0] ?? null)
+                || ($c[1] ?? null) !== ($l[1] ?? null);
+        }
         return ($c[0] ?? null) !== ($l[0] ?? null);
     };
 
-    $platformBadge = function (array $p) use ($isPatchOnly, $isMajorBehind) {
+    $platformBadge = function (array $p, ?string $platform = null) use ($isPatchOnly, $isMajorBehind) {
         $status   = $p['status'] ?? 'unknown';
         $security = ! empty($p['security_update_available']);
         $current  = $p['current'] ?? $p['version'] ?? null;
@@ -59,7 +66,7 @@
             // Only a different major earns "Outdated"; minor bumps are
             // routine updates and read as "Update available" in blue,
             // matching the ecosystem badges.
-            if ($isMajorBehind($current, $latest)) {
+            if ($isMajorBehind($current, $latest, $platform)) {
                 return ['text' => 'Outdated', 'colour' => '#b45309', 'detail' => $current . ' → ' . $latest];
             }
             return ['text' => 'Update available', 'colour' => '#3b82f6', 'detail' => $current . ' → ' . $latest];
@@ -118,10 +125,10 @@
     // a full major behind earns its own tier between needs-attention (red)
     // and routine updates (blue).
     $platformMajorBehind = false;
-    foreach ([$statamic, $laravel, $php] as $_p) {
+    foreach ([['Statamic', $statamic], ['Laravel', $laravel], ['PHP', $php]] as [$_name, $_p]) {
         $_current = $_p['current'] ?? $_p['version'] ?? null;
         $_latest  = $_p['latest']  ?? null;
-        if ($_latest && $_current && version_compare($_current, $_latest, '<') && $isMajorBehind($_current, $_latest)) {
+        if ($_latest && $_current && version_compare($_current, $_latest, '<') && $isMajorBehind($_current, $_latest, $_name)) {
             $platformMajorBehind = true;
             break;
         }
@@ -166,7 +173,7 @@
         {{-- Always-visible rows: Statamic / Laravel / PHP / Composer / npm --}}
         @foreach ($rows as $row)
             @php
-                $b = $row['kind'] === 'platform' ? $platformBadge($row['data']) : $ecosystemBadge($row['data']);
+                $b = $row['kind'] === 'platform' ? $platformBadge($row['data'], $row['label']) : $ecosystemBadge($row['data']);
             @endphp
             <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden; margin-bottom:10px;">
                 <tr>
