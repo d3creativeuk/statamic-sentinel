@@ -16,6 +16,17 @@ Results are cached using the host's default cache store (`CACHE_STORE`) and mirr
 
 > **After updating dependencies:** Sentinel does not watch `composer.lock` or `package-lock.json` for changes, so a fresh `composer update` or `npm install` won't be reflected until the next scan. Hit **Refresh** in the widget/utility header (or run `php artisan sentinel:scan`) to re-read the lockfiles and overwrite the cached audit. Until then, the CP will keep reporting the versions captured by the previous scan.
 
+## What gets scanned vs. what gets shown
+
+Sentinel scans **every package in your lockfile** (direct + transitive) for known vulnerabilities via OSV - so a CVE in something deep in the dependency tree like `axios` (pulled in by `laravel-precognition-alpine`, for example) will still surface under **Security issues**.
+
+The **Updates available** list, however, only shows your **direct dependencies** - the packages you've added to `composer.json` / `package.json` yourself. Transitives are filtered out for two reasons:
+
+- The list would otherwise explode to hundreds of entries and bury the actionable signal.
+- You can't update a transitive directly anyway; it'll move when its parent package releases a new version.
+
+So if you don't see a transitive package in the updates list, it's not being ignored - it's being scanned, just not surfaced as actionable until either it has a known vulnerability or its parent gets an update.
+
 ## Where data lives
 
 Sentinel writes runtime state to the host app's `storage/app/` directory under `statamic-sentinel/`:
