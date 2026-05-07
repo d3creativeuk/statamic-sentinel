@@ -12,7 +12,7 @@ Instead:
 - **Manual refresh:** the **Refresh** link in the widget/utility header forces an immediate re-check at any time.
 - **CLI:** run `php artisan sentinel:scan` to trigger a scan from the terminal. Wire this into your host app's scheduler (e.g. `$schedule->command('sentinel:scan')->daily()` in your `App\Console\Kernel`) if you want unattended daily scans.
 
-Results are cached using the host's default cache store (`CACHE_STORE`) and persist until the next scan overwrites them.
+Results are cached using the host's default cache store (`CACHE_STORE`) and mirrored to `storage/app/statamic-sentinel/audit.json`. They persist until the next scan overwrites them, and the disk mirror means a `cache:clear` (common after `composer update`) won't wipe your last scan - on the next read, the cache is rehydrated from disk.
 
 > **After updating dependencies:** Sentinel does not watch `composer.lock` or `package-lock.json` for changes, so a fresh `composer update` or `npm install` won't be reflected until the next scan. Hit **Refresh** in the widget/utility header (or run `php artisan sentinel:scan`) to re-read the lockfiles and overwrite the cached audit. Until then, the CP will keep reporting the versions captured by the previous scan.
 
@@ -20,6 +20,7 @@ Results are cached using the host's default cache store (`CACHE_STORE`) and pers
 
 Sentinel writes runtime state to the host app's `storage/app/` directory under `statamic-sentinel/`:
 
+- `audit.json` - disk mirror of the last scan, so a `cache:clear` doesn't wipe it
 - `history.json` - rolling 365-day snapshot history (one entry per change)
 - `last-update-report.json` - the most recent meaningful diff, used by **Send anyway**
 - `schedule.json` - scheduled status report config (cadence, time, recipients)
