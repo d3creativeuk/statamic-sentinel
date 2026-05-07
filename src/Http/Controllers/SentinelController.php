@@ -169,10 +169,9 @@ class SentinelController extends Controller
         $audit = (new AuditService())->run();
 
         return $this->previewResponse(view('statamic-sentinel::emails.report', [
-            'audit'       => $audit,
-            'host'        => parse_url(config('app.url'), PHP_URL_HOST) ?: 'site',
-            'utility_url' => cp_route('utilities.sentinel'),
-            'preheader'   => 'Statamic Package Status Report',
+            'audit'     => $audit,
+            'host'      => parse_url(config('app.url'), PHP_URL_HOST) ?: 'site',
+            'preheader' => 'Statamic Package Status Report',
         ])->render());
     }
 

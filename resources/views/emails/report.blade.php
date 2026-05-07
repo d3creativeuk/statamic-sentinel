@@ -170,17 +170,19 @@
             </table>
         @endforeach
 
-        {{-- CTA --}}
-        <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse; margin-top:14px;">
-            <tr>
-                <td align="center" style="padding:4px 0 8px;">
-                    <a href="{{ $utility_url }}"
-                       style="display:inline-block; background:#0f172a; color:#ffffff; font-size:14px; font-weight:600; text-decoration:none; padding:12px 28px; border-radius:8px;">
-                        Current Status
-                    </a>
-                </td>
-            </tr>
-        </table>
+        @if (! empty($sentinelDevEmail))
+            {{-- CTA --}}
+            <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse; margin-top:14px;">
+                <tr>
+                    <td align="center" style="padding:4px 0 8px;">
+                        <a href="mailto:{{ $sentinelDevEmail }}?subject={{ rawurlencode('Maintenance enquiry for ' . $host) }}"
+                           style="display:inline-block; background:#0f172a; color:#ffffff; font-size:14px; font-weight:600; text-decoration:none; padding:12px 28px; border-radius:8px;">
+                            Need help with your website?
+                        </a>
+                    </td>
+                </tr>
+            </table>
+        @endif
 
     </div>
 

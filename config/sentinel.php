@@ -14,8 +14,9 @@ return [
     */
 
     'developer' => [
-        'name' => env('SENTINEL_DEV_NAME'),
-        'url'  => env('SENTINEL_DEV_URL'),
+        'name'  => env('SENTINEL_DEV_NAME'),
+        'url'   => env('SENTINEL_DEV_URL'),
+        'email' => env('SENTINEL_DEV_EMAIL'),
     ],
 
 ];

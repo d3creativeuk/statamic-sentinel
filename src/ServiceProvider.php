@@ -30,8 +30,9 @@ class ServiceProvider extends AddonServiceProvider
 
         View::composer('statamic-sentinel::*', function ($view) {
             $view->with([
-                'sentinelDevName' => config('sentinel.developer.name') ?: null,
-                'sentinelDevUrl'  => config('sentinel.developer.url') ?: null,
+                'sentinelDevName'  => config('sentinel.developer.name')  ?: null,
+                'sentinelDevUrl'   => config('sentinel.developer.url')   ?: null,
+                'sentinelDevEmail' => config('sentinel.developer.email') ?: null,
             ]);
         });
 
