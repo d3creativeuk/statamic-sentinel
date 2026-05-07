@@ -167,35 +167,38 @@
         </div>
 
         {{-- Action row: visible whenever the toggle is on, OR there's an active saved schedule that may need cancelling. --}}
-        <div x-show="form.enabled || savedEnabled" x-cloak style="display:flex; align-items:center; gap:16px; margin-top:14px; flex-wrap:wrap;">
-            <button type="submit"
-                    x-show="form.enabled"
-                    x-cloak
-                    x-bind:disabled="sending"
-                    x-bind:style="{ background: state === 'success' ? '#047857' : (state === 'error' ? '#ef4444' : '#0f172a') }"
-                    style="font-size:13px; font-weight:600; color:#fff; background:#0f172a; border:none; padding:7px 14px; border-radius:6px; cursor:pointer; white-space:nowrap;">
-                <span x-show="sending" x-cloak style="display:inline-flex; align-items:center; gap:6px;">
-                    <span aria-hidden="true" style="display:inline-block; font-size:14px; line-height:1; transform-origin:center; animation:sentinel-spin 1s linear infinite;">↻</span>
-                    Saving…
-                </span>
-                <span x-show="!sending && state === 'success'" x-cloak>✓ Saved</span>
-                <span x-show="!sending && state === 'error'" x-cloak>✕ Failed</span>
-                <span x-show="!sending && state === 'idle'">Save schedule</span>
-            </button>
+        {{-- Outer x-show wrapper toggles display; inner div owns the flex layout because Alpine's x-show strips inline `display` from the element it controls. --}}
+        <div x-show="form.enabled || savedEnabled" x-cloak style="margin-top:14px;">
+            <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+                <button type="submit"
+                        x-show="form.enabled"
+                        x-cloak
+                        x-bind:disabled="sending"
+                        x-bind:style="{ background: state === 'success' ? '#047857' : (state === 'error' ? '#ef4444' : '#0f172a') }"
+                        style="font-size:13px; font-weight:600; color:#fff; background:#0f172a; border:none; padding:7px 14px; border-radius:6px; cursor:pointer; white-space:nowrap;">
+                    <span x-show="sending" x-cloak style="display:inline-flex; align-items:center; gap:6px;">
+                        <span aria-hidden="true" style="display:inline-block; font-size:14px; line-height:1; transform-origin:center; animation:sentinel-spin 1s linear infinite;">↻</span>
+                        Saving…
+                    </span>
+                    <span x-show="!sending && state === 'success'" x-cloak>✓ Saved</span>
+                    <span x-show="!sending && state === 'error'" x-cloak>✕ Failed</span>
+                    <span x-show="!sending && state === 'idle'">Save schedule</span>
+                </button>
 
-            <button type="button"
-                    x-show="savedEnabled"
-                    x-cloak
-                    x-bind:disabled="sending"
-                    x-on:click="cancel()"
-                    style="font-size:13px; font-weight:600; color:#b91c1c; background:#fff; border:1px solid #fecaca; padding:7px 14px; border-radius:6px; cursor:pointer; white-space:nowrap; font-family:inherit;">
-                Cancel schedule
-            </button>
+                <button type="button"
+                        x-show="savedEnabled"
+                        x-cloak
+                        x-bind:disabled="sending"
+                        x-on:click="cancel()"
+                        style="font-size:13px; font-weight:600; color:#b91c1c; background:#fff; border:1px solid #fecaca; padding:7px 14px; border-radius:6px; cursor:pointer; white-space:nowrap; font-family:inherit;">
+                    Cancel schedule
+                </button>
 
-            <span x-show="message" x-cloak
-                  x-text="message"
-                  x-bind:style="{ color: state === 'success' ? '#047857' : '#ef4444' }"
-                  style="font-size:13px;"></span>
+                <span x-show="message" x-cloak
+                      x-text="message"
+                      x-bind:style="{ color: state === 'success' ? '#047857' : '#ef4444' }"
+                      style="font-size:13px;"></span>
+            </div>
         </div>
     </form>
 </div>
