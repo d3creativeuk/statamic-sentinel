@@ -6,6 +6,11 @@
 
 Sentinel cross-references your installed versions against the OSV vulnerability database, endoflife.date, Packagist, and the npm registry, then surfaces ranked findings (vulnerabilities by severity, packages past EOL, available updates) directly in the Statamic Control Panel. It tracks a rolling 365-day history so you can diff snapshots and see exactly what moved between updates, and email reports can be sent on demand or on a daily, weekly, or monthly schedule.
 
+## Documentation
+
+- [Usage](USAGE.md) - how scanning works, where data lives
+- [Security](SECURITY.md) - reporting vulnerabilities
+
 ## What it shows
 
 - **Statamic version** - current version vs latest stable release
@@ -13,6 +18,8 @@ Sentinel cross-references your installed versions against the OSV vulnerability 
 - **Composer vulnerabilities** - packages in `composer.lock` checked against the [OSV vulnerability database](https://osv.dev)
 - **npm vulnerabilities** - packages in `package-lock.json` checked against OSV
 - **Update history** - snapshot of versions and counts is recorded whenever any tracked value changes, viewable in the utility's **History** tab. Retained for 365 days. Each snapshot also stores per-package installed versions so update diffs can be reconstructed later.
+
+## Reporting
 - **Email status report** - super admins can send the full current audit to up to 10 recipients from the utility's **Status Report** tab.
 - **Email update report** - super admins can send a diff between the two most recent snapshots (platform version changes, packages updated/added/removed, vulnerabilities resolved/introduced) from the utility's **Update Report** tab. Run an update, hit **Refresh** to capture a fresh snapshot, then click **Send Update Report** - recipients see exactly what moved. If nothing changed since the last snapshot, you can opt to resend the last meaningful diff via **Send anyway**.
 - **Preview before sending** - both report tabs include a **Preview** button that opens the rendered email in a modal so you can see exactly what recipients will get before clicking Send.
