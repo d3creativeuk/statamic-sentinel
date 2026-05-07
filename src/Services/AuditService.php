@@ -343,6 +343,12 @@ class AuditService
         $full       = PHP_VERSION;
         $majorMinor = implode('.', array_slice(explode('.', $full), 0, 2));
 
+        // Absolute newest stable across all branches, not just the user's own.
+        // Without this, a site on 8.4.20 (latest 8.4 patch) would read as
+        // "up to date" even when 8.5.x has shipped - matches how Statamic and
+        // Laravel surface cross-major upgrades.
+        $latest = $this->latestStablePhpVersion($branches);
+
         if ($branches) {
             try {
                 $branch = collect($branches)->firstWhere('cycle', $majorMinor);
@@ -351,7 +357,6 @@ class AuditService
                     $today        = now();
                     $activeEnds   = \Carbon\Carbon::parse($branch['support']);
                     $securityEnds = \Carbon\Carbon::parse($branch['eol']);
-                    $latest       = $branch['latest'] ?? null;
 
                     if ($today->gt($securityEnds)) {
                         $status = 'eol';
@@ -379,11 +384,47 @@ class AuditService
 
         return [
             'version'   => $full,
-            'latest'    => null,
-            'is_latest' => null,
+            'latest'    => $latest,
+            'is_latest' => $latest && version_compare($full, $latest, '>='),
             'status'    => 'unknown',
             'label'     => 'Unknown',
         ];
+    }
+
+    /**
+     * Highest stable X.Y.Z across all endoflife.date branches. Skips branches
+     * whose `releaseDate` is in the future (upcoming versions that haven't
+     * shipped yet) and any non-stable `latest` strings.
+     */
+    protected function latestStablePhpVersion(?array $branches): ?string
+    {
+        if (! $branches) return null;
+
+        $today   = now();
+        $highest = null;
+
+        foreach ($branches as $branch) {
+            $latest = $branch['latest'] ?? null;
+            if (! $latest || ! preg_match('/^[0-9]+\.[0-9]+\.[0-9]+$/', $latest)) {
+                continue;
+            }
+
+            if (! empty($branch['releaseDate'])) {
+                try {
+                    if (\Carbon\Carbon::parse($branch['releaseDate'])->gt($today)) {
+                        continue;
+                    }
+                } catch (\Throwable $e) {
+                    // Bad date - fall through and consider the version
+                }
+            }
+
+            if ($highest === null || version_compare($latest, $highest, '>')) {
+                $highest = $latest;
+            }
+        }
+
+        return $highest;
     }
 
     // -------------------------------------------------------------------------
