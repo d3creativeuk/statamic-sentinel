@@ -19,29 +19,6 @@ Sentinel cross-references your installed versions against the OSV vulnerability 
 - **Scheduled status reports** - the Status Report tab includes schedule controls (daily/weekly/monthly cadence, time, recipient list) below the manual send form. The addon auto-registers the matching Laravel scheduler entry on boot, and each scheduled run does a fresh scan first - so the email is current AND the CP's cached audit + history get updated for free. Update reports aren't scheduled - they're meant to verify a manual update + scan, so they're send-on-demand only. Requires the standard `* * * * * php artisan schedule:run` cron entry on the host.
 - Both email send endpoints are rate-limited to 6 requests per minute.
 
-## How scanning works
-
-Sentinel does not scan when you load the Control Panel - that would block the dashboard while it talks to several external APIs.
-
-Instead:
-
-- **First install:** the widget shows a **Scan Now** button. Click it once to run your first scan (10-20 seconds).
-- **Manual refresh:** the **Refresh** link in the widget/utility header forces an immediate re-check at any time.
-- **CLI:** run `php artisan sentinel:scan` to trigger a scan from the terminal. Wire this into your host app's scheduler (e.g. `$schedule->command('sentinel:scan')->daily()` in your `App\Console\Kernel`) if you want unattended daily scans.
-
-Results are cached using the host's default cache store (`CACHE_STORE`) and persist until the next scan overwrites them.
-
-## Where data lives
-
-Sentinel writes runtime state to the host app's `storage/app/` directory under `statamic-sentinel/`:
-
-- `history.json` - rolling 365-day snapshot history (one entry per change)
-- `last-update-report.json` - the most recent meaningful diff, used by **Send anyway**
-- `schedule.json` - scheduled status report config (cadence, time, recipients)
-- `sent/index.json` + `sent/{id}.html` - log and rendered HTML of every report sent, capped per kind
-
-All of it is per-environment runtime state - regenerable from `composer.lock`, `package-lock.json`, and the live OSV/Packagist/npm APIs. Laravel's default `.gitignore` already covers `storage/app/`, so these files aren't (and shouldn't be) tracked in git. Back them up with the rest of `storage/` if you want to preserve the sent archive across environment moves.
-
 ## Installation
 
 ```bash
@@ -56,6 +33,10 @@ Then add the widget to your CP dashboard by adding `sentinel` to the widgets arr
     'width' => 50,
 ],
 ```
+
+## Usage
+
+Sentinel scans on demand, not on every CP load. After dependency updates, hit **Refresh** in the widget/utility header to re-read your lockfiles - the cached audit doesn't update on its own. See [USAGE.md](USAGE.md) for scanning, scheduling, and storage details.
 
 ## Branding (optional)
 
