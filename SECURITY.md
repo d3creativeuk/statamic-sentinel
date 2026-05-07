@@ -4,7 +4,7 @@
 
 If you believe you have found a security vulnerability in Sentinel, please report it privately. **Do not open a public GitHub issue for security problems.**
 
-Email: **support@d3creative.uk**
+Report it via **https://d3creative.uk/contact**.
 
 Please include:
 
