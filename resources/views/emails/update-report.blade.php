@@ -31,21 +31,13 @@
     $vulnsResolved = $vulns['composer_resolved']   + $vulns['npm_resolved'];
     $vulnsIntro    = $vulns['composer_introduced'] + $vulns['npm_introduced'];
 
-    $bits = [];
-    if ($platformChangeCount > 0) $bits[] = $platformChangeCount . ' platform ' . \Illuminate\Support\Str::plural('upgrade', $platformChangeCount);
-    if ($composerChanges > 0)     $bits[] = $composerChanges . ' Composer ' . \Illuminate\Support\Str::plural('change', $composerChanges);
-    if ($npmChanges > 0)          $bits[] = $npmChanges . ' npm ' . \Illuminate\Support\Str::plural('change', $npmChanges);
-    if ($vulnsResolved > 0)       $bits[] = $vulnsResolved . ' ' . \Illuminate\Support\Str::plural('vulnerability', $vulnsResolved) . ' resolved';
-    if ($vulnsIntro > 0)          $bits[] = $vulnsIntro . ' new ' . \Illuminate\Support\Str::plural('vulnerability', $vulnsIntro);
-
-    $hasAnyChange = ! empty($bits);
-    $statusLine   = $hasAnyChange ? implode(', ', $bits) . '.' : 'No changes detected since the previous snapshot.';
+    $hasAnyChange = $platformChangeCount > 0 || $composerChanges > 0 || $npmChanges > 0 || $vulnsResolved > 0 || $vulnsIntro > 0;
     $statusAccent = $vulnsIntro > 0 ? '#ef4444' : ($hasAnyChange ? '#10b981' : '#94a3b8');
 
     if ($vulnsIntro > 0) {
         $intro = 'Your Statamic website has been updated, but new security issues need attention.';
     } elseif ($hasAnyChange) {
-        $intro = 'Your Statamic website has been updated and is in good health.';
+        $intro = 'Your Statamic website has been updated.';
     } else {
         $intro = 'No updates have been applied to your Statamic website since the last report.';
     }
@@ -104,7 +96,6 @@
         {{-- Status banner --}}
         <div style="background:{{ $statusAccent }}1a; border-left:3px solid {{ $statusAccent }}; padding:14px 16px; border-radius:6px; margin-bottom:24px;">
             <div style="font-size:15px; font-weight:600; color:#0f172a; line-height:1.4;">{{ $intro }}</div>
-            <div style="font-size:13px; color:#475569; margin-top:6px;">{{ $statusLine }}</div>
         </div>
 
         {{-- Platform rows: Statamic / Laravel / PHP --}}

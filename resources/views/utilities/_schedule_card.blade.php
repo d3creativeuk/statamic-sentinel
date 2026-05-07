@@ -167,7 +167,7 @@
         </div>
 
         {{-- Action row: visible whenever the toggle is on, OR there's an active saved schedule that may need cancelling. --}}
-        <div x-show="form.enabled || savedEnabled" x-cloak style="display:flex; align-items:center; gap:12px; margin-top:14px; flex-wrap:wrap;">
+        <div x-show="form.enabled || savedEnabled" x-cloak style="display:flex; align-items:center; gap:16px; margin-top:14px; flex-wrap:wrap;">
             <button type="submit"
                     x-show="form.enabled"
                     x-cloak

@@ -118,17 +118,12 @@
         $intro        = 'Your Statamic website needs attention - security or platform issues were found.';
         $statusAccent = '#ef4444';
     } elseif ($totalOutdated > 0) {
-        $intro        = 'Your Statamic website is in good health, with some routine updates available.';
+        $intro        = 'Your Statamic website is in good health, routine updates available.';
         $statusAccent = '#3b82f6';
     } else {
         $intro        = 'Your Statamic website is fully up to date and in good health.';
         $statusAccent = '#10b981';
     }
-
-    $bits = [];
-    if ($totalVulns > 0)    $bits[] = $totalVulns    . ' security ' . \Illuminate\Support\Str::plural('issue', $totalVulns);
-    if ($totalOutdated > 0) $bits[] = $totalOutdated . ' ' . \Illuminate\Support\Str::plural('update', $totalOutdated) . ' available';
-    $statusLine = empty($bits) ? 'All checks passed.' : implode(', ', $bits) . '.';
 @endphp
 
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f1f5f9;">
@@ -150,7 +145,6 @@
         {{-- Status banner --}}
         <div style="background:{{ $statusAccent }}1a; border-left:3px solid {{ $statusAccent }}; padding:14px 16px; border-radius:6px; margin-bottom:24px;">
             <div style="font-size:15px; font-weight:600; color:#0f172a; line-height:1.4;">{{ $intro }}</div>
-            <div style="font-size:13px; color:#475569; margin-top:6px;">{{ $statusLine }}</div>
         </div>
 
         {{-- Always-visible rows: Statamic / Laravel / PHP / Composer / npm --}}
