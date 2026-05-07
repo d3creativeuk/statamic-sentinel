@@ -4,6 +4,7 @@ namespace D3Creative\Sentinel\Services;
 
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Storage;
 
 class AuditService
 {
@@ -11,6 +12,11 @@ class AuditService
     const PACKAGIST_STATAMIC_API = 'https://repo.packagist.org/p2/statamic/cms.json';
     const PACKAGIST_LARAVEL_API  = 'https://repo.packagist.org/p2/laravel/framework.json';
     const CACHE_KEY = 'd3creative_sentinel_audit';
+
+    // Disk mirror of the cache so the last scan survives `cache:clear`
+    // (which Statamic / Laravel sites routinely run after `composer update`).
+    const DISK_PATH     = 'statamic-sentinel/audit.json';
+    const DISK_TMP_PATH = 'statamic-sentinel/audit.json.tmp';
 
     const EOL_DATE_PHP_API = 'https://endoflife.date/api/php.json';
 
@@ -44,10 +50,63 @@ class AuditService
     /**
      * Last cached audit result, or null if nothing is cached yet.
      * Never triggers a scan.
+     *
+     * Falls back to the disk mirror if the cache has been cleared - common
+     * after `composer update` since most sites run `cache:clear` afterwards.
+     * On a disk hit we rehydrate the cache so subsequent reads stay hot.
      */
     public function cached(): ?array
     {
-        return Cache::get(self::CACHE_KEY);
+        if ($cached = Cache::get(self::CACHE_KEY)) {
+            return $cached;
+        }
+
+        $disk = $this->readFromDisk();
+
+        if ($disk !== null) {
+            Cache::forever(self::CACHE_KEY, $disk);
+        }
+
+        return $disk;
+    }
+
+    protected function readFromDisk(): ?array
+    {
+        try {
+            $disk = Storage::disk('local');
+
+            if (! $disk->exists(self::DISK_PATH)) {
+                return null;
+            }
+
+            $decoded = json_decode((string) $disk->get(self::DISK_PATH), true);
+
+            return is_array($decoded) ? $decoded : null;
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
+    /**
+     * Atomically write the audit to disk. Mirrors HistoryService::write() -
+     * tmp + rename so readers never see a half-written file. Silent on
+     * failure: the cache write has already succeeded by the time we get here.
+     */
+    protected function writeToDisk(array $result): void
+    {
+        try {
+            $disk = Storage::disk('local');
+            $json = json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+
+            $disk->put(self::DISK_TMP_PATH, $json);
+
+            if (! $disk->move(self::DISK_TMP_PATH, self::DISK_PATH)) {
+                $disk->delete(self::DISK_PATH);
+                $disk->move(self::DISK_TMP_PATH, self::DISK_PATH);
+            }
+        } catch (\Throwable $e) {
+            // Silent fail
+        }
     }
 
     /**
@@ -147,6 +206,7 @@ class AuditService
         ];
 
         Cache::forever(self::CACHE_KEY, $result);
+        $this->writeToDisk($result);
 
         app(HistoryService::class)->recordIfChanged($result);
 
