@@ -219,18 +219,6 @@
             </table>
         @endif
 
-        {{-- CTA --}}
-        <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
-            <tr>
-                <td align="center" style="padding:4px 0 8px;">
-                    <a href="{{ $utility_url }}"
-                       style="display:inline-block; background:#0f172a; color:#ffffff; font-size:14px; font-weight:600; text-decoration:none; padding:12px 28px; border-radius:8px;">
-                        Current Status
-                    </a>
-                </td>
-            </tr>
-        </table>
-
     </div>
 
     {{-- Footer --}}

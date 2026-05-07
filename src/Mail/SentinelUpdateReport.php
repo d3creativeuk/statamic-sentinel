@@ -28,10 +28,9 @@ class SentinelUpdateReport extends Mailable
         return $this->subject($host . ' updates')
                     ->view('statamic-sentinel::emails.update-report')
                     ->with([
-                        'report'      => $this->report,
-                        'host'        => $host,
-                        'utility_url' => cp_route('utilities.sentinel'),
-                        'preheader'   => 'Statamic Package Update Report',
+                        'report'    => $this->report,
+                        'host'      => $host,
+                        'preheader' => 'Statamic Package Update Report',
                     ]);
     }
 }

@@ -200,10 +200,9 @@ class SentinelController extends Controller
         }
 
         return $this->previewResponse(view('statamic-sentinel::emails.update-report', [
-            'report'      => $report,
-            'host'        => parse_url(config('app.url'), PHP_URL_HOST) ?: 'site',
-            'utility_url' => cp_route('utilities.sentinel'),
-            'preheader'   => 'Statamic Package Update Report',
+            'report'    => $report,
+            'host'      => parse_url(config('app.url'), PHP_URL_HOST) ?: 'site',
+            'preheader' => 'Statamic Package Update Report',
         ])->render());
     }
 
