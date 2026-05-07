@@ -15,10 +15,14 @@
 
 <div x-data='{
         form: @json($cardConfig),
+        saved: @json($cardConfig),
         savedEnabled: @json($cardConfig["enabled"]),
         sending: false,
         state: "idle",
         message: "",
+        get dirty() {
+            return JSON.stringify(this.form) !== JSON.stringify(this.saved);
+        },
         save(formEl) {
             this.sending = true;
             this.state = "idle";
@@ -34,7 +38,8 @@
                 this.state = res.ok ? "success" : "error";
                 this.message = res.body.message;
                 if (res.ok) {
-                    this.savedEnabled = this.form.enabled;
+                    this.saved = JSON.parse(JSON.stringify(this.form));
+                    this.savedEnabled = this.saved.enabled;
                     setTimeout(() => { this.state = "idle"; this.message = ""; }, 4000);
                 }
             })
@@ -48,6 +53,10 @@
             // Flip the toggle off, wait one tick so the hidden checkbox
             // mirrors the new state, then submit. Server receives
             // enabled=unchecked → false, schedule deactivates.
+            // Pre-set `sending` so the "schedule still active" warning
+            // (which is gated on !sending) does not flash during the
+            // brief window between toggle-off and the fetch firing.
+            this.sending = true;
             this.form.enabled = false;
             this.$nextTick(() => this.save(this.$refs.form));
         }
@@ -62,7 +71,9 @@
     <form x-ref="form"
           action="{{ route('statamic.cp.d3-sentinel.save-schedule') }}"
           method="POST"
-          x-on:submit.prevent="save($refs.form)">
+          x-on:submit.prevent="save($refs.form)"
+          x-on:input="if (state !== 'idle') { state = 'idle'; message = ''; }"
+          x-on:change="if (state !== 'idle') { state = 'idle'; message = ''; }">
         @csrf
 
         {{-- Pill toggle styled to match Statamic's core blueprint toggle. The visible pill is a real <button> for keyboard support; the actual checked-state lives in a hidden checkbox so the form still POSTs `enabled=1` when on. --}}
@@ -160,8 +171,8 @@
             Scheduled sends are off. Toggle on above to configure a recurring send.
         </div>
 
-        {{-- Off state but a schedule is currently active: warn that the toggle alone hasn't stopped it. --}}
-        <div x-show="!form.enabled && savedEnabled" x-cloak
+        {{-- Off state but a schedule is currently active: warn that the toggle alone hasn't stopped it. Hidden while a request is in flight so the cancel flow does not flash this warning. --}}
+        <div x-show="!form.enabled && savedEnabled && !sending" x-cloak
              style="margin-top:12px; padding:10px 12px; border:1px solid #fcd34d; border-radius:6px; background:#fffbeb; font-size:13px; color:#92400e;">
             A schedule is currently active. Toggling off doesn't stop it - click <strong>Cancel schedule</strong> below.
         </div>
@@ -171,7 +182,7 @@
         <div x-show="form.enabled || savedEnabled" x-cloak style="margin-top:14px;">
             <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
                 <button type="submit"
-                        x-show="form.enabled"
+                        x-show="form.enabled && dirty"
                         x-cloak
                         x-bind:disabled="sending"
                         x-bind:style="{ background: state === 'success' ? '#047857' : (state === 'error' ? '#ef4444' : '#0f172a') }"
