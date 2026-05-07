@@ -62,7 +62,7 @@ class AuditService
     // Laravel
     // -------------------------------------------------------------------------
 
-    protected function laravelInfo(array $composerAudit = []): array
+    protected function laravelInfo(array $composerAudit, ?string $latest): array
     {
         $current = app()->version();
         $major   = (int) explode('.', $current)[0];
@@ -102,8 +102,7 @@ class AuditService
             'eol'      => 'End of Life',
         ];
 
-        $latest    = $this->fetchLatestLaravelVersion();
-        $isLatest  = $latest && version_compare($current, $latest, '>=');
+        $isLatest = $latest && version_compare($current, $latest, '>=');
 
         return [
             'version'                   => $current,
@@ -115,26 +114,6 @@ class AuditService
         ];
     }
 
-    protected function fetchLatestLaravelVersion(): ?string
-    {
-        try {
-            $response = Http::timeout(5)->get(self::PACKAGIST_LARAVEL_API);
-
-            if (! $response->ok()) return null;
-
-            foreach ($response->json('packages.laravel/framework', []) as $version) {
-                $v = ltrim($version['version'] ?? '', 'v');
-                if (preg_match('/^[0-9]+\.[0-9]+\.[0-9]+$/', $v)) {
-                    return $v;
-                }
-            }
-        } catch (\Throwable $e) {
-            // Silently fail
-        }
-
-        return null;
-    }
-
     /**
      * Run a scan and overwrite the cache. Used by the scheduler, the
      * sentinel:scan command, and the manual "Scan now" / "Refresh" buttons.
@@ -142,6 +121,8 @@ class AuditService
      */
     public function refresh(): array
     {
+        $platform = $this->fetchPlatformLatestVersions();
+
         $composer = $this->annotateOutdatedSecurity(
             array_merge($this->composerAudit(), [
                 'outdated'  => $this->composerOutdated(),
@@ -157,9 +138,9 @@ class AuditService
         );
 
         $result = [
-            'statamic'   => $this->statamicInfo($composer),
-            'laravel'    => $this->laravelInfo($composer),
-            'php'        => $this->phpInfo(),
+            'statamic'   => $this->statamicInfo($composer, $platform['statamic']),
+            'laravel'    => $this->laravelInfo($composer, $platform['laravel']),
+            'php'        => $this->phpInfo($platform['php']),
             'composer'   => $composer,
             'npm'        => $npm,
             'audited_at' => now()->format('j M Y, H:i'),
@@ -170,6 +151,67 @@ class AuditService
         app(HistoryService::class)->recordIfChanged($result);
 
         return $result;
+    }
+
+    /**
+     * Fire the three platform-version HTTP requests (Statamic, Laravel, PHP
+     * EOL) concurrently. Returns a map of parsed values; any individual
+     * endpoint that fails comes back as null without affecting the others,
+     * and a total pool failure (network adapter level) returns nulls across
+     * the board.
+     */
+    protected function fetchPlatformLatestVersions(): array
+    {
+        try {
+            $responses = Http::pool(fn ($pool) => [
+                $pool->as('statamic')->timeout(5)->get(self::PACKAGIST_STATAMIC_API),
+                $pool->as('laravel')->timeout(5)->get(self::PACKAGIST_LARAVEL_API),
+                $pool->as('php')->timeout(5)->get(self::EOL_DATE_PHP_API),
+            ]);
+        } catch (\Throwable $e) {
+            return ['statamic' => null, 'laravel' => null, 'php' => null];
+        }
+
+        return [
+            'statamic' => $this->extractLatestStableVersion($responses['statamic'] ?? null, 'statamic/cms'),
+            'laravel'  => $this->extractLatestStableVersion($responses['laravel']  ?? null, 'laravel/framework'),
+            'php'      => $this->extractEolBranches($responses['php'] ?? null),
+        ];
+    }
+
+    /**
+     * Pluck the newest stable (X.Y.Z) version from a Packagist p2 response.
+     * The p2 API returns versions newest-first; dev / RC / beta releases are
+     * filtered out by the regex.
+     */
+    protected function extractLatestStableVersion($response, string $packageKey): ?string
+    {
+        if (! $response || ! $response->ok()) {
+            return null;
+        }
+
+        foreach ($response->json("packages.$packageKey", []) as $version) {
+            $v = ltrim($version['version'] ?? '', 'v');
+            if (preg_match('/^[0-9]+\.[0-9]+\.[0-9]+$/', $v)) {
+                return $v;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Decode the endoflife.date branches array, or null on failure.
+     */
+    protected function extractEolBranches($response): ?array
+    {
+        if (! $response || ! $response->ok()) {
+            return null;
+        }
+
+        $branches = $response->json();
+
+        return is_array($branches) ? $branches : null;
     }
 
     /**
@@ -200,11 +242,9 @@ class AuditService
     // Statamic
     // -------------------------------------------------------------------------
 
-    protected function statamicInfo(array $composerAudit = []): array
+    protected function statamicInfo(array $composerAudit, ?string $latest): array
     {
-        $current = \Statamic\Statamic::version();
-        $latest  = $this->fetchLatestStatamicVersion();
-
+        $current  = \Statamic\Statamic::version();
         $isLatest = $latest && version_compare($current, $latest, '>=');
 
         return [
@@ -234,48 +274,18 @@ class AuditService
         return false;
     }
 
-    protected function fetchLatestStatamicVersion(): ?string
-    {
-        try {
-            $response = Http::timeout(5)->get(self::PACKAGIST_STATAMIC_API);
-
-            if (! $response->ok()) {
-                return null;
-            }
-
-            $packages = $response->json('packages.statamic/cms', []);
-
-            // Packagist p2 API returns versions newest-first
-            foreach ($packages as $version) {
-                $v = ltrim($version['version'] ?? '', 'v');
-                // Skip dev / RC / beta releases
-                if (preg_match('/^[0-9]+\.[0-9]+\.[0-9]+$/', $v)) {
-                    return $v;
-                }
-            }
-        } catch (\Throwable $e) {
-            // Silently fail
-        }
-
-        return null;
-    }
-
     // -------------------------------------------------------------------------
     // PHP
     // -------------------------------------------------------------------------
 
-    protected function phpInfo(): array
+    protected function phpInfo(?array $branches): array
     {
         $full       = PHP_VERSION;
         $majorMinor = implode('.', array_slice(explode('.', $full), 0, 2));
 
-        try {
-            $response = Http::timeout(5)->get(self::EOL_DATE_PHP_API);
-
-            if ($response->ok()) {
-                $branches = collect($response->json());
-
-                $branch = $branches->firstWhere('cycle', $majorMinor);
+        if ($branches) {
+            try {
+                $branch = collect($branches)->firstWhere('cycle', $majorMinor);
 
                 if ($branch) {
                     $today        = now();
@@ -302,9 +312,9 @@ class AuditService
                         'label'     => $label,
                     ];
                 }
+            } catch (\Throwable $e) {
+                // Fall through to unknown
             }
-        } catch (\Throwable $e) {
-            // Fall through to unknown
         }
 
         return [
