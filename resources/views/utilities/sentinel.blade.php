@@ -156,6 +156,20 @@
                         : 'cursor:pointer; background:transparent; border:0; border-bottom:2px solid transparent; padding:10px 14px; margin-bottom:-1px; font-size:13px; font-weight:600; font-family:inherit; color:#64748b;'">
                 Update Report
             </button>
+            <button type="button"
+                    role="tab"
+                    x-on:click="tab = 'content-freeze'"
+                    x-bind:aria-selected="tab === 'content-freeze'"
+                    x-bind:style="tab === 'content-freeze'
+                        ? 'cursor:pointer; background:transparent; border:0; border-bottom:2px solid #0f172a; padding:10px 14px; margin-bottom:-1px; font-size:13px; font-weight:600; font-family:inherit; color:#0f172a;'
+                        : 'cursor:pointer; background:transparent; border:0; border-bottom:2px solid transparent; padding:10px 14px; margin-bottom:-1px; font-size:13px; font-weight:600; font-family:inherit; color:#64748b;'">
+                Content Freeze
+                @if (! empty($freeze_current) && ($freeze_current['status'] ?? null) === \D3Creative\Sentinel\Services\ContentFreezeService::STATUS_ACTIVE)
+                    <span style="display:inline-block; margin-left:6px; padding:1px 7px; border-radius:9px; background:#fef3c7; color:#92400e; font-size:11px; font-weight:600;">Active</span>
+                @elseif (! empty($freeze_current))
+                    <span style="display:inline-block; margin-left:6px; padding:1px 7px; border-radius:9px; background:#dbeafe; color:#1d4ed8; font-size:11px; font-weight:600;">Scheduled</span>
+                @endif
+            </button>
         </div>
 
         {{-- Current tab --}}
@@ -585,6 +599,15 @@
             @include('statamic-sentinel::utilities._sent_list', [
                 'kind'    => 'update',
                 'entries' => $sent_update,
+            ])
+        </div>
+
+        {{-- Content Freeze tab --}}
+        <div x-show="tab === 'content-freeze'" role="tabpanel" x-cloak>
+            @include('statamic-sentinel::utilities._content_freeze', [
+                'freeze_service' => $freeze,
+                'freeze_current' => $freeze_current,
+                'freeze_history' => $freeze_history,
             ])
         </div>
 

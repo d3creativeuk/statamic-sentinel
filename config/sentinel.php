@@ -19,4 +19,20 @@ return [
         'email' => env('SENTINEL_DEV_EMAIL'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Content Freeze
+    |--------------------------------------------------------------------------
+    |
+    | Display timezone for freeze times. Admins enter notify_at / freeze_at
+    | in this timezone, and CP / email times are rendered in it. When this
+    | differs from the server (Laravel app) timezone, both are shown
+    | side-by-side. Defaults to the app timezone.
+    |
+    */
+
+    'freeze' => [
+        'timezone' => env('SENTINEL_FREEZE_TIMEZONE', config('app.timezone')),
+    ],
+
 ];

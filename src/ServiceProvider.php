@@ -5,10 +5,17 @@ namespace D3Creative\Sentinel;
 use Statamic\Providers\AddonServiceProvider;
 use Statamic\Facades\Utility;
 use Illuminate\Support\Facades\View;
+use D3Creative\Sentinel\Console\Commands\FreezeCompleteCommand;
+use D3Creative\Sentinel\Console\Commands\FreezeStartCommand;
+use D3Creative\Sentinel\Console\Commands\FreezeTickActivationsCommand;
+use D3Creative\Sentinel\Console\Commands\FreezeTickNotificationsCommand;
 use D3Creative\Sentinel\Console\Commands\ScanCommand;
 use D3Creative\Sentinel\Console\Commands\SendStatusReportCommand;
+use D3Creative\Sentinel\Http\Controllers\FreezeController;
 use D3Creative\Sentinel\Http\Controllers\SentinelController;
+use D3Creative\Sentinel\Http\Middleware\InjectFreezeBanner;
 use D3Creative\Sentinel\Services\AuditService;
+use D3Creative\Sentinel\Services\ContentFreezeService;
 use D3Creative\Sentinel\Services\HistoryService;
 use D3Creative\Sentinel\Services\ScheduleService;
 use D3Creative\Sentinel\Services\SentMailService;
@@ -35,6 +42,12 @@ class ServiceProvider extends AddonServiceProvider
                 'sentinelDevEmail' => config('sentinel.developer.email') ?: null,
             ]);
         });
+
+        // Inject the content-freeze banner / modal into every CP HTML
+        // response. Operates at the HTTP layer (not the view layer) because
+        // Statamic's CP layout has no body-level push stack we can rely on
+        // across the 3.3 -> 6.x compat range.
+        $this->app['router']->pushMiddlewareToGroup('web', InjectFreezeBanner::class);
 
         $this->registerCpRoutes(function () {
             \Illuminate\Support\Facades\Route::post(
@@ -76,6 +89,16 @@ class ServiceProvider extends AddonServiceProvider
                 'd3-sentinel/delete-sent',
                 [SentinelController::class, 'deleteSentEntry']
             )->middleware('throttle:30,1')->name('d3-sentinel.delete-sent');
+
+            \Illuminate\Support\Facades\Route::post(
+                'd3-sentinel/freeze/schedule',
+                [FreezeController::class, 'schedule']
+            )->middleware('throttle:6,1')->name('d3-sentinel.freeze.schedule');
+
+            \Illuminate\Support\Facades\Route::post(
+                'd3-sentinel/freeze/complete',
+                [FreezeController::class, 'complete']
+            )->middleware('throttle:6,1')->name('d3-sentinel.freeze.complete');
         });
 
         // Auto-register the status-report scheduler entry when the user has
@@ -87,6 +110,13 @@ class ServiceProvider extends AddonServiceProvider
                 if ($cron = app(ScheduleService::class)->cronExpression('status_report')) {
                     $schedule->command('sentinel:send-status-report')->cron($cron);
                 }
+
+                // Drive the freeze state machine. Every-minute ticks are
+                // cheap (no-op when there's no scheduled / notified freeze)
+                // and give us at-most-one-minute lag between the configured
+                // time and the user-visible effect.
+                $schedule->command('sentinel:freeze:tick-notifications')->everyMinute()->withoutOverlapping();
+                $schedule->command('sentinel:freeze:tick-activations')->everyMinute()->withoutOverlapping();
             });
         }
 
@@ -101,13 +131,17 @@ class ServiceProvider extends AddonServiceProvider
                         $service  = new AuditService();
                         $data     = request()->has('d3_refresh') ? $service->refresh() : $service->cached();
                         $sentMail = app(SentMailService::class);
+                        $freeze   = app(ContentFreezeService::class);
 
                         return [
-                            'audit'        => $data,
-                            'history'      => app(HistoryService::class)->all(),
-                            'schedule'     => app(ScheduleService::class)->all(),
-                            'sent_status'  => $sentMail->forKind(SentMailService::KIND_STATUS),
-                            'sent_update'  => $sentMail->forKind(SentMailService::KIND_UPDATE),
+                            'audit'           => $data,
+                            'history'         => app(HistoryService::class)->all(),
+                            'schedule'        => app(ScheduleService::class)->all(),
+                            'sent_status'     => $sentMail->forKind(SentMailService::KIND_STATUS),
+                            'sent_update'     => $sentMail->forKind(SentMailService::KIND_UPDATE),
+                            'freeze'          => $freeze,
+                            'freeze_current'  => $freeze->current(),
+                            'freeze_history'  => $freeze->history(),
                         ];
                     })
             );
@@ -117,6 +151,10 @@ class ServiceProvider extends AddonServiceProvider
             $this->commands([
                 ScanCommand::class,
                 SendStatusReportCommand::class,
+                FreezeStartCommand::class,
+                FreezeCompleteCommand::class,
+                FreezeTickNotificationsCommand::class,
+                FreezeTickActivationsCommand::class,
             ]);
         }
     }
