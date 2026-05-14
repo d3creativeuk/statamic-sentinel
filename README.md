@@ -28,17 +28,23 @@ Sentinel cross-references your installed versions against the OSV vulnerability 
 
 ## Content Freeze
 
-Coordinate update windows with CP users. Schedule a heads-up email, then show a non-dismissible banner during the work, and send an all-clear when done. Useful for client sites where editors and developers share the CP.
+Coordinate update windows with CP users. Schedule a heads-up email, show banners through the lifecycle of the work, and send an all-clear when done. Useful for client sites where editors and developers share the CP.
 
-- **Scheduling** - super admins set two times on the utility's **Content Freeze** tab: when the heads-up email goes out, and when the freeze starts. Enter recipients as a comma-separated list (max 10).
-- **Heads-up email** - sent automatically at the configured notification time. Tells recipients the window is coming and that a banner will appear during the work.
-- **CP banner** - appears at the top of every CP page once the freeze starts. Amber, non-dismissible, asks editors to hold off on changes.
-- **First-load modal** - shown once per user when they first land in the CP during an active freeze. Cookie-scoped to the freeze ID, so each new freeze re-prompts.
-- **Mark complete** - one-click in the CP (or `php please sentinel:freeze:complete`) sends the all-clear email and switches the banner to a green dismissible "update complete" message.
+- **Scheduling** - super admins set two times on the utility's **Content Freeze** tab: when the heads-up email goes out, and when the freeze starts. Recipients are a comma-separated list (max 10).
+- **Heads-up email** - sent automatically at the notification time. Tells recipients when the window starts and what to expect.
+- **CP banners** - injected below the global header on every authenticated CP page, in normal document flow (no fixed overlay). Three states:
+  - **Upcoming** (blue, dismissable) - shows from schedule through to freeze start. Includes a **Learn more** button that opens a modal mirroring the heads-up email. Dismissals are session-scoped, so the banner reappears the next time a user signs in.
+  - **Active** (amber, non-dismissible) - shows once the freeze starts. Paired with a first-load modal per user (cookie-scoped to the freeze id, so each new freeze re-prompts).
+  - **Complete** (green, dismissable) - briefly shown after the freeze ends.
+- **Mark complete** - one-click in the CP (or `php please sentinel:freeze:complete`) sends the all-clear email and switches to the green banner. Available from any pre-complete state, so you can end early if the update finishes faster than scheduled.
+- **Cancel freeze** - one-click in the CP. Aborts a scheduled or notified freeze without sending the all-clear email. The confirm prompt adapts: from notified it warns that recipients already received the heads-up. Not available once the freeze is active - use Mark complete instead so the all-clear still goes out.
+- **Email previews** - both the heads-up and all-clear emails have **Preview** buttons in the CP that render exactly what recipients will receive.
 - **Front-end stays live** - the freeze only affects the CP. Visitors don't see anything.
 - **CLI** - `php please sentinel:freeze:start "2026-05-13 08:00" "2026-05-13 09:00" --email=a@b.com` mirrors the CP form. Same validation, same emails.
 
-Reuses the standard `* * * * * php artisan schedule:run` cron the addon already requires. Display timezone is configurable via `SENTINEL_FREEZE_TIMEZONE` (defaults to the Laravel app timezone). When the display tz differs from the server tz, times render in both side-by-side.
+State transitions are driven by every-minute cron (`sentinel:freeze:tick-notifications`, `sentinel:freeze:tick-activations`) registered by the addon. Production sites should rely on the standard `* * * * * php artisan schedule:run` cron entry. A fallback middleware on the `statamic.cp` group also ticks state on every CP request, so dev environments and shared hosts without scheduler access still see the expected transitions while an editor is in the CP. Both paths are idempotent.
+
+Display timezone is configurable via `SENTINEL_FREEZE_TIMEZONE` (defaults to the Laravel app timezone). When the display tz differs from the server tz, times render in both side-by-side.
 
 ## Installation
 

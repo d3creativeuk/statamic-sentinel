@@ -38,7 +38,7 @@
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; margin:0 0 16px 0;">
             <tr>
                 <td style="padding:14px 16px;">
-                    <div style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; color:#64748b; margin-bottom:4px;">Update window starts</div>
+                    <div style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; color:#64748b; margin-bottom:4px;">Statamic maintenance starts</div>
                     <div style="font-size:15px; font-weight:600; color:#0f172a; font-variant-numeric:tabular-nums;">{{ $freezeAtDisplay }}</div>
                 </td>
             </tr>
