@@ -13,6 +13,7 @@ use D3Creative\Sentinel\Console\Commands\ScanCommand;
 use D3Creative\Sentinel\Console\Commands\SendStatusReportCommand;
 use D3Creative\Sentinel\Http\Controllers\FreezeController;
 use D3Creative\Sentinel\Http\Controllers\SentinelController;
+use D3Creative\Sentinel\Http\Middleware\AdvanceFreezeState;
 use D3Creative\Sentinel\Http\Middleware\InjectFreezeBanner;
 use D3Creative\Sentinel\Services\AuditService;
 use D3Creative\Sentinel\Services\ContentFreezeService;
@@ -26,18 +27,6 @@ class ServiceProvider extends AddonServiceProvider
         Widgets\SentinelWidget::class,
     ];
 
-    /**
-     * Inject the content-freeze banner into every authenticated CP response.
-     * Targets `statamic.cp` (not `web`) because Statamic CP routes are
-     * wrapped in their own middleware group; pushing to `web` never runs.
-     * The middleware itself does the final auth/path/content-type filtering
-     * so unauthenticated /cp/auth/* pages skip the injection.
-     */
-    protected $middlewareGroups = [
-        'statamic.cp' => [
-            InjectFreezeBanner::class,
-        ],
-    ];
 
     public function register(): void
     {
@@ -55,6 +44,28 @@ class ServiceProvider extends AddonServiceProvider
                 'sentinelDevEmail' => config('sentinel.developer.email') ?: null,
             ]);
         });
+
+        // Register two middlewares on every CP request via the manual router
+        // API rather than AddonServiceProvider's `$middlewareGroups` property.
+        // The manual API is plain Laravel, available identically on every
+        // supported Statamic version (3.3 -> 6.x), whereas `$middlewareGroups`
+        // depends on Statamic's `bootMiddleware()` being part of the addon
+        // boot chain - which is true in 6 but not verified for 3.3.
+        //
+        //  - AdvanceFreezeState: ticks the freeze state machine forward if
+        //    any timestamps have passed. Runs on every request (HTML and
+        //    Inertia JSON in Statamic 6) so navigation keeps the state
+        //    moving in dev environments without `schedule:run` cron.
+        //    Production should still rely on the registered cron schedule;
+        //    this is the fallback.
+        //
+        //  - InjectFreezeBanner: injects the banner markup into HTML
+        //    responses. Filters non-HTML / unauthenticated requests itself.
+        //
+        // Pushed to `statamic.cp` (not `web`) because Statamic CP routes
+        // are wrapped in their own middleware group.
+        $this->app['router']->pushMiddlewareToGroup('statamic.cp', AdvanceFreezeState::class);
+        $this->app['router']->pushMiddlewareToGroup('statamic.cp', InjectFreezeBanner::class);
 
         $this->registerCpRoutes(function () {
             \Illuminate\Support\Facades\Route::post(

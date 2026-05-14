@@ -232,59 +232,119 @@
                 $cancelConfirm = $currentStatus === $statusNotified
                     ? 'Cancel this freeze? Recipients have already received the heads-up email, so you may want to email them about the cancellation separately.'
                     : 'Cancel this scheduled freeze? No emails have been sent yet.';
+                $completeConfirm = $currentStatus === $statusNotified
+                    ? 'End this freeze now? The all-clear email will be sent to recipients and the banner won\'t appear.'
+                    : 'End this freeze now? The all-clear email will be sent to recipients even though the heads-up email has not gone out yet.';
             @endphp
-            <div x-data="{
-                    sending: false,
-                    state: 'idle',
-                    message: '',
-                    submit() {
-                        this.sending = true;
-                        this.state = 'idle';
-                        this.message = '';
-                        const fd = new FormData();
-                        fd.append('_token', @js(csrf_token()));
-                        fetch(@js(route('statamic.cp.d3-sentinel.freeze.cancel')), {
-                            method: 'POST',
-                            body: fd,
-                            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
-                        })
-                        .then(res => res.json().then(body => ({ ok: res.ok, body })))
-                        .then(res => {
-                            this.sending = false;
-                            this.state = res.ok ? 'success' : 'error';
-                            this.message = res.body.message;
-                            if (res.ok) {
-                                setTimeout(() => { window.location.reload(); }, 900);
-                            }
-                        })
-                        .catch(() => {
-                            this.sending = false;
-                            this.state = 'error';
-                            this.message = 'Something went wrong. Please try again.';
-                        });
-                    }
-                 }"
-                 style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:14px;">
-                <button type="button"
-                        x-bind:disabled="sending"
-                        x-on:click="$dispatch('sentinel-confirm-open', {
-                            message: @js($cancelConfirm),
-                            confirmLabel: 'Cancel freeze',
-                            onConfirm: () => submit()
-                        })"
-                        style="font-size:13px; font-weight:600; color:#b91c1c; background:#fff; border:1px solid #fecaca; padding:7px 14px; border-radius:6px; cursor:pointer; font-family:inherit;">
-                    <span x-show="sending" x-cloak style="display:inline-flex; align-items:center; gap:6px;">
-                        <span aria-hidden="true" style="display:inline-block; font-size:14px; line-height:1; transform-origin:center; animation:sentinel-spin 1s linear infinite;">↻</span>
-                        Cancelling…
-                    </span>
-                    <span x-show="!sending && state === 'success'" x-cloak>✓ Cancelled</span>
-                    <span x-show="!sending && state === 'error'" x-cloak>✕ Failed</span>
-                    <span x-show="!sending && state === 'idle'">Cancel freeze</span>
-                </button>
-                <div x-show="message" x-cloak
-                     x-bind:style="{ color: state === 'success' ? '#047857' : '#b91c1c' }"
-                     style="font-size:13px; line-height:1.45;"
-                     x-text="message"></div>
+            <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:14px;">
+                <div x-data="{
+                        sending: false,
+                        state: 'idle',
+                        message: '',
+                        submit() {
+                            this.sending = true;
+                            this.state = 'idle';
+                            this.message = '';
+                            const fd = new FormData();
+                            fd.append('_token', @js(csrf_token()));
+                            fetch(@js(route('statamic.cp.d3-sentinel.freeze.cancel')), {
+                                method: 'POST',
+                                body: fd,
+                                headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
+                            })
+                            .then(res => res.json().then(body => ({ ok: res.ok, body })))
+                            .then(res => {
+                                this.sending = false;
+                                this.state = res.ok ? 'success' : 'error';
+                                this.message = res.body.message;
+                                if (res.ok) {
+                                    setTimeout(() => { window.location.reload(); }, 900);
+                                }
+                            })
+                            .catch(() => {
+                                this.sending = false;
+                                this.state = 'error';
+                                this.message = 'Something went wrong. Please try again.';
+                            });
+                        }
+                     }"
+                     style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                    <button type="button"
+                            x-bind:disabled="sending"
+                            x-on:click="$dispatch('sentinel-confirm-open', {
+                                message: @js($cancelConfirm),
+                                confirmLabel: 'Cancel freeze',
+                                onConfirm: () => submit()
+                            })"
+                            style="font-size:13px; font-weight:600; color:#b91c1c; background:#fff; border:1px solid #fecaca; padding:7px 14px; border-radius:6px; cursor:pointer; font-family:inherit;">
+                        <span x-show="sending" x-cloak style="display:inline-flex; align-items:center; gap:6px;">
+                            <span aria-hidden="true" style="display:inline-block; font-size:14px; line-height:1; transform-origin:center; animation:sentinel-spin 1s linear infinite;">↻</span>
+                            Cancelling…
+                        </span>
+                        <span x-show="!sending && state === 'success'" x-cloak>✓ Cancelled</span>
+                        <span x-show="!sending && state === 'error'" x-cloak>✕ Failed</span>
+                        <span x-show="!sending && state === 'idle'">Cancel freeze</span>
+                    </button>
+                    <div x-show="message" x-cloak
+                         x-bind:style="{ color: state === 'success' ? '#047857' : '#b91c1c' }"
+                         style="font-size:13px; line-height:1.45;"
+                         x-text="message"></div>
+                </div>
+
+                <div x-data="{
+                        sending: false,
+                        state: 'idle',
+                        message: '',
+                        submit() {
+                            this.sending = true;
+                            this.state = 'idle';
+                            this.message = '';
+                            const fd = new FormData();
+                            fd.append('_token', @js(csrf_token()));
+                            fetch(@js(route('statamic.cp.d3-sentinel.freeze.complete')), {
+                                method: 'POST',
+                                body: fd,
+                                headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
+                            })
+                            .then(res => res.json().then(body => ({ ok: res.ok, body })))
+                            .then(res => {
+                                this.sending = false;
+                                this.state = res.ok ? 'success' : 'error';
+                                this.message = res.body.message;
+                                if (res.ok) {
+                                    setTimeout(() => { window.location.reload(); }, 900);
+                                }
+                            })
+                            .catch(() => {
+                                this.sending = false;
+                                this.state = 'error';
+                                this.message = 'Something went wrong. Please try again.';
+                            });
+                        }
+                     }"
+                     style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                    <button type="button"
+                            x-bind:disabled="sending"
+                            x-on:click="$dispatch('sentinel-confirm-open', {
+                                message: @js($completeConfirm),
+                                confirmLabel: 'Mark as complete',
+                                onConfirm: () => submit()
+                            })"
+                            x-bind:style="{ background: state === 'success' ? '#047857' : (state === 'error' ? '#ef4444' : '#0f172a') }"
+                            style="font-size:13px; font-weight:600; color:#fff; background:#0f172a; border:none; padding:8px 14px; border-radius:6px; cursor:pointer; font-family:inherit;">
+                        <span x-show="sending" x-cloak style="display:inline-flex; align-items:center; gap:6px;">
+                            <span aria-hidden="true" style="display:inline-block; font-size:14px; line-height:1; transform-origin:center; animation:sentinel-spin 1s linear infinite;">↻</span>
+                            Sending…
+                        </span>
+                        <span x-show="!sending && state === 'success'" x-cloak>✓ Complete</span>
+                        <span x-show="!sending && state === 'error'" x-cloak>✕ Failed</span>
+                        <span x-show="!sending && state === 'idle'">Mark as complete</span>
+                    </button>
+                    <div x-show="message" x-cloak
+                         x-bind:style="{ color: state === 'success' ? '#047857' : '#ef4444' }"
+                         style="font-size:13px; line-height:1.45;"
+                         x-text="message"></div>
+                </div>
             </div>
         @endif
 

@@ -157,6 +157,27 @@ class ContentFreezeService
     }
 
     /**
+     * Idempotently advance the state machine through both transitions
+     * (scheduled -> notified, notified -> active) in a single call. Safe to
+     * invoke from request flow because each underlying tick is cheap when
+     * nothing's due and the mail send is wrapped in try/catch.
+     *
+     * Called from InjectFreezeBanner so any CP page load catches up the
+     * state machine in environments where `schedule:run` cron isn't wired
+     * up (dev / Herd). In production, cron normally beats this to the
+     * transition - which is fine, both call paths are idempotent.
+     */
+    public function tickIfDue(): void
+    {
+        try {
+            $this->tickNotifications();
+            $this->tickActivations();
+        } catch (\Throwable $e) {
+            // Silent fail - never break CP rendering on a tick failure.
+        }
+    }
+
+    /**
      * Find scheduled freezes whose notify_at has passed and dispatch the
      * heads-up email. Idempotent: refuses to advance a freeze that's no
      * longer in `scheduled` status.
@@ -261,7 +282,14 @@ class ContentFreezeService
 
     /**
      * End the freeze. Sends the all-clear email, moves the record into the
-     * history file, and clears the current-freeze file. Returns:
+     * history file, and clears the current-freeze file.
+     *
+     * Allowed from any non-complete state - the user may want to fast-track
+     * out of `scheduled` or `notified` without waiting for the freeze to
+     * activate (e.g. the update finished faster than expected). To skip the
+     * all-clear email, use cancel() instead.
+     *
+     * Returns:
      *   ['ok' => true,  'freeze' => array]
      *   ['ok' => false, 'message' => string]
      */
@@ -270,11 +298,7 @@ class ContentFreezeService
         $current = $this->current();
 
         if (! $current) {
-            return $this->failure('No active freeze to complete.');
-        }
-
-        if (($current['status'] ?? null) !== self::STATUS_ACTIVE) {
-            return $this->failure('The current freeze is not active yet.');
+            return $this->failure('No freeze to complete.');
         }
 
         $current['status']       = self::STATUS_COMPLETE;

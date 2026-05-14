@@ -31,6 +31,10 @@ class InjectFreezeBanner
         }
 
         try {
+            // State machine advancement is handled by the AdvanceFreezeState
+            // middleware which runs on every CP request (HTML or Inertia
+            // JSON). This middleware only renders the banner markup, which
+            // requires an HTML response.
             $markup = view('statamic-sentinel::cp.freeze-injector')->render();
 
             if (trim($markup) === '') {
