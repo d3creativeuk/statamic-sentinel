@@ -32,7 +32,7 @@
     <div style="padding:24px 32px;">
 
         <p style="font-size:14px; color:#1e293b; margin:0 0 16px 0; line-height:1.55;">
-            We're going to apply an update to <strong>{{ $host }}</strong> shortly. While the update is in progress, the Statamic control panel will display a banner asking everyone to hold off on editing content.
+            Maintenance window scheduled for <strong>{{ $host }}</strong>. Once maintenance has started, please don't make any updates to the site.
         </p>
 
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; margin:0 0 16px 0;">
@@ -48,10 +48,10 @@
             <strong>What you need to do:</strong>
         </p>
 
-        <ul style="font-size:14px; color:#1e293b; margin:0 0 16px 0; padding-left:20px; line-height:1.65;">
-            <li style="margin-bottom:6px;">Wrap up any in-flight content edits before the start time above.</li>
-            <li style="margin-bottom:6px;">Once the banner appears, please pause editing content in the control panel.</li>
-            <li>You'll get an "all clear" email from us once the update is complete and it's safe to resume.</li>
+        <ul style="font-size:14px; color:#1e293b; margin:0 0 16px 0; padding-left:22px; line-height:1.65; list-style:disc;">
+            <li style="margin-bottom:6px;">Finish off any content edits before the start time above.</li>
+            <li style="margin-bottom:6px;">Once the banner appears, please stop editing content.</li>
+            <li>You'll receive an "all clear" email once the update is complete and a notification within Statamic when it's safe to continue editing content.</li>
         </ul>
 
         <p style="font-size:14px; color:#475569; margin:0; line-height:1.55;">
