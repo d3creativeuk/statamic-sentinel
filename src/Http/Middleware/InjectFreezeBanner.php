@@ -10,12 +10,22 @@ use Symfony\Component\HttpFoundation\Response;
  * Injects the content-freeze banner / modal into every CP HTML response
  * when there's an active, upcoming, or recently-completed freeze.
  *
- * The banner is injected as the first child of `<div class="workspace">`
- * so it sits in normal document flow at the top of the CP's right-side
- * content area, just under the fixed `.global-header`. A fallback before
- * `</body>` runs for layouts without a `.workspace` element (e.g. the
- * Statamic 3.3 auth pages); the banner has no fixed positioning, so that
- * fallback just appends it at the end of the body.
+ * Two injection strategies, picked by what's in the response HTML:
+ *
+ *  1. Statamic 3.3 / 4 / 5: the layout is Blade-rendered, so the
+ *     `<div class="workspace">` is present in the response. Banner is
+ *     injected as its first child - normal document flow, sits below
+ *     the fixed `.global-header`.
+ *
+ *  2. Statamic 6: the CP is rendered client-side via Inertia/Vue, so the
+ *     initial HTML response only contains `<div id="statamic" data-page="...">`
+ *     with no workspace / header / main in the markup. Banner is appended
+ *     before `</body>` wrapped in a `position:fixed; top:0` overlay, and a
+ *     small inline script shifts the Vue-rendered header and `#main` down
+ *     by the banner's height (re-applied on Inertia navigations via a
+ *     MutationObserver). Without the shift the overlay would sit on top
+ *     of the global header; without the overlay the banner ends up below
+ *     the full-viewport `#statamic` and is invisible.
  *
  * Silent on any failure - the CP render must never break because the
  * banner couldn't be assembled.
@@ -53,7 +63,13 @@ class InjectFreezeBanner
             // they intentionally render bare email markup with no #statamic
             // wrapper. Without this guard the </body> fallback below ends up
             // injecting the freeze banner into the email preview iframe.
-            if (strpos($content, '<div id="statamic"') === false) {
+            //
+            // Statamic 6's layout.blade.php uses multi-line attributes, so
+            // the rendered shell is `<div\n    id="statamic"` (whitespace
+            // between the tag name and the id attribute). Match the id
+            // attribute alone via regex so we tolerate any whitespace and
+            // attribute ordering.
+            if (! preg_match('/<div\b[^>]*\bid\s*=\s*"statamic"/is', $content)) {
                 return $response;
             }
 
@@ -69,25 +85,83 @@ class InjectFreezeBanner
                 return $response;
             }
 
-            // Fallback: inject before the last </body>. The banner has no
-            // fixed positioning, so it just appends at the end of the body
-            // on layouts that don't expose a .workspace element. Safe to run
-            // here because the #statamic shell check above already filtered
-            // out preview iframes.
+            // Fallback: inject before the last </body>. Used on Statamic 6
+            // where the CP is rendered client-side by Vue/Inertia and the
+            // initial HTML response has no `.workspace` for us to target.
+            //
+            // Without a wrapper the banner ends up after the full-viewport
+            // `#statamic` and is off-screen, so wrap it in a fixed overlay
+            // at top:0 and ship an inline script that shifts the Vue-rendered
+            // global header + `#main` down by the overlay's height. The
+            // script keeps reapplying on Inertia navigations so the shift
+            // survives page transitions.
             $pos = strripos($content, '</body>');
 
             if ($pos === false) {
                 return $response;
             }
 
+            // Override the global `[x-cloak]{display:none}` rule inside the
+            // overlay so the banner stays visible even if Alpine never
+            // processes it (e.g. a JS error earlier in the Statamic bundle
+            // aborts boot before Alpine.start). Only x-cloak is overridden,
+            // not x-show - x-show needs to keep working for the dismissible
+            // green completed-freeze banner, and without Alpine its absence
+            // of inline `display:none` leaves the banner visible anyway.
+            $overlay = '<style>#d3-sentinel-freeze-overlay [x-cloak]{display:block !important;}</style>'
+                . '<div id="d3-sentinel-freeze-overlay" style="position:fixed; top:0; left:0; right:0; z-index:9999;">'
+                . $markup
+                . '</div>'
+                . $this->shiftScript();
+
             $response->setContent(
-                substr($content, 0, $pos) . $markup . substr($content, $pos)
+                substr($content, 0, $pos) . $overlay . substr($content, $pos)
             );
         } catch (\Throwable $e) {
             // Silent fail.
         }
 
         return $response;
+    }
+
+    /**
+     * Inline script that pushes the Statamic 6 Vue-rendered global header
+     * and `#main` down by the freeze overlay's height. Re-runs on Inertia
+     * navigation because Vue re-creates those nodes; the parent check on
+     * the banner makes apply() idempotent.
+     */
+    protected function shiftScript(): string
+    {
+        return <<<'HTML'
+<script>
+(function () {
+    try {
+        var overlay = document.getElementById('d3-sentinel-freeze-overlay');
+        if (! overlay) return;
+
+        var apply = function () {
+            var h = overlay.offsetHeight || 0;
+            if (! h) return;
+            var hdr = document.querySelector('#statamic header.fixed.top-0')
+                || document.querySelector('header.fixed.top-0');
+            if (hdr) hdr.style.top = h + 'px';
+            var main = document.getElementById('main');
+            if (main) main.style.top = 'calc(3.5rem + ' + h + 'px)';
+        };
+
+        apply();
+        if (window.ResizeObserver) new ResizeObserver(apply).observe(overlay);
+        if (window.MutationObserver) {
+            new MutationObserver(apply).observe(document.body, { childList: true, subtree: true });
+        }
+        // Vue may not have mounted yet on first paint; nudge a few times.
+        setTimeout(apply, 100);
+        setTimeout(apply, 500);
+        setTimeout(apply, 1500);
+    } catch (e) {}
+})();
+</script>
+HTML;
     }
 
     protected function shouldInject(Request $request, Response $response): bool
