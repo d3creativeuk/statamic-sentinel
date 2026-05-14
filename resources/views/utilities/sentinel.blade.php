@@ -425,9 +425,9 @@
                                         <td style="padding:10px 14px; text-align:right; white-space:nowrap;">
                                             @if ($deleteKey !== '')
                                                 @include('statamic-sentinel::utilities._delete_row_button', [
-                                                    'action'  => route('statamic.cp.d3-sentinel.delete-history'),
-                                                    'field'   => 'key',
-                                                    'value'   => $deleteKey,
+                                                    'url'     => cp_route('d3-sentinel.history.actions.run'),
+                                                    'handle'  => 'delete_history_entry',
+                                                    'id'      => $deleteKey,
                                                     'confirm' => $confirmText,
                                                 ])
                                             @endif

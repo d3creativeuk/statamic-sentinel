@@ -392,6 +392,7 @@
                             <th style="text-align:left; padding:10px 14px; font-weight:600; color:#475569; white-space:nowrap;">Started</th>
                             <th style="text-align:left; padding:10px 14px; font-weight:600; color:#475569; white-space:nowrap;">Completed</th>
                             <th style="text-align:right; padding:10px 14px; font-weight:600; color:#475569; white-space:nowrap;">Recipients</th>
+                            <th style="text-align:right; padding:10px 14px; font-weight:600; color:#475569; white-space:nowrap; width:1%;"></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -401,6 +402,16 @@
                                 <td style="padding:10px 14px; white-space:nowrap; color:#0f172a; font-variant-numeric:tabular-nums;">{{ $freeze_service->formatTime($entry['activated_at'] ?? $entry['freeze_at'] ?? null) }}</td>
                                 <td style="padding:10px 14px; white-space:nowrap; color:#0f172a; font-variant-numeric:tabular-nums;">{{ $freeze_service->formatTime($entry['completed_at'] ?? null) }}</td>
                                 <td style="padding:10px 14px; text-align:right; white-space:nowrap; color:#475569;">{{ count($entry['recipients'] ?? []) }}</td>
+                                <td style="padding:10px 14px; text-align:right; white-space:nowrap;">
+                                    @if (! empty($entry['id']))
+                                        @include('statamic-sentinel::utilities._delete_row_button', [
+                                            'url'     => cp_route('d3-sentinel.freezes.actions.run'),
+                                            'handle'  => 'delete_freeze_history',
+                                            'id'      => $entry['id'],
+                                            'confirm' => 'Delete this past freeze record? The audit row will be removed permanently.',
+                                        ])
+                                    @endif
+                                </td>
                             </tr>
                         @endforeach
                     </tbody>

@@ -101,9 +101,9 @@
                                         </button>
                                         @if (! empty($entry['id']))
                                             @include('statamic-sentinel::utilities._delete_row_button', [
-                                                'action'  => route('statamic.cp.d3-sentinel.delete-sent'),
-                                                'field'   => 'id',
-                                                'value'   => $entry['id'],
+                                                'url'     => cp_route('d3-sentinel.sent.actions.run'),
+                                                'handle'  => 'delete_sent_email',
+                                                'id'      => $entry['id'],
                                                 'confirm' => 'Delete this sent record? The HTML preview will also be removed.',
                                             ])
                                         @endif

@@ -12,7 +12,10 @@ use D3Creative\Sentinel\Console\Commands\FreezeTickNotificationsCommand;
 use D3Creative\Sentinel\Console\Commands\ScanCommand;
 use D3Creative\Sentinel\Console\Commands\SendStatusReportCommand;
 use D3Creative\Sentinel\Http\Controllers\FreezeController;
+use D3Creative\Sentinel\Http\Controllers\FreezeHistoryActionController;
+use D3Creative\Sentinel\Http\Controllers\HistoryActionController;
 use D3Creative\Sentinel\Http\Controllers\SentinelController;
+use D3Creative\Sentinel\Http\Controllers\SentMailActionController;
 use D3Creative\Sentinel\Http\Middleware\AdvanceFreezeState;
 use D3Creative\Sentinel\Http\Middleware\InjectFreezeBanner;
 use D3Creative\Sentinel\Services\AuditService;
@@ -108,15 +111,40 @@ class ServiceProvider extends AddonServiceProvider
                 [SentinelController::class, 'saveSchedule']
             )->middleware('throttle:30,1')->name('d3-sentinel.save-schedule');
 
+            // Per-resource Action endpoints. Statamic-native contract:
+            // POST /actions       runs an action against {action, selections, context}
+            // POST /actions/list  returns the bulk-action list for the current selection
+            // Per-row delete in the addon's UI uses /actions with a single id;
+            // /actions/list is exposed for free (no UI consumer today, future-proofs bulk).
             \Illuminate\Support\Facades\Route::post(
-                'd3-sentinel/delete-history',
-                [SentinelController::class, 'deleteHistoryEntry']
-            )->middleware('throttle:30,1')->name('d3-sentinel.delete-history');
+                'd3-sentinel/history/actions',
+                [HistoryActionController::class, 'run']
+            )->middleware('throttle:30,1')->name('d3-sentinel.history.actions.run');
 
             \Illuminate\Support\Facades\Route::post(
-                'd3-sentinel/delete-sent',
-                [SentinelController::class, 'deleteSentEntry']
-            )->middleware('throttle:30,1')->name('d3-sentinel.delete-sent');
+                'd3-sentinel/history/actions/list',
+                [HistoryActionController::class, 'bulkActions']
+            )->middleware('throttle:30,1')->name('d3-sentinel.history.actions.bulk');
+
+            \Illuminate\Support\Facades\Route::post(
+                'd3-sentinel/sent/actions',
+                [SentMailActionController::class, 'run']
+            )->middleware('throttle:30,1')->name('d3-sentinel.sent.actions.run');
+
+            \Illuminate\Support\Facades\Route::post(
+                'd3-sentinel/sent/actions/list',
+                [SentMailActionController::class, 'bulkActions']
+            )->middleware('throttle:30,1')->name('d3-sentinel.sent.actions.bulk');
+
+            \Illuminate\Support\Facades\Route::post(
+                'd3-sentinel/freezes/actions',
+                [FreezeHistoryActionController::class, 'run']
+            )->middleware('throttle:30,1')->name('d3-sentinel.freezes.actions.run');
+
+            \Illuminate\Support\Facades\Route::post(
+                'd3-sentinel/freezes/actions/list',
+                [FreezeHistoryActionController::class, 'bulkActions']
+            )->middleware('throttle:30,1')->name('d3-sentinel.freezes.actions.bulk');
 
             \Illuminate\Support\Facades\Route::post(
                 'd3-sentinel/freeze/schedule',

@@ -433,6 +433,42 @@ class ContentFreezeService
         }
     }
 
+    /**
+     * Remove a single freeze-history entry by `id`. Returns true if a row was
+     * removed, false if the id matched nothing or the write failed. Mirrors
+     * HistoryService::delete - atomic filter-and-rewrite of the JSON file.
+     */
+    public function deleteHistory(string $id): bool
+    {
+        try {
+            $entries = $this->history();
+            $before  = count($entries);
+
+            $entries = array_values(array_filter(
+                $entries,
+                fn ($e) => ($e['id'] ?? null) !== $id
+            ));
+
+            if (count($entries) === $before) {
+                return false;
+            }
+
+            $disk = Storage::disk('local');
+            $json = json_encode($entries, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+
+            $disk->put(self::HISTORY_TMP_PATH, $json);
+
+            if (! $disk->move(self::HISTORY_TMP_PATH, self::HISTORY_PATH)) {
+                $disk->delete(self::HISTORY_PATH);
+                $disk->move(self::HISTORY_TMP_PATH, self::HISTORY_PATH);
+            }
+
+            return true;
+        } catch (\Throwable $e) {
+            return false;
+        }
+    }
+
     protected function appendHistory(array $freeze): void
     {
         try {

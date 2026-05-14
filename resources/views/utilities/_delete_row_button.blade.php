@@ -1,22 +1,25 @@
 {{--
-    Inline delete button for a table row. Posts (field=value) to $action,
-    confirms via the page-level `sentinel-confirm-open` modal, and on success
-    removes the enclosing <tr>.
+    Inline delete button for a table row. Posts the standard Statamic Action
+    payload to $url, confirms via the page-level `sentinel-confirm-open` modal,
+    and on success removes the enclosing <tr>.
 
     Required vars:
-      - $action  string  POST route URL
-      - $field   string  form field name ('key' or 'id')
-      - $value   string  the row's identifier
-      - $confirm string  message shown in the confirm modal
+      - $url     string       POST endpoint (the resource's /actions route)
+      - $handle  string       Action handle (e.g. 'delete-history-entry')
+      - $id      string       Selection id passed in `selections[]`
+      - $confirm string       Confirm-modal message
+      - $context array|null   Optional context map sent as `context[key]=value`
 --}}
+@php($context = $context ?? [])
 <button type="button"
         x-data="{ busy: false }"
         x-bind:disabled="busy"
         x-bind:aria-busy="busy ? 'true' : 'false'"
-        data-action="{{ $action }}"
-        data-field="{{ $field }}"
-        data-value="{{ $value }}"
+        data-url="{{ $url }}"
+        data-handle="{{ $handle }}"
+        data-id="{{ $id }}"
         data-confirm="{{ $confirm }}"
+        data-context='@json($context)'
         data-token="{{ csrf_token() }}"
         x-on:click="
             $dispatch('sentinel-confirm-open', {
@@ -25,21 +28,29 @@
                 onConfirm: () => {
                     busy = true;
                     const fd = new FormData();
-                    fd.append($el.dataset.field, $el.dataset.value);
+                    fd.append('action', $el.dataset.handle);
+                    fd.append('selections[]', $el.dataset.id);
+                    // Statamic's ActionController calls $request->replace($request->values)
+                    // and rejects null; force `values` to parse as an empty array.
+                    fd.append('values[_]', '');
+                    try {
+                        const ctx = JSON.parse($el.dataset.context || '{}');
+                        Object.entries(ctx).forEach(([k, v]) => fd.append('context[' + k + ']', v));
+                    } catch (e) {}
                     fd.append('_token', $el.dataset.token);
-                    fetch($el.dataset.action, {
+                    fetch($el.dataset.url, {
                         method: 'POST',
                         body: fd,
                         headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
                     })
-                    .then(res => res.json().then(body => ({ ok: res.ok, body })))
-                    .then(res => {
+                    .then(res => res.json().then(body => ({ ok: res.ok, body })).catch(() => ({ ok: res.ok, body: {} })))
+                    .then(({ ok, body }) => {
                         busy = false;
-                        if (res.ok) {
+                        if (ok && body.success !== false) {
                             const row = $el.closest('tr');
                             if (row) row.remove();
                         } else {
-                            alert(res.body.message || 'Failed to delete.');
+                            alert((body && body.message) || 'Failed to delete.');
                         }
                     })
                     .catch(() => {

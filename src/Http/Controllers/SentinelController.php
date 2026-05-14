@@ -264,44 +264,6 @@ class SentinelController extends Controller
         ];
     }
 
-    public function deleteHistoryEntry(Request $request)
-    {
-        abort_unless(auth()->user()?->isSuper(), 403);
-
-        $key = (string) $request->input('key', '');
-
-        if ($key === '') {
-            return response()->json(['message' => 'Missing history key.'], 422);
-        }
-
-        $deleted = app(HistoryService::class)->delete($key);
-
-        if (! $deleted) {
-            return response()->json(['message' => 'History entry not found.'], 404);
-        }
-
-        return response()->json(['message' => 'History entry deleted.'], 200);
-    }
-
-    public function deleteSentEntry(Request $request)
-    {
-        abort_unless(auth()->user()?->isSuper(), 403);
-
-        $id = (string) $request->input('id', '');
-
-        if (! preg_match(SentMailService::ID_PATTERN, $id)) {
-            return response()->json(['message' => 'Invalid record id.'], 422);
-        }
-
-        $deleted = app(SentMailService::class)->delete($id);
-
-        if (! $deleted) {
-            return response()->json(['message' => 'Sent record not found.'], 404);
-        }
-
-        return response()->json(['message' => 'Sent record deleted.'], 200);
-    }
-
     public function previewSentReport(Request $request, string $id)
     {
         abort_unless(auth()->user()?->isSuper(), 403);
