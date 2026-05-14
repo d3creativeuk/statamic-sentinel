@@ -75,6 +75,16 @@ class ServiceProvider extends AddonServiceProvider
                 [SentinelController::class, 'previewSentReport']
             )->middleware('throttle:60,1')->where('id', '[A-Za-z0-9]+')->name('d3-sentinel.preview-sent-report');
 
+            \Illuminate\Support\Facades\Route::get(
+                'd3-sentinel/preview-freeze-notification',
+                [SentinelController::class, 'previewFreezeNotification']
+            )->middleware('throttle:30,1')->name('d3-sentinel.preview-freeze-notification');
+
+            \Illuminate\Support\Facades\Route::get(
+                'd3-sentinel/preview-freeze-completion',
+                [SentinelController::class, 'previewFreezeCompletion']
+            )->middleware('throttle:30,1')->name('d3-sentinel.preview-freeze-completion');
+
             \Illuminate\Support\Facades\Route::post(
                 'd3-sentinel/save-schedule',
                 [SentinelController::class, 'saveSchedule']

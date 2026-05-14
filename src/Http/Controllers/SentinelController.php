@@ -5,7 +5,9 @@ namespace D3Creative\Sentinel\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Validator;
+use Carbon\Carbon;
 use D3Creative\Sentinel\Services\AuditService;
+use D3Creative\Sentinel\Services\ContentFreezeService;
 use D3Creative\Sentinel\Services\HistoryService;
 use D3Creative\Sentinel\Services\ReportSender;
 use D3Creative\Sentinel\Services\ScheduleService;
@@ -203,6 +205,63 @@ class SentinelController extends Controller
             'host'      => parse_url(config('app.url'), PHP_URL_HOST) ?: 'site',
             'preheader' => 'Statamic Package Update Report',
         ])->render());
+    }
+
+    public function previewFreezeNotification(Request $request)
+    {
+        abort_unless(auth()->user()?->isSuper(), 403);
+
+        $freeze  = $this->previewFreezeRecord();
+        $service = app(ContentFreezeService::class);
+        $host    = parse_url(config('app.url'), PHP_URL_HOST) ?: 'site';
+
+        return $this->previewResponse(view('statamic-sentinel::emails.freeze-notification', [
+            'freeze'          => $freeze,
+            'host'            => $host,
+            'preheader'       => 'Statamic update scheduled. Banner will appear at ' . $service->formatTime($freeze['freeze_at']) . '.',
+            'freezeAtDisplay' => $service->formatTime($freeze['freeze_at']),
+        ])->render());
+    }
+
+    public function previewFreezeCompletion(Request $request)
+    {
+        abort_unless(auth()->user()?->isSuper(), 403);
+
+        $freeze  = $this->previewFreezeRecord();
+        $service = app(ContentFreezeService::class);
+        $host    = parse_url(config('app.url'), PHP_URL_HOST) ?: 'site';
+
+        $completedAt = $freeze['completed_at'] ?? Carbon::now()->toIso8601String();
+
+        return $this->previewResponse(view('statamic-sentinel::emails.freeze-completion', [
+            'freeze'             => $freeze + ['completed_at' => $completedAt],
+            'host'               => $host,
+            'preheader'          => 'Statamic update complete. The control panel is safe to use again.',
+            'completedAtDisplay' => $service->formatTime($completedAt),
+        ])->render());
+    }
+
+    /**
+     * Return the current freeze record if one exists, otherwise synthesise
+     * placeholder times so the preview templates have something to render
+     * before the user has filled in the schedule form.
+     */
+    protected function previewFreezeRecord(): array
+    {
+        $current = app(ContentFreezeService::class)->current();
+
+        if ($current) {
+            return $current;
+        }
+
+        $now = Carbon::now();
+
+        return [
+            'notify_at'    => $now->copy()->addHour()->toIso8601String(),
+            'freeze_at'    => $now->copy()->addHours(2)->toIso8601String(),
+            'completed_at' => $now->copy()->addHours(3)->toIso8601String(),
+            'recipients'   => [],
+        ];
     }
 
     public function deleteHistoryEntry(Request $request)

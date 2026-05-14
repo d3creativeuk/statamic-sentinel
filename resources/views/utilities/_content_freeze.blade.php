@@ -101,7 +101,7 @@
                 <span style="font-size:11px; color:#64748b;">Maximum 10 recipients. They receive the heads-up email at the time above, and the all-clear email when the freeze ends.</span>
             </label>
 
-            <div style="display:flex; align-items:center; gap:10px;">
+            <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
                 <button type="submit"
                         x-bind:disabled="sending"
                         x-bind:style="{ background: state === 'success' ? '#047857' : (state === 'error' ? '#ef4444' : '#0f172a') }"
@@ -113,6 +113,16 @@
                     <span x-show="!sending && state === 'success'" x-cloak>✓ Scheduled</span>
                     <span x-show="!sending && state === 'error'" x-cloak>✕ Failed</span>
                     <span x-show="!sending && state === 'idle'">Schedule freeze</span>
+                </button>
+                <button type="button"
+                        x-on:click="$dispatch('sentinel-preview-open', { url: @js(route('statamic.cp.d3-sentinel.preview-freeze-notification')), title: 'Heads-up email preview' })"
+                        style="font-size:13px; font-weight:600; color:#0f172a; background:#fff; border:1px solid #e2e8f0; padding:7px 12px; border-radius:6px; cursor:pointer; font-family:inherit;">
+                    Preview heads-up email
+                </button>
+                <button type="button"
+                        x-on:click="$dispatch('sentinel-preview-open', { url: @js(route('statamic.cp.d3-sentinel.preview-freeze-completion')), title: 'All-clear email preview' })"
+                        style="font-size:13px; font-weight:600; color:#0f172a; background:#fff; border:1px solid #e2e8f0; padding:7px 12px; border-radius:6px; cursor:pointer; font-family:inherit;">
+                    Preview all-clear email
                 </button>
                 <div x-show="message" x-cloak
                      x-bind:style="{ color: state === 'success' ? '#047857' : '#ef4444' }"
@@ -216,6 +226,20 @@
                 </form>
             </div>
         @endif
+
+        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:14px; padding-top:12px; border-top:1px solid {{ $stateBorder }};">
+            <span style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; color:{{ $stateColor }};">Preview emails</span>
+            <button type="button"
+                    x-on:click="$dispatch('sentinel-preview-open', { url: @js(route('statamic.cp.d3-sentinel.preview-freeze-notification')), title: 'Heads-up email preview' })"
+                    style="font-size:12px; font-weight:600; color:#0f172a; background:#fff; border:1px solid #e2e8f0; padding:5px 10px; border-radius:5px; cursor:pointer; font-family:inherit;">
+                Heads-up email
+            </button>
+            <button type="button"
+                    x-on:click="$dispatch('sentinel-preview-open', { url: @js(route('statamic.cp.d3-sentinel.preview-freeze-completion')), title: 'All-clear email preview' })"
+                    style="font-size:12px; font-weight:600; color:#0f172a; background:#fff; border:1px solid #e2e8f0; padding:5px 10px; border-radius:5px; cursor:pointer; font-family:inherit;">
+                All-clear email
+            </button>
+        </div>
     </div>
 
 @endif
