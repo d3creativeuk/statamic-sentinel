@@ -227,6 +227,67 @@
             </div>
         @endif
 
+        @if ($currentStatus === $statusScheduled || $currentStatus === $statusNotified)
+            @php
+                $cancelConfirm = $currentStatus === $statusNotified
+                    ? 'Cancel this freeze? Recipients have already received the heads-up email, so you may want to email them about the cancellation separately.'
+                    : 'Cancel this scheduled freeze? No emails have been sent yet.';
+            @endphp
+            <div x-data="{
+                    sending: false,
+                    state: 'idle',
+                    message: '',
+                    submit() {
+                        this.sending = true;
+                        this.state = 'idle';
+                        this.message = '';
+                        const fd = new FormData();
+                        fd.append('_token', @js(csrf_token()));
+                        fetch(@js(route('statamic.cp.d3-sentinel.freeze.cancel')), {
+                            method: 'POST',
+                            body: fd,
+                            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
+                        })
+                        .then(res => res.json().then(body => ({ ok: res.ok, body })))
+                        .then(res => {
+                            this.sending = false;
+                            this.state = res.ok ? 'success' : 'error';
+                            this.message = res.body.message;
+                            if (res.ok) {
+                                setTimeout(() => { window.location.reload(); }, 900);
+                            }
+                        })
+                        .catch(() => {
+                            this.sending = false;
+                            this.state = 'error';
+                            this.message = 'Something went wrong. Please try again.';
+                        });
+                    }
+                 }"
+                 style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:14px;">
+                <button type="button"
+                        x-bind:disabled="sending"
+                        x-on:click="$dispatch('sentinel-confirm-open', {
+                            message: @js($cancelConfirm),
+                            confirmLabel: 'Cancel freeze',
+                            onConfirm: () => submit()
+                        })"
+                        style="font-size:13px; font-weight:600; color:#b91c1c; background:#fff; border:1px solid #fecaca; padding:7px 14px; border-radius:6px; cursor:pointer; font-family:inherit;">
+                    <span x-show="sending" x-cloak style="display:inline-flex; align-items:center; gap:6px;">
+                        <span aria-hidden="true" style="display:inline-block; font-size:14px; line-height:1; transform-origin:center; animation:sentinel-spin 1s linear infinite;">↻</span>
+                        Cancelling…
+                    </span>
+                    <span x-show="!sending && state === 'success'" x-cloak>✓ Cancelled</span>
+                    <span x-show="!sending && state === 'error'" x-cloak>✕ Failed</span>
+                    <span x-show="!sending && state === 'idle'">Cancel freeze</span>
+                </button>
+                <div x-show="message" x-cloak
+                     x-bind:style="{ color: state === 'success' ? '#047857' : '#b91c1c' }"
+                     style="font-size:13px; line-height:1.45;"
+                     x-text="message"></div>
+            </div>
+        @endif
+
         <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:14px; padding-top:12px; border-top:1px solid {{ $stateBorder }};">
             <span style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; color:{{ $stateColor }};">Preview emails</span>
             <button type="button"

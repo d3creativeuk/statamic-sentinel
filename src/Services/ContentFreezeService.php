@@ -302,6 +302,48 @@ class ContentFreezeService
     }
 
     /**
+     * Abort a freeze before it activates. Allowed while status is `scheduled`
+     * or `notified`; an `active` freeze must be marked complete instead so
+     * recipients still get the all-clear email. Deletes the current-freeze
+     * file without appending to history - cancellations are not part of the
+     * audit trail today.
+     *
+     * Returns:
+     *   ['ok' => true,  'freeze' => array, 'was_notified' => bool]
+     *   ['ok' => false, 'message' => string]
+     */
+    public function cancel(?string $cancelledBy = null): array
+    {
+        $current = $this->current();
+
+        if (! $current) {
+            return $this->failure('No scheduled freeze to cancel.');
+        }
+
+        $status = $current['status'] ?? null;
+
+        if ($status === self::STATUS_ACTIVE) {
+            return $this->failure('The freeze is already active. Mark it complete to send the all-clear email.');
+        }
+
+        if ($status !== self::STATUS_SCHEDULED && $status !== self::STATUS_NOTIFIED) {
+            return $this->failure('This freeze can no longer be cancelled.');
+        }
+
+        try {
+            Storage::disk('local')->delete(self::CURRENT_PATH);
+        } catch (\Throwable $e) {
+            return $this->failure('Failed to remove the freeze record. Check storage permissions.');
+        }
+
+        return [
+            'ok'           => true,
+            'freeze'       => $current,
+            'was_notified' => $status === self::STATUS_NOTIFIED,
+        ];
+    }
+
+    /**
      * Format a UTC timestamp for display. When the configured display tz
      * differs from the server tz, returns dual times: "08:00 GMT / 04:00 EDT".
      */

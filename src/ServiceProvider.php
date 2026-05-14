@@ -26,6 +26,19 @@ class ServiceProvider extends AddonServiceProvider
         Widgets\SentinelWidget::class,
     ];
 
+    /**
+     * Inject the content-freeze banner into every authenticated CP response.
+     * Targets `statamic.cp` (not `web`) because Statamic CP routes are
+     * wrapped in their own middleware group; pushing to `web` never runs.
+     * The middleware itself does the final auth/path/content-type filtering
+     * so unauthenticated /cp/auth/* pages skip the injection.
+     */
+    protected $middlewareGroups = [
+        'statamic.cp' => [
+            InjectFreezeBanner::class,
+        ],
+    ];
+
     public function register(): void
     {
         $this->mergeConfigFrom(__DIR__ . '/../config/sentinel.php', 'sentinel');
@@ -42,12 +55,6 @@ class ServiceProvider extends AddonServiceProvider
                 'sentinelDevEmail' => config('sentinel.developer.email') ?: null,
             ]);
         });
-
-        // Inject the content-freeze banner / modal into every CP HTML
-        // response. Operates at the HTTP layer (not the view layer) because
-        // Statamic's CP layout has no body-level push stack we can rely on
-        // across the 3.3 -> 6.x compat range.
-        $this->app['router']->pushMiddlewareToGroup('web', InjectFreezeBanner::class);
 
         $this->registerCpRoutes(function () {
             \Illuminate\Support\Facades\Route::post(
@@ -109,6 +116,11 @@ class ServiceProvider extends AddonServiceProvider
                 'd3-sentinel/freeze/complete',
                 [FreezeController::class, 'complete']
             )->middleware('throttle:6,1')->name('d3-sentinel.freeze.complete');
+
+            \Illuminate\Support\Facades\Route::post(
+                'd3-sentinel/freeze/cancel',
+                [FreezeController::class, 'cancel']
+            )->middleware('throttle:6,1')->name('d3-sentinel.freeze.cancel');
         });
 
         // Auto-register the status-report scheduler entry when the user has

@@ -17,7 +17,12 @@
         $sentinelFreezeRecent  = null;
     }
 
-    $sentinelFreezeActive   = $sentinelFreezeCurrent && ($sentinelFreezeCurrent['status'] ?? null) === \D3Creative\Sentinel\Services\ContentFreezeService::STATUS_ACTIVE;
+    $sentinelFreezeStatus     = $sentinelFreezeCurrent['status'] ?? null;
+    $sentinelFreezeActive     = $sentinelFreezeCurrent && $sentinelFreezeStatus === \D3Creative\Sentinel\Services\ContentFreezeService::STATUS_ACTIVE;
+    $sentinelFreezeUpcoming   = $sentinelFreezeCurrent && in_array($sentinelFreezeStatus, [
+        \D3Creative\Sentinel\Services\ContentFreezeService::STATUS_SCHEDULED,
+        \D3Creative\Sentinel\Services\ContentFreezeService::STATUS_NOTIFIED,
+    ], true);
     $sentinelFreezeComplete = $sentinelFreezeRecent !== null;
 @endphp
 
@@ -55,8 +60,8 @@
         <div x-show="visible"
              role="status"
              aria-live="polite"
-             style="position:fixed; top:0; left:0; right:0; z-index:9998; background:#fef3c7; color:#92400e; border-bottom:1px solid #fcd34d; padding:10px 16px; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; font-size:13px; line-height:1.45; box-shadow:0 1px 2px rgba(0,0,0,0.04);">
-            <div style="max-width:1200px; margin:0 auto; display:flex; align-items:center; gap:10px;">
+             style="background:#fef3c7; color:#92400e; border-bottom:1px solid #fcd34d; padding:10px 16px; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; font-size:13px; line-height:1.45;">
+            <div style="display:flex; align-items:center; gap:10px;">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;" aria-hidden="true">
                     <path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
                 </svg>
@@ -90,6 +95,44 @@
             </div>
         </dialog>
     </div>
+@elseif ($sentinelFreezeUpcoming)
+    @php
+        $sentinelUpcomingId  = $sentinelFreezeCurrent['id'] ?? 'unknown';
+        $sentinelFreezeAt    = $sentinelFreezeService->formatTime($sentinelFreezeCurrent['freeze_at'] ?? null);
+        $sentinelHost        = parse_url(config('app.url'), PHP_URL_HOST) ?: 'site';
+    @endphp
+
+    {{-- Upcoming freeze (scheduled / notified): blue dismissible banner --}}
+    <div x-data="{
+            visible: false,
+            cookieName: 'sentinel_freeze_upcoming_{{ $sentinelUpcomingId }}',
+            init() {
+                if (! document.cookie.split('; ').some(c => c.startsWith(this.cookieName + '='))) {
+                    this.visible = true;
+                }
+            },
+            dismiss() {
+                document.cookie = this.cookieName + '=1; max-age=2592000; path=/; SameSite=Lax';
+                this.visible = false;
+            }
+         }"
+         x-cloak>
+        <div x-show="visible"
+             role="status"
+             aria-live="polite"
+             style="background:#dbeafe; color:#1e40af; border-bottom:1px solid #bfdbfe; padding:10px 16px; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; font-size:13px; line-height:1.45;">
+            <div style="display:flex; align-items:center; gap:10px;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;" aria-hidden="true">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                </svg>
+                <span style="flex:1;"><strong>A Statamic update is scheduled for {{ $sentinelHost }}.</strong> Update window starts <span style="font-variant-numeric:tabular-nums;">{{ $sentinelFreezeAt }}</span>.</span>
+                <button type="button"
+                        x-on:click="dismiss()"
+                        aria-label="Dismiss"
+                        style="flex-shrink:0; background:transparent; border:none; color:#1e40af; cursor:pointer; padding:2px 6px; font-size:18px; line-height:1; font-family:inherit;">&times;</button>
+            </div>
+        </div>
+    </div>
 @elseif ($sentinelFreezeComplete)
     @php
         $sentinelRecentId    = $sentinelFreezeRecent['id'] ?? 'unknown';
@@ -114,8 +157,8 @@
         <div x-show="visible"
              role="status"
              aria-live="polite"
-             style="position:fixed; top:0; left:0; right:0; z-index:9998; background:#d1fae5; color:#065f46; border-bottom:1px solid #6ee7b7; padding:10px 16px; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; font-size:13px; line-height:1.45; box-shadow:0 1px 2px rgba(0,0,0,0.04);">
-            <div style="max-width:1200px; margin:0 auto; display:flex; align-items:center; gap:10px;">
+             style="background:#d1fae5; color:#065f46; border-bottom:1px solid #6ee7b7; padding:10px 16px; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; font-size:13px; line-height:1.45;">
+            <div style="display:flex; align-items:center; gap:10px;">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;" aria-hidden="true">
                     <path d="M20 6 9 17l-5-5"/>
                 </svg>

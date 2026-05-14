@@ -7,13 +7,18 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Injects the content-freeze banner / modal into the bottom of every CP HTML
- * response when there's an active or recently-completed freeze. Operates on
- * the rendered response so it works across the full Statamic 3.3 -> 6.x
- * range without depending on layout-specific push stacks.
+ * Injects the content-freeze banner / modal into every CP HTML response
+ * when there's an active, upcoming, or recently-completed freeze.
  *
- * Silent on any failure - the CP render must never break because the banner
- * couldn't be assembled.
+ * The banner is injected as the first child of `<div class="workspace">`
+ * so it sits in normal document flow at the top of the CP's right-side
+ * content area, just under the fixed `.global-header`. A fallback before
+ * `</body>` runs for layouts without a `.workspace` element (e.g. the
+ * Statamic 3.3 auth pages); the banner has no fixed positioning, so that
+ * fallback just appends it at the end of the body.
+ *
+ * Silent on any failure - the CP render must never break because the
+ * banner couldn't be assembled.
  */
 class InjectFreezeBanner
 {
@@ -38,8 +43,21 @@ class InjectFreezeBanner
                 return $response;
             }
 
-            // Inject before the last </body> only - some CP responses include
-            // markup with literal "</body>" inside a textarea or pre block.
+            // Preferred injection point: first child of <div class="workspace">,
+            // which Statamic renders inside #main, below the .global-header.
+            // The regex tolerates extra classes and attribute ordering.
+            if (preg_match('/<div\s[^>]*\bclass\s*=\s*"[^"]*\bworkspace\b[^"]*"[^>]*>/i', $content, $matches, PREG_OFFSET_CAPTURE)) {
+                $insertAt = $matches[0][1] + strlen($matches[0][0]);
+                $response->setContent(
+                    substr($content, 0, $insertAt) . $markup . substr($content, $insertAt)
+                );
+
+                return $response;
+            }
+
+            // Fallback: inject before the last </body>. The banner has no
+            // fixed positioning, so it just appends at the end of the body
+            // on layouts that don't expose a .workspace element.
             $pos = strripos($content, '</body>');
 
             if ($pos === false) {

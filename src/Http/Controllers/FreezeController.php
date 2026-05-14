@@ -47,6 +47,26 @@ class FreezeController extends Controller
         ], 200);
     }
 
+    public function cancel(Request $request, ContentFreezeService $service)
+    {
+        abort_unless(auth()->user()?->isSuper(), 403);
+
+        $result = $service->cancel($this->actorId());
+
+        if (! $result['ok']) {
+            return response()->json(['message' => $result['message']], 422);
+        }
+
+        $message = ! empty($result['was_notified'])
+            ? 'Freeze cancelled. Recipients had already been emailed, so you may want to let them know separately.'
+            : 'Freeze cancelled.';
+
+        return response()->json([
+            'message' => $message,
+            'freeze'  => $result['freeze'],
+        ], 200);
+    }
+
     /**
      * Statamic user IDs are strings - take whatever the auth user exposes
      * and stringify it. Falls back to email when the id() helper is absent
