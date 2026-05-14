@@ -132,6 +132,11 @@
     @php
         $d            = $row['data'];
         $totalVulns   = array_sum($d['counts'] ?? []);
+        // Vendor-flagged security updates (no matching OSV advisory yet) - count
+        // them toward the security-issues badge so the widget matches the
+        // utility view and Statamic's own updater notification.
+        $vendorOnly   = (int) ($d['outdated']['vendor_security_updates_total'] ?? 0);
+        $totalSec     = $totalVulns + $vendorOnly;
         $updatesTotal = $d['outdated']['total'] ?? 0;
         $hasData      = in_array($d['status'], ['ok', 'vulnerable']);
     @endphp
@@ -163,8 +168,9 @@
             {{-- Security issues row --}}
             <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; padding:6px 12px; border-bottom:1px solid #e2e8f0;">
                 <span style="font-size:11px; font-weight:600; color:#0f172a;">Security issues</span>
-                @if($totalVulns > 0)
-                    <span style="display:inline-flex; align-items:center; font-size:10px; font-weight:500; padding:1px 7px; border-radius:4px; color:#dc2626; background:#fff; border:1px solid #dc2626; flex-shrink:0; font-variant-numeric:tabular-nums;">{{ $totalVulns }}</span>
+                @if($totalSec > 0)
+                    <span style="display:inline-flex; align-items:center; font-size:10px; font-weight:500; padding:1px 7px; border-radius:4px; color:#dc2626; background:#fff; border:1px solid #dc2626; flex-shrink:0; font-variant-numeric:tabular-nums;"
+                          @if($vendorOnly > 0 && $totalVulns === 0) title="Vendor-flagged security release available" @endif>{{ $totalSec }}</span>
                 @else
                     <span style="display:inline-flex; align-items:center; font-size:10px; font-weight:500; padding:1px 7px; border-radius:4px; color:#047857; background:#fff; border:1px solid #047857; flex-shrink:0; font-variant-numeric:tabular-nums;">0</span>
                 @endif

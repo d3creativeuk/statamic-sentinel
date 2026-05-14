@@ -35,4 +35,22 @@ return [
         'timezone' => env('SENTINEL_FREEZE_TIMEZONE', config('app.timezone')),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Vendor security check
+    |--------------------------------------------------------------------------
+    |
+    | When enabled, Sentinel asks the Statamic marketplace API whether any
+    | release newer than the installed version is flagged as a security
+    | release by the vendor - the same signal the built-in CP updater uses.
+    | This catches vendor-published security patches before they appear in
+    | the public OSV / GHSA advisory feeds.
+    |
+    | Disable for air-gapped installs or test environments that should not
+    | reach out to statamic.com during a scan.
+    |
+    */
+
+    'vendor_security_check' => env('SENTINEL_VENDOR_SECURITY_CHECK', true),
+
 ];

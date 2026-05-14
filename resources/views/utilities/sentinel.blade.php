@@ -234,12 +234,29 @@
         </div>
 
         {{-- Security Issues --}}
+        @php
+            // Vendor-flagged security updates (Composer only - npm doesn't surface
+            // a vendor `security` flag through any feed we read). When the OSV
+            // status is "ok" but the marketplace has flagged a release, treat
+            // that as a security advisory the user should see.
+            $vendorOnly = (int) ($d['outdated']['vendor_security_updates_total'] ?? 0);
+        @endphp
         @if($d['status'] === 'ok' || $d['status'] === 'vulnerable')
             <div style="margin-bottom:14px;">
-                @if($d['status'] === 'ok')
+                @if($d['status'] === 'ok' && $vendorOnly === 0)
                     <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
                         <div style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; color:#64748b;">Security Issues</div>
                         <span style="display:inline-flex; align-items:center; font-size:12px; font-weight:500; color:#047857; background:#fff; border:1px solid #047857; padding:3px 10px; border-radius:5px;">No known vulnerabilities</span>
+                    </div>
+                @elseif($d['status'] === 'ok' && $vendorOnly > 0)
+                    {{-- No OSV advisories, but the vendor has flagged at least one release as security.
+                         Surface this so the Sentinel card matches the built-in updater's red badge. --}}
+                    <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+                        <div style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; color:#64748b;">Security Issues</div>
+                        <span style="display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:500; color:#dc2626; background:#fff; border:1px solid #dc2626; padding:3px 10px; border-radius:5px;" title="Statamic has marked at least one available update as a security release.">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 20 20" fill="#dc2626" style="flex-shrink:0;"><path fill-rule="evenodd" d="M10 1a4.5 4.5 0 0 0-4.5 4.5V9H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-.5V5.5A4.5 4.5 0 0 0 10 1zm3 8V5.5a3 3 0 1 0-6 0V9h6z" clip-rule="evenodd"></path></svg>
+                            {{ $vendorOnly }} vendor security {{ $vendorOnly === 1 ? 'update' : 'updates' }}
+                        </span>
                     </div>
                 @else
                     @php

@@ -186,14 +186,16 @@ class AuditService
             array_merge($this->composerAudit(), [
                 'outdated'  => $this->composerOutdated(),
                 'installed' => $this->composerInstalledDirect(),
-            ])
+            ]),
+            'composer'
         );
 
         $npm = $this->annotateOutdatedSecurity(
             array_merge($this->npmAudit(), [
                 'outdated'  => $this->npmOutdated(),
                 'installed' => $this->npmInstalledDirect(),
-            ])
+            ]),
+            'npm'
         );
 
         $result = [
@@ -277,23 +279,41 @@ class AuditService
     /**
      * For each package in the ecosystem's `outdated.packages`, set a
      * `security_update` flag indicating whether updating it would resolve a
-     * known OSV advisory. Adds `outdated.security_updates_total` alongside.
+     * known OSV advisory OR a marketplace-flagged security release (Composer
+     * only). Adds `outdated.security_updates_total` and `vendor_security_updates_total`
+     * alongside, where the latter counts vendor-flagged updates that have no
+     * matching OSV advisory yet - useful for distinguishing the two in the UI.
      */
-    protected function annotateOutdatedSecurity(array $ecosystem): array
+    protected function annotateOutdatedSecurity(array $ecosystem, string $ecosystemType): array
     {
-        $packages = $ecosystem['outdated']['packages'] ?? [];
-        $count    = 0;
+        $packages    = $ecosystem['outdated']['packages'] ?? [];
+        $count       = 0;
+        $vendorOnly  = 0;
+        $marketplace = $ecosystemType === 'composer' ? app(MarketplaceService::class) : null;
 
         foreach ($packages as $i => $pkg) {
-            $isSecurity = $this->hasSecurityUpdateFor($pkg['name'] ?? '', $ecosystem);
-            $packages[$i]['security_update'] = $isSecurity;
-            if ($isSecurity) {
+            $name    = $pkg['name'] ?? '';
+            $current = $pkg['current'] ?? '';
+
+            $osvFlag    = $this->hasSecurityUpdateFor($name, $ecosystem);
+            $vendorFlag = $marketplace && $name !== '' && $current !== ''
+                ? $marketplace->hasSecurityReleaseAfter($name, $current)
+                : false;
+
+            $packages[$i]['security_update']        = $osvFlag || $vendorFlag;
+            $packages[$i]['security_source']        = $this->resolveSecuritySource($osvFlag, $vendorFlag);
+
+            if ($osvFlag || $vendorFlag) {
                 $count++;
+            }
+            if ($vendorFlag && ! $osvFlag) {
+                $vendorOnly++;
             }
         }
 
-        $ecosystem['outdated']['packages']                = $packages;
-        $ecosystem['outdated']['security_updates_total']  = $count;
+        $ecosystem['outdated']['packages']                        = $packages;
+        $ecosystem['outdated']['security_updates_total']          = $count;
+        $ecosystem['outdated']['vendor_security_updates_total']   = $vendorOnly;
 
         return $ecosystem;
     }
@@ -307,13 +327,33 @@ class AuditService
         $current  = \Statamic\Statamic::version();
         $isLatest = $latest && version_compare($current, $latest, '>=');
 
+        $osvFlag    = $this->hasSecurityUpdateFor('statamic/cms', $composerAudit);
+        $vendorFlag = ! $isLatest && app(MarketplaceService::class)
+            ->hasSecurityReleaseAfter('statamic/cms', $current);
+
         return [
             'current'                   => $current,
             'latest'                    => $latest,
             'is_latest'                 => $isLatest,
             'status'                    => $isLatest ? 'ok' : ($latest ? 'outdated' : 'unknown'),
-            'security_update_available' => ! $isLatest && $this->hasSecurityUpdateFor('statamic/cms', $composerAudit),
+            'security_update_available' => ! $isLatest && ($osvFlag || $vendorFlag),
+            'security_source'           => $this->resolveSecuritySource($osvFlag, $vendorFlag),
         ];
+    }
+
+    /**
+     * Where the Statamic security signal came from. Reported on the platform
+     * row so the CP can show why it's flagged - "vendor" means the Statamic
+     * team marked the release as security in the marketplace; "osv" means a
+     * public advisory matched; "both" means the advisory caught up with the
+     * vendor flag. null means no signal.
+     */
+    protected function resolveSecuritySource(bool $osv, bool $vendor): ?string
+    {
+        if ($osv && $vendor) return 'both';
+        if ($osv)            return 'osv';
+        if ($vendor)         return 'vendor';
+        return null;
     }
 
     /**

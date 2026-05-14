@@ -77,19 +77,23 @@
     };
 
     $ecosystemBadge = function (array $eco) {
-        $status   = $eco['status']     ?? 'unknown';
-        $vulns    = (int) ($eco['total_vulns']         ?? 0);
-        $outdated = (int) ($eco['outdated']['total']   ?? 0);
+        $status     = $eco['status']     ?? 'unknown';
+        $vulns      = (int) ($eco['total_vulns']                            ?? 0);
+        $outdated   = (int) ($eco['outdated']['total']                      ?? 0);
+        // Vendor-flagged security releases that don't yet have an OSV advisory.
+        // Counted toward the security pill so the email matches the CP badge.
+        $vendorOnly = (int) ($eco['outdated']['vendor_security_updates_total'] ?? 0);
+        $totalSec   = $vulns + $vendorOnly;
 
         if ($status === 'unavailable') return ['text' => 'Not found',    'colour' => '#94a3b8', 'detail' => 'Lock file not found'];
         if ($status === 'error')       return ['text' => 'Check failed', 'colour' => '#dc2626', 'detail' => 'Could not reach the registry'];
 
         $updatesText = $outdated . ' ' . \Illuminate\Support\Str::plural('update', $outdated) . ' available';
-        $vulnsText   = $vulns    . ' security ' . \Illuminate\Support\Str::plural('issue', $vulns);
+        $vulnsText   = $totalSec . ' security ' . \Illuminate\Support\Str::plural('issue', $totalSec);
 
         // Vulns take the (red) pill when present; updates fall back to the
         // detail line so the row never duplicates itself.
-        if ($vulns > 0) {
+        if ($totalSec > 0) {
             return ['text' => $vulnsText, 'colour' => '#dc2626', 'detail' => $outdated > 0 ? $updatesText : ''];
         }
 
@@ -109,7 +113,9 @@
         ['kind' => 'eco',      'label' => 'npm',      'description' => 'Third-party JavaScript packages your site uses', 'data' => $npm],
     ];
 
-    $totalVulns    = ($composer['total_vulns']        ?? 0) + ($npm['total_vulns']        ?? 0);
+    $totalVulns    = ($composer['total_vulns']        ?? 0) + ($npm['total_vulns']        ?? 0)
+                   + ($composer['outdated']['vendor_security_updates_total'] ?? 0)
+                   + ($npm['outdated']['vendor_security_updates_total']      ?? 0);
     $totalOutdated = ($composer['outdated']['total']  ?? 0) + ($npm['outdated']['total']  ?? 0);
 
     $platformEol = in_array($statamic['status'] ?? '', ['eol'])
