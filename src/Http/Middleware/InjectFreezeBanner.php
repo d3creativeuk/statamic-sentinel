@@ -47,6 +47,16 @@ class InjectFreezeBanner
                 return $response;
             }
 
+            // Only inject into responses that contain the Statamic CP shell.
+            // Preview-email iframe responses are full HTML documents served
+            // under the CP route prefix, so they pass shouldInject() - but
+            // they intentionally render bare email markup with no #statamic
+            // wrapper. Without this guard the </body> fallback below ends up
+            // injecting the freeze banner into the email preview iframe.
+            if (strpos($content, '<div id="statamic"') === false) {
+                return $response;
+            }
+
             // Preferred injection point: first child of <div class="workspace">,
             // which Statamic renders inside #main, below the .global-header.
             // The regex tolerates extra classes and attribute ordering.
@@ -61,7 +71,9 @@ class InjectFreezeBanner
 
             // Fallback: inject before the last </body>. The banner has no
             // fixed positioning, so it just appends at the end of the body
-            // on layouts that don't expose a .workspace element.
+            // on layouts that don't expose a .workspace element. Safe to run
+            // here because the #statamic shell check above already filtered
+            // out preview iframes.
             $pos = strripos($content, '</body>');
 
             if ($pos === false) {
