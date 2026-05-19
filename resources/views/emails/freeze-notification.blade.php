@@ -51,7 +51,7 @@
 
         <ul style="font-size:14px; color:#1e293b; margin:0 0 16px 0; padding-left:22px; line-height:1.65; list-style:disc;">
             <li style="margin-bottom:6px;">Finish off any content edits before the start time above.</li>
-            <li style="margin-bottom:6px;">Once the banner appears, please stop editing content.</li>
+            <li style="margin-bottom:6px;">Once the amber banner appears, please don't make any further edits.</li>
             <li>You'll receive an "all clear" email once the update is complete and a notification within Statamic when it's safe to continue editing content.</li>
         </ul>
 
