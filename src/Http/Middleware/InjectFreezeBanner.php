@@ -147,6 +147,26 @@ class InjectFreezeBanner
             if (hdr) hdr.style.top = h + 'px';
             var main = document.getElementById('main');
             if (main) main.style.top = 'calc(3.5rem + ' + h + 'px)';
+            // Statamic 6's sidebar (`.nav-main`) is position:fixed with its
+            // own `top: 3.5rem` and `height: calc(100vh - 3.5rem)`, so it
+            // doesn't inherit `#main`'s shift. Push it down by `h` and
+            // shrink its height so the first nav item (Dashboard) isn't
+            // hidden behind the freeze banner.
+            //
+            // `.page-fully-loaded .nav-main` has `transition: inset .3s`,
+            // which would animate the jump on every refresh. Suppress the
+            // transition for the shift, force a reflow to commit the value
+            // synchronously, then restore so Statamic's own nav slide-in
+            // animations still work afterwards.
+            var nav = document.querySelector('.nav-main');
+            if (nav) {
+                var prevTransition = nav.style.transition;
+                nav.style.transition = 'none';
+                nav.style.top = 'calc(3.5rem + ' + h + 'px)';
+                nav.style.height = 'calc(100vh - 3.5rem - ' + h + 'px)';
+                void nav.offsetHeight;
+                nav.style.transition = prevTransition;
+            }
         };
 
         apply();
