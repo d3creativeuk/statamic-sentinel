@@ -116,11 +116,25 @@
         $sentinelUpcomingId = $sentinelFreezeCurrent['id'] ?? 'unknown';
         $sentinelFreezeAt   = $sentinelFreezeService->formatTime($sentinelFreezeCurrent['freeze_at'] ?? null);
         $sentinelHost       = parse_url(config('app.url'), PHP_URL_HOST) ?: 'site';
+        // Same dismissal scoping as the active-freeze modal: freeze id +
+        // session token. Resets on tab close or logout/login.
+        $sentinelUpcomingSessionToken = substr(hash('sha256', (string) (session()->getId() ?? 'anon')), 0, 16);
     @endphp
 
-    {{-- Upcoming freeze (scheduled / notified): blue non-dismissible banner. --}}
+    {{-- Upcoming freeze (scheduled / notified): blue non-dismissible banner +
+         first-load modal. "Seen" flag lives in sessionStorage, keyed by
+         freeze id + session token, so dismissal lasts only until the tab
+         closes OR the user logs out and back in. --}}
     <div x-data="{
             modalOpen: false,
+            storageKey: 'sentinel_freeze_upcoming_modal_seen_{{ $sentinelUpcomingId }}_{{ $sentinelUpcomingSessionToken }}',
+            init() {
+                var seen = false;
+                try { seen = window.sessionStorage.getItem(this.storageKey) === '1'; } catch (e) {}
+                if (! seen) {
+                    this.$nextTick(() => { this.openModal(); });
+                }
+            },
             openModal() {
                 this.modalOpen = true;
                 if (this.$refs.dlg && typeof this.$refs.dlg.showModal === 'function') {
@@ -128,6 +142,7 @@
                 }
             },
             closeModal() {
+                try { window.sessionStorage.setItem(this.storageKey, '1'); } catch (e) {}
                 this.modalOpen = false;
                 if (this.$refs.dlg && this.$refs.dlg.open) {
                     try { this.$refs.dlg.close(); } catch (e) {}
@@ -162,7 +177,7 @@
 
             <div style="padding:22px 28px;">
                 <p style="font-size:14px; color:#1e293b; margin:0 0 16px 0; line-height:1.55;">
-                    Maintenance window scheduled for <strong>{{ $sentinelHost }}</strong>. Once maintenance has started, please don't make any updates to the site.
+                    This website is scheduled for a Statamic update. You can still make edits until the time shown below.
                 </p>
 
                 <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px 14px; margin:0 0 16px 0;">

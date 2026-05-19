@@ -24,6 +24,7 @@ class ContentFreezeService
     const CURRENT_TMP_PATH  = 'statamic-sentinel/content-freeze.json.tmp';
     const HISTORY_PATH      = 'statamic-sentinel/content-freeze-history.json';
     const HISTORY_TMP_PATH  = 'statamic-sentinel/content-freeze-history.json.tmp';
+    const LAST_CANCEL_PATH  = 'statamic-sentinel/content-freeze-last-cancel.json';
 
     const HISTORY_LIMIT     = 50;
     const SCHEDULE_LEAD_MIN = 5;
@@ -79,12 +80,57 @@ class ContentFreezeService
     /**
      * Most recently completed freeze, used by the CP layout injector to
      * decide whether to render the green dismissible "all clear" banner.
+     *
+     * Suppressed (returns null) when the latest history entry predates the
+     * most recent cancel - otherwise cancelling a freshly-scheduled freeze
+     * resurfaces the green banner from a *previous* completed freeze that
+     * has nothing to do with the cancel that just happened.
      */
     public function lastCompleted(): ?array
     {
         $history = $this->history();
+        $latest  = $history[0] ?? null;
 
-        return $history[0] ?? null;
+        if (! $latest) {
+            return null;
+        }
+
+        $cancelAt = $this->lastCancelAt();
+        $doneAt   = $latest['completed_at'] ?? null;
+
+        if ($cancelAt && $doneAt) {
+            try {
+                if (Carbon::parse($doneAt)->lessThan(Carbon::parse($cancelAt))) {
+                    return null;
+                }
+            } catch (\Throwable $e) {
+                // Fall through and return the entry if dates can't be compared.
+            }
+        }
+
+        return $latest;
+    }
+
+    /**
+     * ISO timestamp of the most recent freeze cancellation, or null if none
+     * has been recorded. Used to suppress the green completion banner from
+     * older history when the user has just cancelled a different freeze.
+     */
+    public function lastCancelAt(): ?string
+    {
+        try {
+            $disk = Storage::disk('local');
+
+            if (! $disk->exists(self::LAST_CANCEL_PATH)) {
+                return null;
+            }
+
+            $decoded = json_decode($disk->get(self::LAST_CANCEL_PATH), true);
+
+            return is_array($decoded) ? ($decoded['cancelled_at'] ?? null) : null;
+        } catch (\Throwable $e) {
+            return null;
+        }
     }
 
     /**
@@ -358,6 +404,22 @@ class ContentFreezeService
             Storage::disk('local')->delete(self::CURRENT_PATH);
         } catch (\Throwable $e) {
             return $this->failure('Failed to remove the freeze record. Check storage permissions.');
+        }
+
+        // Record the cancel timestamp so older completed freezes in history
+        // don't keep the green "Update complete" banner alive after a cancel.
+        // Silent on failure - the banner suppression is best-effort.
+        try {
+            Storage::disk('local')->put(
+                self::LAST_CANCEL_PATH,
+                json_encode([
+                    'cancelled_at' => Carbon::now()->utc()->toIso8601String(),
+                    'cancelled_by' => $cancelledBy,
+                    'freeze_id'    => $current['id'] ?? null,
+                ], JSON_UNESCAPED_SLASHES)
+            );
+        } catch (\Throwable $e) {
+            // Silent fail.
         }
 
         return [
