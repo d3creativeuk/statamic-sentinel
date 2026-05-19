@@ -37,7 +37,7 @@
         <p style="font-size:13px; color:#64748b; margin:0 0 20px 0; line-height:1.55; max-width:420px; margin-left:auto; margin-right:auto;">Run your first scan to see Statamic, Laravel, PHP and dependency status. Re-run any time using the Refresh button.</p>
         <a x-data
            x-init="if (! document.getElementById('sentinel-keyframes')) { var s = document.createElement('style'); s.id = 'sentinel-keyframes'; s.textContent = '@keyframes sentinel-spin { to { transform: rotate(360deg); } }'; document.head.appendChild(s); }"
-           x-on:click.prevent="$el.querySelector('[data-sentinel-label]').textContent = 'Scanning…'; $el.querySelector('[data-sentinel-icon]').style.animation = 'sentinel-spin 1s linear infinite'; requestAnimationFrame(() => requestAnimationFrame(() => location.href = $el.href))"
+           x-on:click.prevent="$el.querySelector('[data-sentinel-label]').textContent = 'Scanning…'; $el.querySelector('[data-sentinel-icon]').style.animation = 'sentinel-spin 1s linear infinite'; requestAnimationFrame(() => requestAnimationFrame(() => location.href = $el.href + location.hash))"
            href="?d3_refresh=1"
            style="display:inline-flex; align-items:center; justify-content:center; gap:8px; white-space:nowrap; font-weight:600; cursor:pointer; text-decoration:none; color:#fff; background:#0f172a; padding:0 18px; height:38px; font-size:13px; line-height:1.25; border-radius:8px;">
             <span data-sentinel-label>Scan Now</span>
@@ -103,7 +103,7 @@
             <span style="font-size:12px; color:rgb(63 63 71);">Last scanned: {{ $audited_at }}</span>
             <a x-data
                x-init="if (! document.getElementById('sentinel-keyframes')) { var s = document.createElement('style'); s.id = 'sentinel-keyframes'; s.textContent = '@keyframes sentinel-spin { to { transform: rotate(360deg); } }'; document.head.appendChild(s); }"
-               x-on:click.prevent="$el.querySelector('[data-sentinel-label]').textContent = 'Scanning…'; $el.querySelector('[data-sentinel-icon]').style.animation = 'sentinel-spin 1s linear infinite'; requestAnimationFrame(() => requestAnimationFrame(() => location.href = $el.href))"
+               x-on:click.prevent="$el.querySelector('[data-sentinel-label]').textContent = 'Scanning…'; $el.querySelector('[data-sentinel-icon]').style.animation = 'sentinel-spin 1s linear infinite'; requestAnimationFrame(() => requestAnimationFrame(() => location.href = $el.href + location.hash))"
                href="?d3_refresh=1"
                title="Refresh audit results"
                style="display:inline-flex; align-items:center; gap:4px; font-size:12px; color:rgb(63 63 71); text-decoration:none;">
@@ -114,7 +114,23 @@
     </header>
 
     {{-- Tabs --}}
-    <div x-data="{ tab: 'current' }">
+    {{-- Tab state is mirrored to location.hash (e.g. #history) so refresh and
+         back/forward land on the active tab instead of jumping to Current. --}}
+    <div x-data="{
+        tab: 'current',
+        init() {
+            var valid = ['current', 'history', 'status-report', 'update-report', 'content-freeze'];
+            var hash = (window.location.hash || '').replace('#', '');
+            if (valid.indexOf(hash) !== -1) this.tab = hash;
+            this.$watch('tab', function (v) {
+                window.history.replaceState(null, '', '#' + v);
+            });
+            window.addEventListener('hashchange', () => {
+                var h = (window.location.hash || '').replace('#', '');
+                if (valid.indexOf(h) !== -1 && this.tab !== h) this.tab = h;
+            });
+        }
+    }">
 
         <div role="tablist" style="display:flex; gap:4px; border-bottom:1px solid #e2e8f0; margin-bottom:18px;">
             <button type="button"

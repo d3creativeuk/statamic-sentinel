@@ -155,7 +155,23 @@ class HistoryService
             // - not part of TRACKED_FIELDS, so doesn't drive change detection.
             'composer_packages'         => $audit['composer']['installed'] ?? [],
             'npm_packages'              => $audit['npm']['installed']      ?? [],
+            // Per-package vuln counts (`[name => count]`), so the update report
+            // can name which packages had vulns resolved or introduced between
+            // two snapshots, not just the total delta.
+            'composer_vuln_packages'    => self::vulnPackageMap($audit['composer']['by_package'] ?? []),
+            'npm_vuln_packages'         => self::vulnPackageMap($audit['npm']['by_package']      ?? []),
         ];
+    }
+
+    protected static function vulnPackageMap(array $byPackage): array
+    {
+        $map = [];
+        foreach ($byPackage as $entry) {
+            $name = $entry['name'] ?? null;
+            if ($name === null) continue;
+            $map[$name] = (int) ($entry['count'] ?? 0);
+        }
+        return $map;
     }
 
     protected function matches(array $a, array $b): bool

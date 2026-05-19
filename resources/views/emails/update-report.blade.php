@@ -201,16 +201,44 @@
 
         {{-- Vulnerabilities (only when relevant) --}}
         @if ($vulnsResolved > 0 || $vulnsIntro > 0)
+            @php
+                $resolvedPkgs = array_merge(
+                    $vulns['composer_resolved_packages']   ?? [],
+                    $vulns['npm_resolved_packages']        ?? []
+                );
+                $introPkgs = array_merge(
+                    $vulns['composer_introduced_packages'] ?? [],
+                    $vulns['npm_introduced_packages']      ?? []
+                );
+
+                $formatVulnPkgs = function (array $pkgs) {
+                    return implode(', ', array_map(
+                        fn ($p) => $p['count'] > 1
+                            ? $p['name'] . ' (' . $p['count'] . ')'
+                            : $p['name'],
+                        $pkgs
+                    ));
+                };
+            @endphp
             <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden; margin-bottom:24px;">
                 <tr style="{{ $vulnsResolved > 0 && $vulnsIntro > 0 ? 'border-bottom:1px solid #f1f5f9;' : '' }}">
                     <td style="padding:12px 16px; font-size:13px; font-weight:600; color:#0f172a;">Vulnerabilities</td>
                     <td align="right" style="padding:12px 16px; font-size:12px; color:#475569;">
                         @if ($vulnsResolved > 0)
-                            <span style="color:#10b981; font-weight:600;">{{ $vulnsResolved }} resolved</span>
+                            <div>
+                                <span style="color:#10b981; font-weight:600;">{{ $vulnsResolved }} resolved</span>
+                                @if (! empty($resolvedPkgs))
+                                    <div style="font-size:11px; color:#64748b; font-weight:400; margin-top:2px;">{{ $formatVulnPkgs($resolvedPkgs) }}</div>
+                                @endif
+                            </div>
                         @endif
-                        @if ($vulnsResolved > 0 && $vulnsIntro > 0)<span style="color:#94a3b8;"> · </span>@endif
                         @if ($vulnsIntro > 0)
-                            <span style="color:#ef4444; font-weight:600;">{{ $vulnsIntro }} new</span>
+                            <div style="{{ $vulnsResolved > 0 ? 'margin-top:6px;' : '' }}">
+                                <span style="color:#ef4444; font-weight:600;">{{ $vulnsIntro }} new</span>
+                                @if (! empty($introPkgs))
+                                    <div style="font-size:11px; color:#64748b; font-weight:400; margin-top:2px;">{{ $formatVulnPkgs($introPkgs) }}</div>
+                                @endif
+                            </div>
                         @endif
                     </td>
                 </tr>

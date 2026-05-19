@@ -194,8 +194,21 @@ class ServiceProvider extends AddonServiceProvider
                     ->icon('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z"/></svg>')
                     ->description('Full vulnerability and outdated-package report.')
                     ->view('statamic-sentinel::utilities.sentinel', function () {
-                        $service  = new AuditService();
-                        $data     = request()->has('d3_refresh') ? $service->refresh() : $service->cached();
+                        $service = new AuditService();
+
+                        // Run the refresh then redirect to the same URL with
+                        // `d3_refresh` stripped, so a manual F5 doesn't
+                        // re-trigger the audit. The exception bubbles out of
+                        // the utility render pipeline; Laravel turns it back
+                        // into the redirect response.
+                        if (request()->has('d3_refresh')) {
+                            $service->refresh();
+                            throw new \Illuminate\Http\Exceptions\HttpResponseException(
+                                redirect()->to(request()->fullUrlWithoutQuery('d3_refresh'))
+                            );
+                        }
+
+                        $data     = $service->cached();
                         $sentMail = app(SentMailService::class);
                         $freeze   = app(ContentFreezeService::class);
 

@@ -254,12 +254,12 @@ class SentinelController extends Controller
             return $current;
         }
 
-        $now = Carbon::now();
+        $now = Carbon::now()->toIso8601String();
 
         return [
-            'notify_at'    => $now->copy()->addHour()->toIso8601String(),
-            'freeze_at'    => $now->copy()->addHours(2)->toIso8601String(),
-            'completed_at' => $now->copy()->addHours(3)->toIso8601String(),
+            'notify_at'    => $now,
+            'freeze_at'    => $now,
+            'completed_at' => $now,
             'recipients'   => [],
         ];
     }
