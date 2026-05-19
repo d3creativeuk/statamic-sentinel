@@ -3,6 +3,7 @@
 namespace D3Creative\Sentinel\Services;
 
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
@@ -24,7 +25,8 @@ class ContentFreezeService
     const CURRENT_TMP_PATH  = 'statamic-sentinel/content-freeze.json.tmp';
     const HISTORY_PATH      = 'statamic-sentinel/content-freeze-history.json';
     const HISTORY_TMP_PATH  = 'statamic-sentinel/content-freeze-history.json.tmp';
-    const LAST_CANCEL_PATH  = 'statamic-sentinel/content-freeze-last-cancel.json';
+    const LAST_CANCEL_PATH      = 'statamic-sentinel/content-freeze-last-cancel.json';
+    const LAST_CANCEL_TMP_PATH  = 'statamic-sentinel/content-freeze-last-cancel.json.tmp';
 
     const HISTORY_LIMIT     = 50;
     const SCHEDULE_LEAD_MIN = 5;
@@ -216,8 +218,17 @@ class ContentFreezeService
     public function tickIfDue(): void
     {
         try {
-            $this->tickNotifications();
-            $this->tickActivations();
+            // Cache lock so the every-minute cron and the per-request middleware
+            // can't both pass the status guard and double-dispatch the heads-up
+            // email when they happen to fire in the same second. `get()` with a
+            // closure auto-releases after the callback (or on exception).
+            // Drivers that don't support locks (array) silently no-op the lock
+            // - acceptable for dev/test, real production should run a driver
+            // that does (file is fine for single-host; redis for multi-host).
+            Cache::lock('sentinel_freeze_tick', 30)->get(function () {
+                $this->tickNotifications();
+                $this->tickActivations();
+            });
         } catch (\Throwable $e) {
             // Silent fail - never break CP rendering on a tick failure.
         }
@@ -280,9 +291,12 @@ class ContentFreezeService
     }
 
     /**
-     * Send the heads-up email and move status to `notified`. Mail send
-     * failure is logged but never throws - the state machine still advances
-     * so the next tick won't re-attempt sending to the same recipients.
+     * Send the heads-up email and move status to `notified`. Mail is dispatched
+     * BEFORE the state write so a dispatch failure (SMTP down on the sync
+     * driver, queue config wrong, malformed template) leaves the freeze at
+     * `scheduled` and the next tick retries. With no valid recipients we
+     * advance anyway so the state machine doesn't stall on a permanently-bad
+     * record.
      */
     public function markNotified(array $freeze): void
     {
@@ -292,21 +306,23 @@ class ContentFreezeService
             return;
         }
 
+        $recipients = $this->filterValidRecipients($current['recipients'] ?? [], $current['id'] ?? '?');
+
+        if (! empty($recipients)) {
+            try {
+                Mail::to($recipients)->queue(new FreezeNotificationMail($current));
+            } catch (\Throwable $e) {
+                Log::warning('Sentinel freeze notification mail dispatch failed: ' . $e->getMessage());
+                return;
+            }
+        } else {
+            Log::warning('Sentinel freeze ' . ($current['id'] ?? '?') . ': no valid recipients to notify; advancing anyway.');
+        }
+
         $current['status']      = self::STATUS_NOTIFIED;
         $current['notified_at'] = Carbon::now()->utc()->toIso8601String();
 
         $this->writeCurrent($current);
-
-        if (empty($current['recipients'])) {
-            Log::warning('Sentinel freeze ' . ($current['id'] ?? '?') . ': no recipients to notify.');
-            return;
-        }
-
-        try {
-            Mail::to($current['recipients'])->send(new FreezeNotificationMail($current));
-        } catch (\Throwable $e) {
-            Log::warning('Sentinel freeze notification email failed: ' . $e->getMessage());
-        }
     }
 
     /**
@@ -351,21 +367,28 @@ class ContentFreezeService
         $current['completed_at'] = Carbon::now()->utc()->toIso8601String();
         $current['completed_by'] = $completedBy ?: self::ACTOR_CLI;
 
+        $recipients = $this->filterValidRecipients($current['recipients'] ?? [], $current['id'] ?? '?');
+
+        // Dispatch the all-clear email BEFORE advancing state. complete() is
+        // user-initiated (button or CLI command) so a dispatch failure should
+        // surface as a retryable failure rather than silently advancing the
+        // freeze and losing the email.
+        if (! empty($recipients)) {
+            try {
+                Mail::to($recipients)->queue(new FreezeCompletionMail($current));
+            } catch (\Throwable $e) {
+                Log::warning('Sentinel freeze completion mail dispatch failed: ' . $e->getMessage());
+                return $this->failure('Could not send the all-clear email. Check your mail configuration and try again.');
+            }
+        }
+
         $this->appendHistory($current);
 
         try {
             Storage::disk('local')->delete(self::CURRENT_PATH);
         } catch (\Throwable $e) {
             // Silent fail - the history record is the source of truth from
-            // this point forward; a stale current-file is recovered below.
-        }
-
-        if (! empty($current['recipients'])) {
-            try {
-                Mail::to($current['recipients'])->send(new FreezeCompletionMail($current));
-            } catch (\Throwable $e) {
-                Log::warning('Sentinel freeze completion email failed: ' . $e->getMessage());
-            }
+            // this point forward.
         }
 
         return ['ok' => true, 'freeze' => $current];
@@ -408,16 +431,23 @@ class ContentFreezeService
 
         // Record the cancel timestamp so older completed freezes in history
         // don't keep the green "Update complete" banner alive after a cancel.
+        // .tmp + move so a crash mid-write doesn't leave partial JSON that
+        // would make lastCancelAt() return null and resurface the banner.
         // Silent on failure - the banner suppression is best-effort.
         try {
-            Storage::disk('local')->put(
-                self::LAST_CANCEL_PATH,
-                json_encode([
-                    'cancelled_at' => Carbon::now()->utc()->toIso8601String(),
-                    'cancelled_by' => $cancelledBy,
-                    'freeze_id'    => $current['id'] ?? null,
-                ], JSON_UNESCAPED_SLASHES)
-            );
+            $disk = Storage::disk('local');
+            $json = json_encode([
+                'cancelled_at' => Carbon::now()->utc()->toIso8601String(),
+                'cancelled_by' => $cancelledBy,
+                'freeze_id'    => $current['id'] ?? null,
+            ], JSON_UNESCAPED_SLASHES);
+
+            $disk->put(self::LAST_CANCEL_TMP_PATH, $json);
+
+            if (! $disk->move(self::LAST_CANCEL_TMP_PATH, self::LAST_CANCEL_PATH)) {
+                $disk->delete(self::LAST_CANCEL_PATH);
+                $disk->move(self::LAST_CANCEL_TMP_PATH, self::LAST_CANCEL_PATH);
+            }
         } catch (\Throwable $e) {
             // Silent fail.
         }
@@ -442,7 +472,10 @@ class ContentFreezeService
         try {
             $time = Carbon::parse($iso);
         } catch (\Throwable $e) {
-            return (string) $iso;
+            // Garbage in the stored ISO (corruption, manual edit) renders as
+            // a placeholder rather than printing the raw string into emails
+            // and the CP modal.
+            return '-';
         }
 
         $displayTz = $this->timezone();
@@ -559,5 +592,27 @@ class ContentFreezeService
     protected function failure(string $message): array
     {
         return ['ok' => false, 'message' => $message];
+    }
+
+    /**
+     * Filter a stored recipient list through FILTER_VALIDATE_EMAIL just before
+     * dispatch. The current-freeze JSON file can sit on disk for hours/days
+     * after schedule() validated the input; corruption or manual edits could
+     * leave invalid addresses in place, and `Mail::to([bad])` throws at
+     * dispatch. Invalid entries are dropped with a log warning rather than
+     * killing the whole send.
+     */
+    protected function filterValidRecipients(array $recipients, string $freezeId): array
+    {
+        $valid = [];
+        foreach ($recipients as $email) {
+            if (is_string($email) && filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                $valid[] = $email;
+            } else {
+                Log::warning('Sentinel freeze ' . $freezeId . ': dropping invalid recipient ' . var_export($email, true));
+            }
+        }
+
+        return $valid;
     }
 }

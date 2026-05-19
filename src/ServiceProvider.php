@@ -160,11 +160,6 @@ class ServiceProvider extends AddonServiceProvider
                 'd3-sentinel/freeze/cancel',
                 [FreezeController::class, 'cancel']
             )->middleware('throttle:6,1')->name('d3-sentinel.freeze.cancel');
-
-            \Illuminate\Support\Facades\Route::post(
-                'd3-sentinel/freeze/dismiss-banner',
-                [FreezeController::class, 'dismissBanner']
-            )->middleware('throttle:30,1')->name('d3-sentinel.freeze.dismiss-banner');
         });
 
         // Auto-register the status-report scheduler entry when the user has

@@ -139,6 +139,20 @@ class InjectFreezeBanner
         var overlay = document.getElementById('d3-sentinel-freeze-overlay');
         if (! overlay) return;
 
+        // MutationObserver fires on every DOM change in the CP (Inertia
+        // navigation, Alpine toggles, Statamic toasts). Collapse calls into
+        // one per animation frame so apply() doesn't force a style recalc
+        // dozens of times per second on a busy page.
+        var scheduled = false;
+        var schedule = function () {
+            if (scheduled) return;
+            scheduled = true;
+            (window.requestAnimationFrame || function (cb) { setTimeout(cb, 16); })(function () {
+                scheduled = false;
+                apply();
+            });
+        };
+
         var apply = function () {
             var h = overlay.offsetHeight || 0;
             if (! h) return;
@@ -170,9 +184,9 @@ class InjectFreezeBanner
         };
 
         apply();
-        if (window.ResizeObserver) new ResizeObserver(apply).observe(overlay);
+        if (window.ResizeObserver) new ResizeObserver(schedule).observe(overlay);
         if (window.MutationObserver) {
-            new MutationObserver(apply).observe(document.body, { childList: true, subtree: true });
+            new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true });
         }
         // Vue may not have mounted yet on first paint; nudge a few times.
         setTimeout(apply, 100);

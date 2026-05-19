@@ -47,30 +47,6 @@ class FreezeController extends Controller
         ], 200);
     }
 
-    /**
-     * Record a per-session dismissal of the upcoming-freeze banner. The flag
-     * lives in the Laravel session, which is regenerated on login - so the
-     * banner reappears for the user's next sign-in even after they dismiss
-     * it during the current session.
-     *
-     * Available to any authenticated CP user (not just super admins) because
-     * the banner is shown to every CP user.
-     */
-    public function dismissBanner(Request $request)
-    {
-        abort_unless(auth()->check(), 403);
-
-        $id = (string) $request->input('id', '');
-
-        if ($id === '' || ! preg_match('/^freeze_[a-z0-9]+$/i', $id)) {
-            return response()->json(['message' => 'Invalid freeze id.'], 422);
-        }
-
-        $request->session()->put('sentinel_freeze_dismissed_' . $id, true);
-
-        return response()->json(['message' => 'Dismissed.'], 200);
-    }
-
     public function cancel(Request $request, ContentFreezeService $service)
     {
         abort_unless(auth()->user()?->isSuper(), 403);

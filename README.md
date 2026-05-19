@@ -83,6 +83,7 @@ SENTINEL_DEV_EMAIL='hello@your-agency.example'
 
 - PHP 8.0+
 - Statamic 3.3, 4.x, 5.x, or 6.x
+- If your host app sets a Content Security Policy, the freeze banner and modal use inline `<style>` and `<script>` to position the overlay and the auto-open dialog. Allow `style-src 'unsafe-inline'` and `script-src 'unsafe-inline'` on CP routes, or whitelist Sentinel's inline assets via nonce/hash. With a strict CSP and no allowance, the banner falls back to a normal-flow position and the auto-open modal won't run - the addon's reporting and audit features are unaffected.
 
 ## Support
 

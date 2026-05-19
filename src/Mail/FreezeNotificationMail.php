@@ -10,7 +10,7 @@ use D3Creative\Sentinel\Services\ContentFreezeService;
 
 class FreezeNotificationMail extends Mailable
 {
-    use Queueable, SerializesModels;
+    use Queueable, SerializesModels, SentinelFromAddress;
 
     public array $freeze;
 
@@ -39,6 +39,8 @@ class FreezeNotificationMail extends Mailable
         } catch (\Throwable $e) {
             // Fall through with placeholder.
         }
+
+        $this->applySentinelFrom();
 
         return $this->subject($host . ' update scheduled for ' . $subjectDate)
                     ->view('statamic-sentinel::emails.freeze-notification')

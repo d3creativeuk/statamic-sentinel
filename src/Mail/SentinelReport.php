@@ -8,7 +8,7 @@ use Illuminate\Queue\SerializesModels;
 
 class SentinelReport extends Mailable
 {
-    use Queueable, SerializesModels;
+    use Queueable, SerializesModels, SentinelFromAddress;
 
     public array $audit;
 
@@ -24,6 +24,8 @@ class SentinelReport extends Mailable
     public function build(): static
     {
         $host = parse_url(config('app.url'), PHP_URL_HOST) ?: 'site';
+
+        $this->applySentinelFrom();
 
         return $this->subject($host . ' status')
                     ->view('statamic-sentinel::emails.report')

@@ -36,7 +36,11 @@ class ReportSender
             $mailable = new SentinelReport($audit);
             $html     = $this->safeRender($mailable);
 
-            Mail::to($recipients)->send($mailable);
+            // queue() dispatches via the configured queue connection; on
+            // sync this is still inline (same behaviour as send()), but on a
+            // real queue the CP request returns instantly and SMTP failures
+            // surface in the queue worker rather than hanging the CP.
+            Mail::to($recipients)->queue($mailable);
 
             $this->record(SentMailService::KIND_STATUS, $recipients, $trigger, SentMailService::OUTCOME_SENT, $html);
 
@@ -95,7 +99,7 @@ class ReportSender
             $mailable = new SentinelUpdateReport($report);
             $html     = $this->safeRender($mailable);
 
-            Mail::to($recipients)->send($mailable);
+            Mail::to($recipients)->queue($mailable);
 
             // Remember the report only when it carries real content, so a
             // future force-resend has something meaningful to replay.

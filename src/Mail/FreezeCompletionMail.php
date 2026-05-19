@@ -9,7 +9,7 @@ use D3Creative\Sentinel\Services\ContentFreezeService;
 
 class FreezeCompletionMail extends Mailable
 {
-    use Queueable, SerializesModels;
+    use Queueable, SerializesModels, SentinelFromAddress;
 
     public array $freeze;
 
@@ -26,6 +26,8 @@ class FreezeCompletionMail extends Mailable
     {
         $host    = parse_url(config('app.url'), PHP_URL_HOST) ?: 'site';
         $service = app(ContentFreezeService::class);
+
+        $this->applySentinelFrom();
 
         return $this->subject($host . ' update complete: safe to log back in')
                     ->view('statamic-sentinel::emails.freeze-completion')
