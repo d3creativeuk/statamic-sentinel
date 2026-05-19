@@ -25,7 +25,8 @@
     {{-- Header --}}
     <div style="background:#0f172a; padding:24px 32px;">
         <div style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.08em; color:#94a3b8; margin-bottom:6px;">Heads up</div>
-        <h1 style="font-size:20px; font-weight:600; color:#ffffff; margin:0; line-height:1.3;">A Statamic update is scheduled for {{ $host }}</h1>
+        <h1 style="font-size:20px; font-weight:600; color:#ffffff; margin:0; line-height:1.3;">A Statamic update is scheduled</h1>
+        <div style="font-size:14px; font-weight:500; color:#cbd5e1; margin-top:4px;">{{ $host }}</div>
     </div>
 
     {{-- Body --}}

@@ -140,8 +140,10 @@
         }
     }
 
+    $introDetail = null;
     if ($needsAttention) {
-        $intro        = 'Your Statamic website needs attention - security or platform issues were found.';
+        $intro        = 'Your Statamic website needs attention';
+        $introDetail  = 'Security or platform issues were found.';
         $statusAccent = '#ef4444';
     } elseif ($platformMajorBehind) {
         $intro        = 'One or more platforms a major version behind.';
@@ -174,6 +176,9 @@
         {{-- Status banner --}}
         <div style="background:{{ $statusAccent }}1a; border-left:3px solid {{ $statusAccent }}; padding:14px 16px; border-radius:6px; margin-bottom:24px;">
             <div style="font-size:15px; font-weight:600; color:#0f172a; line-height:1.4;">{{ $intro }}</div>
+            @if ($introDetail)
+                <div style="font-size:13px; font-weight:400; color:#475569; line-height:1.4; margin-top:4px;">{{ $introDetail }}</div>
+            @endif
         </div>
 
         {{-- Always-visible rows: Statamic / Laravel / PHP / Composer / npm --}}
