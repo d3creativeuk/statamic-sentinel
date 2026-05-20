@@ -177,7 +177,7 @@
 
             <div style="padding:22px 28px;">
                 <p style="font-size:14px; color:#1e293b; margin:0 0 16px 0; line-height:1.55;">
-                    This website is scheduled for a Statamic update. You can still make edits until the time shown below.
+                    You can still make edits until the time shown below.
                 </p>
 
                 <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px 14px; margin:0 0 16px 0;">

@@ -91,7 +91,9 @@
             </svg>
             Sentinel
         </span>
-        <a href="{{ cp_route('utilities.sentinel') }}" style="display:inline-flex; align-items:center; justify-content:center; white-space:nowrap; flex-shrink:0; font-weight:500; cursor:pointer; text-decoration:none; color:#111827; background:linear-gradient(to bottom, #ffffff, #f9fafb); border:1px solid #d1d5db; box-shadow:0 1px 2px 0 rgba(0,0,0,0.05); padding:0 12px; height:32px; font-size:13px; line-height:1.25; border-radius:8px;">View Report</a>
+        @if (auth()->user()?->can('access sentinel utility'))
+            <a href="{{ cp_route('utilities.sentinel') }}" style="display:inline-flex; align-items:center; justify-content:center; white-space:nowrap; flex-shrink:0; font-weight:500; cursor:pointer; text-decoration:none; color:#111827; background:linear-gradient(to bottom, #ffffff, #f9fafb); border:1px solid #d1d5db; box-shadow:0 1px 2px 0 rgba(0,0,0,0.05); padding:0 12px; height:32px; font-size:13px; line-height:1.25; border-radius:8px;">View Report</a>
+        @endif
     </div>
 
     {{-- Card body --}}
