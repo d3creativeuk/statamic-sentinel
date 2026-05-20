@@ -26,14 +26,17 @@
     <div style="background:#0f172a; padding:24px 32px;">
         <div style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.08em; color:#94a3b8; margin-bottom:6px;">Heads up</div>
         <h1 style="font-size:20px; font-weight:600; color:#ffffff; margin:0; line-height:1.3;">A Statamic update is scheduled</h1>
-        <div style="font-size:14px; font-weight:500; color:#cbd5e1; margin-top:4px;">{{ $host }}</div>
+        <div style="font-size:14px; font-weight:500; color:#cbd5e1; margin-top:4px;">
+            {{-- Wrap in an explicit anchor so Gmail's auto-linker doesn't recolour the bare host to blue. --}}
+            <a href="{{ config('app.url') }}" style="color:#cbd5e1; text-decoration:none;">{{ $host }}</a>
+        </div>
     </div>
 
     {{-- Body --}}
     <div style="padding:24px 32px;">
 
         <p style="font-size:14px; color:#1e293b; margin:0 0 16px 0; line-height:1.55;">
-            You can still make edits until the time shown below.
+            Just to let you know, {{ $host }} is scheduled for a Statamic update. You can still make edits until the time shown below.
         </p>
 
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; margin:0 0 16px 0;">
@@ -51,7 +54,7 @@
 
         <ul style="font-size:14px; color:#1e293b; margin:0 0 16px 0; padding-left:22px; line-height:1.65; list-style:disc;">
             <li style="margin-bottom:6px;">Finish off any content edits before the start time above.</li>
-            <li style="margin-bottom:6px;">Once the amber banner appears, please don't make any further edits.</li>
+            <li style="margin-bottom:6px;">Once the amber banner appears in the CMS, please don't make any further edits.</li>
             <li>You'll receive an "all clear" email once the update is complete and a notification within Statamic when it's safe to continue editing content.</li>
         </ul>
 
