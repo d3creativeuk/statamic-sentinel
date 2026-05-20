@@ -267,12 +267,31 @@
                 @elseif($d['status'] === 'ok' && $vendorOnly > 0)
                     {{-- No OSV advisories, but the vendor has flagged at least one release as security.
                          Surface this so the Sentinel card matches the built-in updater's red badge. --}}
-                    <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
-                        <div style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; color:#64748b;">Security Issues</div>
-                        <span style="display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:500; color:#dc2626; background:#fff; border:1px solid #dc2626; padding:3px 10px; border-radius:5px;" title="Statamic has marked at least one available update as a security release.">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 20 20" fill="#dc2626" style="flex-shrink:0;"><path fill-rule="evenodd" d="M10 1a4.5 4.5 0 0 0-4.5 4.5V9H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-.5V5.5A4.5 4.5 0 0 0 10 1zm3 8V5.5a3 3 0 1 0-6 0V9h6z" clip-rule="evenodd"></path></svg>
-                            {{ $vendorOnly }} vendor security {{ $vendorOnly === 1 ? 'update' : 'updates' }}
-                        </span>
+                    @php
+                        $vendorPackages = array_values(array_filter(
+                            $d['outdated']['packages'] ?? [],
+                            fn($p) => ($p['security_source'] ?? null) === 'vendor'
+                        ));
+                    @endphp
+                    <div x-data="{ open: false }">
+                        <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+                            <div style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; color:#64748b;">Security Issues</div>
+                            <button type="button" x-on:click="open = !open" aria-label="Toggle vendor security updates list" title="Statamic has marked at least one available update as a security release." style="display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:500; padding:3px 10px; border-radius:5px; color:#dc2626; background:#fff; border:1px solid #dc2626; cursor:pointer; font-family:inherit;">
+                                <span>{{ $vendorOnly }} vendor security {{ $vendorOnly === 1 ? 'update' : 'updates' }}</span>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" x-bind:style="{ transform: open ? 'rotate(180deg)' : null }" style="display:block; flex-shrink:0; transition:transform 0.15s ease;"><path d="m4 6 4 4 4-4"></path></svg>
+                            </button>
+                        </div>
+                        <div x-show="open" x-cloak style="margin-top:8px; background:#fff; border:1px solid #e2e8f0; border-radius:6px; overflow:hidden;">
+                            @foreach($vendorPackages as $i => $pkg)
+                                <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; padding:6px 12px; {{ $i < count($vendorPackages) - 1 ? 'border-bottom:1px solid #e2e8f0;' : '' }}">
+                                    <div style="display:flex; align-items:center; gap:6px; min-width:0;">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 20 20" fill="#94a3b8" style="flex-shrink:0;"><title>Vendor security update</title><path fill-rule="evenodd" d="M10 1a4.5 4.5 0 0 0-4.5 4.5V9H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-.5V5.5A4.5 4.5 0 0 0 10 1zm3 8V5.5a3 3 0 1 0-6 0V9h6z" clip-rule="evenodd"></path></svg>
+                                        <div style="font-size:13px; font-weight:600; color:#0f172a; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ $pkg['name'] }}</div>
+                                    </div>
+                                    <span style="display:inline-flex; align-items:center; font-size:11px; font-weight:500; padding:1px 7px; border-radius:4px; color:#1d4ed8; background:#fff; border:1px solid #1d4ed8; flex-shrink:0; font-variant-numeric:tabular-nums;">{{ $pkg['current'] }} → {{ $pkg['latest'] }}</span>
+                                </div>
+                            @endforeach
+                        </div>
                     </div>
                 @else
                     @php
@@ -293,7 +312,7 @@
                             @foreach($byPackage as $i => $pkg)
                                 @php
                                     $sevColour  = $severityColour($pkg['highest']);
-                                    $lockColour = in_array($pkg['highest'], ['CRITICAL', 'HIGH']) ? '#dc2626' : '#94a3b8';
+                                    $lockColour = '#94a3b8';
                                 @endphp
                                 <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; padding:6px 12px; {{ $i < count($byPackage) - 1 ? 'border-bottom:1px solid #e2e8f0;' : '' }}">
                                     <div style="display:flex; align-items:center; gap:6px; min-width:0;">
@@ -332,7 +351,7 @@
                         <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; padding:6px 12px; {{ $i < count($packages) - 1 ? 'border-bottom:1px solid #e2e8f0;' : '' }}">
                             <div style="display:flex; align-items:center; gap:6px; min-width:0;">
                                 @if(!empty($pkg['security_update']))
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 20 20" fill="#dc2626" style="flex-shrink:0;"><title>Security update available</title><path fill-rule="evenodd" d="M10 1a4.5 4.5 0 0 0-4.5 4.5V9H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-.5V5.5A4.5 4.5 0 0 0 10 1zm3 8V5.5a3 3 0 1 0-6 0V9h6z" clip-rule="evenodd"></path></svg>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 20 20" fill="#94a3b8" style="flex-shrink:0;"><title>Security update available</title><path fill-rule="evenodd" d="M10 1a4.5 4.5 0 0 0-4.5 4.5V9H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-.5V5.5A4.5 4.5 0 0 0 10 1zm3 8V5.5a3 3 0 1 0-6 0V9h6z" clip-rule="evenodd"></path></svg>
                                 @endif
                                 <div style="font-size:13px; font-weight:600; color:#0f172a; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ $pkg['name'] }}</div>
                             </div>
