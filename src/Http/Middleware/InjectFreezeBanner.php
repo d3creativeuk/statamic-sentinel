@@ -155,12 +155,11 @@ class InjectFreezeBanner
 
         var apply = function () {
             var h = overlay.offsetHeight || 0;
-            if (! h) return;
             var hdr = document.querySelector('#statamic header.fixed.top-0')
                 || document.querySelector('header.fixed.top-0');
-            if (hdr) hdr.style.top = h + 'px';
+            if (hdr) hdr.style.top = h ? h + 'px' : '';
             var main = document.getElementById('main');
-            if (main) main.style.top = 'calc(3.5rem + ' + h + 'px)';
+            if (main) main.style.top = h ? 'calc(3.5rem + ' + h + 'px)' : '';
             // Statamic 6's sidebar (`.nav-main`) is position:fixed with its
             // own `top: 3.5rem` and `height: calc(100vh - 3.5rem)`, so it
             // doesn't inherit `#main`'s shift. Push it down by `h` and
@@ -176,8 +175,8 @@ class InjectFreezeBanner
             if (nav) {
                 var prevTransition = nav.style.transition;
                 nav.style.transition = 'none';
-                nav.style.top = 'calc(3.5rem + ' + h + 'px)';
-                nav.style.height = 'calc(100vh - 3.5rem - ' + h + 'px)';
+                nav.style.top = h ? 'calc(3.5rem + ' + h + 'px)' : '';
+                nav.style.height = h ? 'calc(100vh - 3.5rem - ' + h + 'px)' : '';
                 void nav.offsetHeight;
                 nav.style.transition = prevTransition;
             }
