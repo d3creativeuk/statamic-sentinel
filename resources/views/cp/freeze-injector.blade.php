@@ -230,10 +230,16 @@
             }
          }"
          x-cloak>
+        {{-- Inline display:none keeps the banner hidden on the pre-Alpine
+             paint when the dismissal cookie is set - the parent's x-cloak
+             override (display:block !important) would otherwise reveal this
+             element for a frame before Alpine evaluates x-show=false and
+             init() re-checks the cookie. x-show strips inline display when
+             toggling on, so this only suppresses the initial flash. --}}
         <div x-show="visible"
              role="status"
              aria-live="polite"
-             style="background:#d1fae5; color:#065f46; border-bottom:1px solid #6ee7b7; padding:10px 16px; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; font-size:13px; line-height:1.45;">
+             style="display:none; background:#d1fae5; color:#065f46; border-bottom:1px solid #6ee7b7; padding:10px 16px; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; font-size:13px; line-height:1.45;">
             <div style="display:flex; align-items:center; gap:10px;">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;" aria-hidden="true">
                     <path d="M20 6 9 17l-5-5"/>
