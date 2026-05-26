@@ -54,20 +54,26 @@ class AuditService
      * Falls back to the disk mirror if the cache has been cleared - common
      * after `composer update` since most sites run `cache:clear` afterwards.
      * On a disk hit we rehydrate the cache so subsequent reads stay hot.
+     *
+     * The cached snapshot is reconciled against live platform + lockfile
+     * versions before being returned (see reconcileAgainstLive), so a
+     * `composer update` that lands between scheduled scans doesn't leave a
+     * red "security update available" pill for a release the user already
+     * installed.
      */
     public function cached(): ?array
     {
-        if ($cached = Cache::get(self::CACHE_KEY)) {
-            return $cached;
+        $cached = Cache::get(self::CACHE_KEY);
+
+        if ($cached === null) {
+            $cached = $this->readFromDisk();
+
+            if ($cached !== null) {
+                Cache::forever(self::CACHE_KEY, $cached);
+            }
         }
 
-        $disk = $this->readFromDisk();
-
-        if ($disk !== null) {
-            Cache::forever(self::CACHE_KEY, $disk);
-        }
-
-        return $disk;
+        return is_array($cached) ? $this->reconcileAgainstLive($cached) : null;
     }
 
     protected function readFromDisk(): ?array
@@ -115,6 +121,215 @@ class AuditService
     public function run(): array
     {
         return $this->cached() ?? $this->refresh();
+    }
+
+    // -------------------------------------------------------------------------
+    // Live-state reconciliation
+    //
+    // The cached snapshot is captured at scan time. When the user later runs
+    // `composer update`, the snapshot's platform versions and outdated lists
+    // go stale - the widget would render a red "security update available"
+    // pill for a release they already installed. Reconcile against live
+    // platform versions + live composer.lock / package-lock.json on every
+    // read so the UI stays honest between scheduled scans. No HTTP - this
+    // path must stay cheap enough to run on every dashboard render.
+    //
+    // OSV vulnerability lists are NOT reconciled - validating advisory
+    // ranges needs more data than we cache. Most security updates also
+    // appear in outdated.packages (which IS pruned), so the Security Issues
+    // count stays in sync with what the user has actually installed.
+    // -------------------------------------------------------------------------
+
+    protected function reconcileAgainstLive(array $audit): array
+    {
+        if (! empty($audit['statamic']) && class_exists(\Statamic\Statamic::class)) {
+            $audit['statamic'] = $this->reconcileStatamicAgainstLive(
+                $audit['statamic'],
+                \Statamic\Statamic::version()
+            );
+        }
+
+        if (! empty($audit['laravel'])) {
+            $audit['laravel'] = $this->reconcileLaravelAgainstLive(
+                $audit['laravel'],
+                app()->version()
+            );
+        }
+
+        if (! empty($audit['php'])) {
+            $audit['php'] = $this->reconcilePhpAgainstLive(
+                $audit['php'],
+                PHP_VERSION
+            );
+        }
+
+        if (! empty($audit['composer']['outdated']['packages'])) {
+            $audit['composer'] = $this->pruneOutdatedAgainstLive(
+                $audit['composer'],
+                $this->liveComposerVersions()
+            );
+        }
+
+        if (! empty($audit['npm']['outdated']['packages'])) {
+            $audit['npm'] = $this->pruneOutdatedAgainstLive(
+                $audit['npm'],
+                $this->liveNpmVersions()
+            );
+        }
+
+        return $audit;
+    }
+
+    protected function reconcileStatamicAgainstLive(array $info, string $live): array
+    {
+        if (($info['current'] ?? null) === $live) {
+            return $info;
+        }
+
+        $latest   = $info['latest'] ?? null;
+        $isLatest = $latest && version_compare($live, $latest, '>=');
+
+        $info['current']   = $live;
+        $info['is_latest'] = $isLatest;
+        $info['status']    = $isLatest ? 'ok' : ($latest ? 'outdated' : 'unknown');
+
+        if ($isLatest) {
+            $info['security_update_available'] = false;
+            $info['security_source']           = null;
+        }
+
+        return $info;
+    }
+
+    protected function reconcileLaravelAgainstLive(array $info, string $live): array
+    {
+        if (($info['version'] ?? null) === $live) {
+            return $info;
+        }
+
+        $latest   = $info['latest'] ?? null;
+        $isLatest = $latest && version_compare($live, $latest, '>=');
+
+        $info['version']   = $live;
+        $info['is_latest'] = $isLatest;
+
+        if ($isLatest) {
+            $info['security_update_available'] = false;
+        }
+
+        return $info;
+    }
+
+    // Status + label for PHP come from endoflife.date branch lifecycle, not
+    // version comparison, so they stay as captured. Only the version pill
+    // (current + is_latest) needs reconciling here.
+    protected function reconcilePhpAgainstLive(array $info, string $live): array
+    {
+        if (($info['version'] ?? null) === $live) {
+            return $info;
+        }
+
+        $latest = $info['latest'] ?? null;
+
+        $info['version']   = $live;
+        $info['is_latest'] = $latest && version_compare($live, $latest, '>=');
+
+        return $info;
+    }
+
+    /**
+     * `['vendor/pkg' => '1.2.3', ...]` from the live composer.lock. Reads
+     * both packages + packages-dev so dev-only upgrades are pruned too.
+     * Empty array if the lock can't be read.
+     */
+    protected function liveComposerVersions(): array
+    {
+        $lock = $this->readJsonFile(base_path('composer.lock'));
+
+        if ($lock === null) return [];
+
+        $versions = [];
+        foreach (array_merge($lock['packages'] ?? [], $lock['packages-dev'] ?? []) as $pkg) {
+            if (! empty($pkg['name']) && ! empty($pkg['version'])) {
+                $versions[$pkg['name']] = ltrim($pkg['version'], 'v');
+            }
+        }
+
+        return $versions;
+    }
+
+    /**
+     * `['alpinejs' => '3.13.0', ...]` from the live package-lock.json.
+     * Supports lock v1 (`dependencies`) and v2/v3 (`packages`).
+     * Empty array if the lock can't be read.
+     */
+    protected function liveNpmVersions(): array
+    {
+        $lock = $this->readJsonFile(base_path('package-lock.json'));
+
+        if ($lock === null) return [];
+
+        $versions = [];
+
+        if (! empty($lock['packages'])) {
+            foreach ($lock['packages'] as $path => $data) {
+                if ($path === '' || empty($data['version'])) continue;
+                $name = preg_replace('#^node_modules/#', '', $path);
+                $versions[$name] = $data['version'];
+            }
+        } elseif (! empty($lock['dependencies'])) {
+            foreach ($lock['dependencies'] as $name => $data) {
+                $versions[$name] = ltrim($data['version'] ?? '', 'v^~');
+            }
+        }
+
+        return $versions;
+    }
+
+    /**
+     * Drop outdated.packages entries whose live installed version is already
+     * at or past the cached `latest`, and refresh each kept entry's `current`
+     * to match the live install. Recomputes total + the two security counts
+     * (OSV-flagged and vendor-flagged) the widget/utility depend on.
+     */
+    protected function pruneOutdatedAgainstLive(array $ecosystem, array $liveVersions): array
+    {
+        if (empty($liveVersions)) return $ecosystem;
+
+        $packages   = $ecosystem['outdated']['packages'] ?? [];
+        $kept       = [];
+        $secTotal   = 0;
+        $vendorOnly = 0;
+
+        foreach ($packages as $pkg) {
+            $name   = $pkg['name']   ?? null;
+            $latest = $pkg['latest'] ?? null;
+            $live   = $name ? ($liveVersions[$name] ?? null) : null;
+
+            if ($live && $latest && version_compare($live, $latest, '>=')) {
+                continue;
+            }
+
+            if ($live) {
+                $pkg['current'] = $live;
+            }
+
+            $kept[] = $pkg;
+
+            if (! empty($pkg['security_update'])) {
+                $secTotal++;
+            }
+            if (($pkg['security_source'] ?? null) === 'vendor') {
+                $vendorOnly++;
+            }
+        }
+
+        $ecosystem['outdated']['packages']                      = $kept;
+        $ecosystem['outdated']['total']                         = count($kept);
+        $ecosystem['outdated']['security_updates_total']        = $secTotal;
+        $ecosystem['outdated']['vendor_security_updates_total'] = $vendorOnly;
+
+        return $ecosystem;
     }
 
     // -------------------------------------------------------------------------
