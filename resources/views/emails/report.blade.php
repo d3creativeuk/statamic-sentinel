@@ -6,6 +6,20 @@
     <meta name="x-apple-disable-message-reformatting">
     <meta name="format-detection" content="telephone=no,address=no,email=no,date=no,url=no">
     <title>Statamic Package Status Report</title>
+    <style>
+        /* On narrow screens the two-column row layout squeezes the version +
+           pill into a cramped column, so stack each row: label, description,
+           then version + pill drop onto their own full-width rows. */
+        @media only screen and (max-width:480px) {
+            .sentinel-row-cell { display:block !important; width:100% !important; }
+            .sentinel-row-meta {
+                text-align:left !important;
+                padding-top:2px !important;
+                white-space:normal !important;
+            }
+            .sentinel-row-meta .sentinel-pill { margin-left:0 !important; }
+        }
+    </style>
 </head>
 <body style="margin:0; padding:0; background:#f1f5f9; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size:14px; color:#1e293b;">
 
@@ -188,16 +202,16 @@
             @endphp
             <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden; margin-bottom:10px;">
                 <tr>
-                    <td style="padding:12px 16px; vertical-align:middle;">
+                    <td class="sentinel-row-cell" style="padding:12px 16px; vertical-align:middle;">
                         <div style="font-size:13px; font-weight:600; color:#0f172a;">{{ $row['label'] }}</div>
                         <div style="font-size:12px; color:#475569; margin-top:3px;">{{ $row['description'] }}</div>
                     </td>
-                    <td align="right" style="padding:12px 16px; font-size:12px; color:#475569; vertical-align:middle; white-space:nowrap; font-variant-numeric:tabular-nums;">
+                    <td align="right" class="sentinel-row-cell sentinel-row-meta" style="padding:12px 16px; font-size:12px; color:#475569; vertical-align:middle; white-space:nowrap; font-variant-numeric:tabular-nums;">
                         @if (! empty($b['detail']))
                             <span style="color:#475569;">{{ $b['detail'] }}</span>
                         @endif
                         @if (! empty($b['text']))
-                            <span style="display:inline-block; margin-left:10px; font-size:11px; font-weight:600; padding:2px 8px; border-radius:4px; color:{{ $b['colour'] }}; border:1px solid {{ $b['colour'] }}; background:#fff;">{{ $b['text'] }}</span>
+                            <span class="sentinel-pill" style="display:inline-block; margin-left:10px; font-size:11px; font-weight:600; padding:2px 8px; border-radius:4px; color:{{ $b['colour'] }}; border:1px solid {{ $b['colour'] }}; background:#fff;">{{ $b['text'] }}</span>
                         @endif
                     </td>
                 </tr>
