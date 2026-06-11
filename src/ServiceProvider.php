@@ -31,20 +31,15 @@ class ServiceProvider extends AddonServiceProvider
     ];
 
 
-    public function register(): void
-    {
-        $this->mergeConfigFrom(__DIR__ . '/../config/sentinel.php', 'sentinel');
-    }
-
     public function bootAddon(): void
     {
         $this->loadViewsFrom(__DIR__ . '/../resources/views', 'statamic-sentinel');
 
         View::composer('statamic-sentinel::*', function ($view) {
             $view->with([
-                'sentinelDevName'  => config('sentinel.developer.name')  ?: null,
-                'sentinelDevUrl'   => config('sentinel.developer.url')   ?: null,
-                'sentinelDevEmail' => config('sentinel.developer.email') ?: null,
+                'sentinelDevName'  => config('statamic-sentinel.developer.name')  ?: null,
+                'sentinelDevUrl'   => config('statamic-sentinel.developer.url')   ?: null,
+                'sentinelDevEmail' => config('statamic-sentinel.developer.email') ?: null,
             ]);
         });
 

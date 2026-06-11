@@ -498,7 +498,7 @@ class ContentFreezeService
      */
     public function timezone(): string
     {
-        $tz = config('sentinel.freeze.timezone') ?: (config('app.timezone') ?: 'UTC');
+        $tz = config('statamic-sentinel.freeze.timezone') ?: (config('app.timezone') ?: 'UTC');
 
         try {
             new \DateTimeZone($tz);

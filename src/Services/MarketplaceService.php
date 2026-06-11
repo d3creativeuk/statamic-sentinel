@@ -36,7 +36,7 @@ class MarketplaceService
 
     public function enabled(): bool
     {
-        return (bool) config('sentinel.vendor_security_check', true);
+        return (bool) config('statamic-sentinel.vendor_security_check', true);
     }
 
     /**
