@@ -213,6 +213,8 @@ class ServiceProvider extends AddonServiceProvider
                             'schedule'        => app(ScheduleService::class)->all(),
                             'sent_status'     => $sentMail->forKind(SentMailService::KIND_STATUS),
                             'sent_update'     => $sentMail->forKind(SentMailService::KIND_UPDATE),
+                            'last_status_recipients' => $sentMail->lastManualRecipients(SentMailService::KIND_STATUS),
+                            'last_update_recipients' => $sentMail->lastManualRecipients(SentMailService::KIND_UPDATE),
                             'freeze'          => $freeze,
                             'freeze_current'  => $freeze->current(),
                             'freeze_history'  => $freeze->history(),

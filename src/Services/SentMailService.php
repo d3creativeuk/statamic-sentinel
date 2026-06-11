@@ -140,6 +140,27 @@ class SentMailService
     }
 
     /**
+     * Recipients from the most recent manually-triggered send of this kind,
+     * so the utility can pre-fill the email field with exactly what the user
+     * last entered (including any extra addresses they added). Scheduled sends
+     * are skipped - those recipients are configured separately in the schedule
+     * card and shouldn't leak into the one-off send field. Returns [] when
+     * there's no manual/forced send on record for this kind.
+     */
+    public function lastManualRecipients(string $kind): array
+    {
+        foreach ($this->forKind($kind) as $entry) {
+            $trigger = $entry['trigger'] ?? null;
+
+            if ($trigger === self::TRIGGER_MANUAL || $trigger === self::TRIGGER_FORCED) {
+                return array_values($entry['recipients'] ?? []);
+            }
+        }
+
+        return [];
+    }
+
+    /**
      * Look up a single record by id. Null if not found or id is malformed.
      */
     public function find(string $id): ?array

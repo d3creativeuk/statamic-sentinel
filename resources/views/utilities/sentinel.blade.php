@@ -89,6 +89,13 @@
         ($npm['counts']['CRITICAL'] ?? 0) > 0;
 
     $userEmail = auth()->user()?->email ?? '';
+
+    // Pre-fill each one-off send field with the recipients last entered for
+    // that report (extra addresses included), falling back to the current
+    // user's own email until they've sent one. $last_*_recipients come from
+    // the most recent manual send recorded by SentMailService.
+    $statusEmail = ! empty($last_status_recipients ?? []) ? implode(', ', $last_status_recipients) : $userEmail;
+    $updateEmail = ! empty($last_update_recipients ?? []) ? implode(', ', $last_update_recipients) : $userEmail;
 @endphp
 
     {{-- Header --}}
@@ -521,7 +528,7 @@
                     @csrf
                     <input type="text"
                            name="email"
-                           value="{{ $userEmail }}"
+                           value="{{ $statusEmail }}"
                            required
                            placeholder="email@example.com, another@example.com"
                            style="flex:1; font-size:13px; padding:7px 12px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#1e293b; outline:none; min-width:0;">
@@ -613,7 +620,7 @@
                     @csrf
                     <input type="text"
                            name="email"
-                           value="{{ $userEmail }}"
+                           value="{{ $updateEmail }}"
                            required
                            placeholder="email@example.com, another@example.com"
                            style="flex:1; font-size:13px; padding:7px 12px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#1e293b; outline:none; min-width:0;">
