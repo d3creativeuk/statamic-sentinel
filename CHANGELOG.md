@@ -30,5 +30,13 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
   git add config/statamic-sentinel.php
   ```
 
+  Note: this resolves the *config build* (the value is now reliably baked into the cache). It does
+  not change the fact that, on production with OPcache (`opcache.validate_timestamps=0`), FPM
+  workers keep serving the old compiled `bootstrap/cache/config.php` until OPcache is reset. After
+  any `config:cache`, reload FPM (e.g. `sudo service php8.x-fpm reload`) for the new values to
+  reach web requests. A normal deploy that reloads FPM handles this; a manual `.env` + `config:cache`
+  outside a deploy does not. When verifying, don't trust `php artisan tinker` alone (fresh CLI
+  process, own OPcache) - reload FPM, then check the CP widget.
+
 > Note: because the config key changed, this is a breaking change. Per SemVer it should ship as
 > the next major (the latest release is `v1.1.4`, so `v2.0.0`).
