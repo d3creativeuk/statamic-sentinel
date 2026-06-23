@@ -21,6 +21,18 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
   - Any host code reading `config('sentinel...')` directly must switch to
     `config('statamic-sentinel...')`.
 
+### Changed
+
+- **Branded for D3 Creative by default.** With no `SENTINEL_DEV_*` vars set, the widget,
+  utility, and report emails now attribute to D3 Creative, link to the managed-maintenance
+  service, and show the `Need help with your website?` button - no configuration required.
+  Previously an empty config rendered unbranded.
+  - White-labelling is unchanged: set `SENTINEL_DEV_NAME` / `SENTINEL_DEV_URL` /
+    `SENTINEL_DEV_EMAIL` to swap in your own agency details.
+  - New `SENTINEL_BRANDING=false` (config `statamic-sentinel.branding.enabled`) renders
+    Sentinel fully unbranded ("Sentinel for Statamic"), restoring the previous default for
+    hosts that want no attribution.
+
 ### Fixed
 
 - Developer attribution no longer disappears on hosts that run `php artisan config:cache` in

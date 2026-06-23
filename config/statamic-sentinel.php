@@ -4,19 +4,33 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Developer attribution
+    | Branding / developer attribution
     |--------------------------------------------------------------------------
     |
-    | Optional branding shown in the CP widget, utility footer, and report
-    | emails. When `name` is empty, Sentinel renders unbranded. When `name`
-    | is set without a `url`, the name renders as plain text.
+    | Out of the box Sentinel is branded for D3 Creative - the CP widget,
+    | utility footer, and report emails attribute to D3 Creative, link to the
+    | managed-maintenance service, and add a "Need help with your website?"
+    | mailto button. No configuration is required for this default.
+    |
+    | Agencies installing Sentinel on a client site have two options:
+    |
+    |  - White-label: override any of the SENTINEL_DEV_* vars below to swap in
+    |    your own name, link, and contact email. A `name` set without a `url`
+    |    renders as plain text.
+    |
+    |  - Remove branding: set SENTINEL_BRANDING=false to render Sentinel fully
+    |    unbranded ("Sentinel for Statamic", no link, no CTA).
     |
     */
 
+    'branding' => [
+        'enabled' => env('SENTINEL_BRANDING', true),
+    ],
+
     'developer' => [
-        'name'  => env('SENTINEL_DEV_NAME'),
-        'url'   => env('SENTINEL_DEV_URL'),
-        'email' => env('SENTINEL_DEV_EMAIL'),
+        'name'  => env('SENTINEL_DEV_NAME', 'D3 Creative'),
+        'url'   => env('SENTINEL_DEV_URL', 'https://d3creative.uk/services/statamic-maintenance'),
+        'email' => env('SENTINEL_DEV_EMAIL', 'support@d3creative.uk'),
     ],
 
     /*

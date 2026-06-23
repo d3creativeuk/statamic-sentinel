@@ -36,10 +36,11 @@ class ServiceProvider extends AddonServiceProvider
         $this->loadViewsFrom(__DIR__ . '/../resources/views', 'statamic-sentinel');
 
         View::composer('statamic-sentinel::*', function ($view) {
+            $branded = (bool) config('statamic-sentinel.branding.enabled', true);
             $view->with([
-                'sentinelDevName'  => config('statamic-sentinel.developer.name')  ?: null,
-                'sentinelDevUrl'   => config('statamic-sentinel.developer.url')   ?: null,
-                'sentinelDevEmail' => config('statamic-sentinel.developer.email') ?: null,
+                'sentinelDevName'  => $branded ? (config('statamic-sentinel.developer.name')  ?: null) : null,
+                'sentinelDevUrl'   => $branded ? (config('statamic-sentinel.developer.url')   ?: null) : null,
+                'sentinelDevEmail' => $branded ? (config('statamic-sentinel.developer.email') ?: null) : null,
             ]);
         });
 
