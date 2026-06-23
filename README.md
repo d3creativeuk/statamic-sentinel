@@ -88,11 +88,14 @@ SENTINEL_BRANDING=false
 ```
 
 This renders Sentinel fully unbranded ("Sentinel for Statamic", no link, no CTA button) regardless of the `SENTINEL_DEV_*` values.
+
+## Other settings
+
 - `SENTINEL_FREEZE_TIMEZONE` - display timezone for content-freeze times in the CP and freeze emails. Defaults to the Laravel app timezone. When different from the server tz, times render in both. Example: `SENTINEL_FREEZE_TIMEZONE='Europe/London'`.
 
-### Publishing the config (survives `config:cache`)
+## Publishing the config (survives `config:cache`)
 
-The env vars above are read at config-build time. On a host that runs `php artisan config:cache` in production, reading them only from the addon's vendor config can leave branding blank if anything perturbs the cache build. To make your branding survive `config:cache`, publish and commit the config file so it loads as a first-class host config:
+All the env vars above are read at config-build time. On a host that runs `php artisan config:cache` in production, reading them only from the addon's vendor config can leave settings blank if anything perturbs the cache build. To make your settings survive `config:cache`, publish and commit the config file so it loads as a first-class host config:
 
 ```bash
 php artisan vendor:publish --tag=statamic-sentinel-config
