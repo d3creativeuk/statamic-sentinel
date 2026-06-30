@@ -90,6 +90,14 @@
 
     $userEmail = auth()->user()?->email ?? '';
 
+    // Reports, history, scheduling and content-freeze controls all drive
+    // super-only POST endpoints (SentinelController / FreezeController abort
+    // 403 for non-supers). A non-super granted `access sentinel utility` can
+    // open this page, so hide every tab but Current for them - the Current
+    // tab carries the same audit data the Status Report would email, and the
+    // Refresh link (an unguarded ?d3_refresh GET) stays available to all.
+    $isSuper = auth()->user()?->isSuper() === true;
+
     // Pre-fill each one-off send field with the recipients last entered for
     // that report (extra addresses included), falling back to the current
     // user's own email until they've sent one. $last_*_recipients come from
@@ -126,7 +134,7 @@
     <div x-data="{
         tab: 'current',
         init() {
-            var valid = ['current', 'history', 'status-report', 'update-report', 'content-freeze'];
+            var valid = {!! $isSuper ? "['current', 'history', 'status-report', 'update-report', 'content-freeze']" : "['current']" !!};
             var hash = (window.location.hash || '').replace('#', '');
             if (valid.indexOf(hash) !== -1) this.tab = hash;
             this.$watch('tab', function (v) {
@@ -139,6 +147,7 @@
         }
     }">
 
+        @if ($isSuper)
         <div role="tablist" style="display:flex; gap:4px; border-bottom:1px solid #e2e8f0; margin-bottom:18px;">
             <button type="button"
                     role="tab"
@@ -194,6 +203,7 @@
                 @endif
             </button>
         </div>
+        @endif
 
         {{-- Current tab --}}
         <div x-show="tab === 'current'" role="tabpanel">
@@ -381,6 +391,7 @@
 
         </div>
 
+        @if ($isSuper)
         {{-- History tab --}}
         <div x-show="tab === 'history'" role="tabpanel" x-cloak>
 
@@ -669,6 +680,7 @@
                 'freeze_history' => $freeze_history,
             ])
         </div>
+        @endif
 
     </div>
     {{-- /Tabs --}}
@@ -680,6 +692,7 @@
         </p>
     </div>
 
+    @if ($isSuper)
     {{-- Email preview modal (shared between Status Report and Update Report tabs) --}}
     <div x-data="{ src: '', title: '' }"
          x-on:sentinel-preview-open.window="
@@ -744,6 +757,7 @@
             </div>
         </dialog>
     </div>
+    @endif
 
 @endif
 
