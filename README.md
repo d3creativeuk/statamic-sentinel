@@ -65,6 +65,8 @@ Then add the widget to your CP dashboard by adding `sentinel` to the widgets arr
 
 Sentinel scans on demand, not on every CP load. After dependency updates, hit **Refresh** in the widget/utility header to re-read your lockfiles - the cached audit doesn't update on its own. See [USAGE.md](USAGE.md) for scanning, scheduling, and storage details.
 
+Reporting, history, scheduling, and Content Freeze are super-admin only. A non-super user granted the `access sentinel utility` permission sees a read-only view: the **Current** audit plus **Refresh**, without the report/history/freeze tabs.
+
 ## Branding (optional)
 
 Sentinel ships branded for D3 Creative out of the box - no configuration needed. The widget, utility, and report emails attribute to D3 Creative, link to the managed-maintenance service, and include a `Need help with your website?` button. Agencies installing Sentinel on a client site can white-label it, or remove the branding entirely.

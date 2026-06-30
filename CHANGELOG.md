@@ -35,6 +35,13 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Fixed
 
+- Non-super users with the `access sentinel utility` permission no longer hit a `403 Forbidden`
+  in the report preview (and on the Send / Schedule / Content Freeze controls). Those actions
+  drive super-only endpoints, but the utility itself renders for anyone granted access, so the
+  buttons were visible yet broken. Non-supers now see only the **Current** tab plus **Refresh** -
+  the same audit data a report would email - while the tabs that drive super-only endpoints are
+  hidden. The controller super-admin checks are unchanged (defense-in-depth).
+
 - Developer attribution no longer disappears on hosts that run `php artisan config:cache` in
   production. Hosts can now publish and commit the config so the values survive caching:
   ```bash
