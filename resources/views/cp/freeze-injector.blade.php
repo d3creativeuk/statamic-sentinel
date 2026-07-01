@@ -171,7 +171,7 @@
                 x-on:close="closeModal()"
                 style="position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); width:min(540px,92vw); margin:0; padding:0; border:none; border-radius:10px; overflow:hidden; box-shadow:0 25px 50px -12px rgba(0,0,0,0.25); font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
             <div style="background:#0f172a; padding:20px 28px;">
-                <div style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.08em; color:#94a3b8; margin-bottom:6px;">Heads up</div>
+                <div style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.08em; color:#94a3b8; margin-bottom:6px;">Notification of planned work</div>
                 <h2 style="font-size:18px; font-weight:600; color:#ffffff; margin:0; line-height:1.3;">A Statamic update is scheduled</h2>
             </div>
 
