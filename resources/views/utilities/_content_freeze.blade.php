@@ -36,14 +36,6 @@
     $freezeDate = $freezeRounded->format('Y-m-d');
     $freezeTime = $freezeRounded->format('H:i');
 
-    // 15-minute time slots (00:00 ... 23:45) for the dropdowns.
-    $timeSlots = [];
-    for ($h = 0; $h < 24; $h++) {
-        foreach ([0, 15, 30, 45] as $m) {
-            $timeSlots[] = sprintf('%02d:%02d', $h, $m);
-        }
-    }
-
     $currentStatus = $freeze_current['status'] ?? null;
 @endphp
 
@@ -146,11 +138,11 @@
                                x-model="notifyDate"
                                required
                                style="flex:1; min-width:0; font-size:13px; padding:7px 10px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#1e293b; outline:none; font-family:inherit;">
-                        <select x-model="notifyTime"
-                                required
-                                style="font-size:13px; padding:7px 10px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#1e293b; outline:none; font-family:inherit;">
-                            @foreach ($timeSlots as $slot)<option value="{{ $slot }}">{{ $slot }}</option>@endforeach
-                        </select>
+                        <input type="time"
+                               x-model="notifyTime"
+                               step="900"
+                               required
+                               style="font-size:13px; padding:7px 10px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#1e293b; outline:none; font-family:inherit;">
                     </div>
                 </label>
                 <label style="display:flex; flex-direction:column; gap:4px;">
@@ -160,11 +152,11 @@
                                x-model="freezeDate"
                                required
                                style="flex:1; min-width:0; font-size:13px; padding:7px 10px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#1e293b; outline:none; font-family:inherit;">
-                        <select x-model="freezeTime"
-                                required
-                                style="font-size:13px; padding:7px 10px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#1e293b; outline:none; font-family:inherit;">
-                            @foreach ($timeSlots as $slot)<option value="{{ $slot }}">{{ $slot }}</option>@endforeach
-                        </select>
+                        <input type="time"
+                               x-model="freezeTime"
+                               step="900"
+                               required
+                               style="font-size:13px; padding:7px 10px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#1e293b; outline:none; font-family:inherit;">
                     </div>
                 </label>
             </div>
@@ -179,11 +171,10 @@
                         <input type="date"
                                x-model="freezeEndsDate"
                                style="flex:1; min-width:0; font-size:13px; padding:7px 10px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#1e293b; outline:none; font-family:inherit;">
-                        <select x-model="freezeEndsTime"
-                                style="font-size:13px; padding:7px 10px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#1e293b; outline:none; font-family:inherit;">
-                            <option value="">--</option>
-                            @foreach ($timeSlots as $slot)<option value="{{ $slot }}">{{ $slot }}</option>@endforeach
-                        </select>
+                        <input type="time"
+                               x-model="freezeEndsTime"
+                               step="900"
+                               style="font-size:13px; padding:7px 10px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#1e293b; outline:none; font-family:inherit;">
                     </div>
                     <input type="hidden" name="freeze_ends_at" x-bind:value="freezeEndsAt">
                     <span style="font-size:11px; color:#64748b;">Optional. Used in the notification email.</span>
