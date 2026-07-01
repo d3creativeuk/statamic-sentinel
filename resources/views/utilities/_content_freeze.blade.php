@@ -50,7 +50,7 @@
             notifyTime: '{{ $nowTime }}',
             freezeDate: '{{ $freezeDate }}',
             freezeTime: '{{ $freezeTime }}',
-            freezeEndsDate: '',
+            freezeEndsDate: '{{ $freezeDate }}',
             freezeEndsTime: '',
             expectedDuration: '',
             expectedDurationUnit: 'minutes',
