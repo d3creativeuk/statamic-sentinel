@@ -22,15 +22,27 @@
 
     $userEmailDefault = auth()->user()?->email ?? '';
 
-    // Round defaults up to the next 15-minute block so they satisfy the
-    // inputs' step="900" (15 min) constraint - otherwise the browser flags the
-    // pre-filled value as invalid. Basic Carbon methods only, for wide compat.
+    // Times are picked as a date + a 15-minute dropdown, so round the defaults
+    // up to the next 15-minute block. Basic Carbon methods only, for wide compat.
     $ceil15 = function (\Carbon\Carbon $c) {
         $r = $c->minute % 15;
         return $r === 0 ? $c->copy() : $c->copy()->addMinutes(15 - $r);
     };
-    $nowDefault = $ceil15(\Carbon\Carbon::now($tz))->format('Y-m-d\TH:i');
-    $freezeDefault = $ceil15(\Carbon\Carbon::now($tz)->addDays(3))->format('Y-m-d\TH:i');
+    $nowRounded    = $ceil15(\Carbon\Carbon::now($tz));
+    $freezeRounded = $ceil15(\Carbon\Carbon::now($tz)->addDays(3));
+
+    $nowDate    = $nowRounded->format('Y-m-d');
+    $nowTime    = $nowRounded->format('H:i');
+    $freezeDate = $freezeRounded->format('Y-m-d');
+    $freezeTime = $freezeRounded->format('H:i');
+
+    // 15-minute time slots (00:00 ... 23:45) for the dropdowns.
+    $timeSlots = [];
+    for ($h = 0; $h < 24; $h++) {
+        foreach ([0, 15, 30, 45] as $m) {
+            $timeSlots[] = sprintf('%02d:%02d', $h, $m);
+        }
+    }
 
     $currentStatus = $freeze_current['status'] ?? null;
 @endphp
@@ -42,12 +54,19 @@
             sending: false,
             state: 'idle',
             message: '',
-            notifyAt: '{{ $nowDefault }}',
-            freezeAt: '{{ $freezeDefault }}',
-            freezeEndsAt: '',
+            notifyDate: '{{ $nowDate }}',
+            notifyTime: '{{ $nowTime }}',
+            freezeDate: '{{ $freezeDate }}',
+            freezeTime: '{{ $freezeTime }}',
+            freezeEndsDate: '',
+            freezeEndsTime: '',
             expectedDuration: '',
             expectedDurationUnit: 'minutes',
-            get endsBeforeStart() { return this.freezeEndsAt !== '' && this.freezeEndsAt <= this.freezeAt; },
+            combine(d, t) { return d && t ? d + 'T' + t : ''; },
+            get notifyAt() { return this.combine(this.notifyDate, this.notifyTime); },
+            get freezeAt() { return this.combine(this.freezeDate, this.freezeTime); },
+            get freezeEndsAt() { return this.combine(this.freezeEndsDate, this.freezeEndsTime); },
+            get endsBeforeStart() { return this.freezeEndsAt !== '' && this.freezeAt !== '' && this.freezeEndsAt <= this.freezeAt; },
             previewHeadsUpUrl() {
                 var params = new URLSearchParams({
                     notify_at: this.notifyAt,
@@ -122,34 +141,51 @@
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
                 <label style="display:flex; flex-direction:column; gap:4px;">
                     <span style="font-size:12px; font-weight:600; color:#0f172a;">Send notification at</span>
-                    <input type="datetime-local"
-                           name="notify_at"
-                           value="{{ $nowDefault }}"
-                           x-model="notifyAt"
-                           step="900"
-                           required
-                           style="font-size:13px; padding:7px 10px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#1e293b; outline:none; font-family:inherit;">
+                    <div style="display:flex; gap:8px;">
+                        <input type="date"
+                               x-model="notifyDate"
+                               required
+                               style="flex:1; min-width:0; font-size:13px; padding:7px 10px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#1e293b; outline:none; font-family:inherit;">
+                        <select x-model="notifyTime"
+                                required
+                                style="font-size:13px; padding:7px 10px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#1e293b; outline:none; font-family:inherit;">
+                            @foreach ($timeSlots as $slot)<option value="{{ $slot }}">{{ $slot }}</option>@endforeach
+                        </select>
+                    </div>
                 </label>
                 <label style="display:flex; flex-direction:column; gap:4px;">
                     <span style="font-size:12px; font-weight:600; color:#0f172a;">Freeze starts at</span>
-                    <input type="datetime-local"
-                           name="freeze_at"
-                           value="{{ $freezeDefault }}"
-                           x-model="freezeAt"
-                           step="900"
-                           required
-                           style="font-size:13px; padding:7px 10px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#1e293b; outline:none; font-family:inherit;">
+                    <div style="display:flex; gap:8px;">
+                        <input type="date"
+                               x-model="freezeDate"
+                               required
+                               style="flex:1; min-width:0; font-size:13px; padding:7px 10px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#1e293b; outline:none; font-family:inherit;">
+                        <select x-model="freezeTime"
+                                required
+                                style="font-size:13px; padding:7px 10px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#1e293b; outline:none; font-family:inherit;">
+                            @foreach ($timeSlots as $slot)<option value="{{ $slot }}">{{ $slot }}</option>@endforeach
+                        </select>
+                    </div>
                 </label>
             </div>
+
+            <input type="hidden" name="notify_at" x-bind:value="notifyAt">
+            <input type="hidden" name="freeze_at" x-bind:value="freezeAt">
 
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
                 <label style="display:flex; flex-direction:column; gap:4px;">
                     <span style="font-size:12px; font-weight:600; color:#0f172a;">Freeze ends at</span>
-                    <input type="datetime-local"
-                           name="freeze_ends_at"
-                           x-model="freezeEndsAt"
-                           step="900"
-                           style="font-size:13px; padding:7px 10px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#1e293b; outline:none; font-family:inherit;">
+                    <div style="display:flex; gap:8px;">
+                        <input type="date"
+                               x-model="freezeEndsDate"
+                               style="flex:1; min-width:0; font-size:13px; padding:7px 10px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#1e293b; outline:none; font-family:inherit;">
+                        <select x-model="freezeEndsTime"
+                                style="font-size:13px; padding:7px 10px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#1e293b; outline:none; font-family:inherit;">
+                            <option value="">--</option>
+                            @foreach ($timeSlots as $slot)<option value="{{ $slot }}">{{ $slot }}</option>@endforeach
+                        </select>
+                    </div>
+                    <input type="hidden" name="freeze_ends_at" x-bind:value="freezeEndsAt">
                     <span style="font-size:11px; color:#64748b;">Optional. Used in the notification email.</span>
                 </label>
                 <label style="display:flex; flex-direction:column; gap:4px;">
