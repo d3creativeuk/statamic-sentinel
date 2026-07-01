@@ -116,23 +116,9 @@
             {{-- Schedule box --}}
             <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:16px 18px;">
 
-                <div style="display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin-bottom:12px;">
-                    <div style="display:flex; align-items:baseline; gap:8px; flex-wrap:wrap;">
-                        <span style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; color:#64748b;">Schedule a content freeze</span>
-                        <span style="font-size:11px; color:#64748b; text-transform:none; letter-spacing:0;">{{ $tzHelper }}</span>
-                    </div>
-                    <div style="display:flex; align-items:center; gap:10px;">
-                        <button type="button"
-                                x-on:click="$dispatch('sentinel-preview-open', { url: previewHeadsUpUrl(), title: 'Notify email preview' })"
-                                style="font-size:12px; color:#2563eb; background:transparent; border:none; padding:0; cursor:pointer; text-decoration:underline; font-family:inherit;">
-                            Preview heads-up email
-                        </button>
-                        <button type="button"
-                                x-on:click="$dispatch('sentinel-preview-open', { url: @js(route('statamic.cp.d3-sentinel.preview-freeze-completion')), title: 'All-clear email preview' })"
-                                style="font-size:12px; color:#2563eb; background:transparent; border:none; padding:0; cursor:pointer; text-decoration:underline; font-family:inherit;">
-                            Preview all-clear email
-                        </button>
-                    </div>
+                <div style="display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; margin-bottom:12px;">
+                    <span style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; color:#64748b;">Schedule a content freeze</span>
+                    <span style="font-size:11px; color:#64748b; text-transform:none; letter-spacing:0;">{{ $tzHelper }}</span>
                 </div>
 
                 <p x-show="!sending && state !== 'success'"
@@ -231,6 +217,16 @@
                     <span x-show="!sending && state === 'success'" x-cloak>✓ Scheduled</span>
                     <span x-show="!sending && state === 'error'" x-cloak>✕ Failed</span>
                     <span x-show="!sending && state === 'idle'">Schedule freeze</span>
+                </button>
+                <button type="button"
+                        x-on:click="$dispatch('sentinel-preview-open', { url: previewHeadsUpUrl(), title: 'Notify email preview' })"
+                        style="flex-shrink:0; font-size:13px; font-weight:600; color:#0f172a; background:#fff; border:1px solid #e2e8f0; padding:7px 12px; border-radius:6px; cursor:pointer; white-space:nowrap;">
+                    Notify email
+                </button>
+                <button type="button"
+                        x-on:click="$dispatch('sentinel-preview-open', { url: @js(route('statamic.cp.d3-sentinel.preview-freeze-completion')), title: 'All-clear email preview' })"
+                        style="flex-shrink:0; font-size:13px; font-weight:600; color:#0f172a; background:#fff; border:1px solid #e2e8f0; padding:7px 12px; border-radius:6px; cursor:pointer; white-space:nowrap;">
+                    All-clear email
                 </button>
                 <div x-show="message" x-cloak
                      x-bind:style="{ color: state === 'success' ? '#047857' : '#ef4444' }"
@@ -462,7 +458,7 @@
             <button type="button"
                     x-on:click="$dispatch('sentinel-preview-open', { url: @js(route('statamic.cp.d3-sentinel.preview-freeze-notification')), title: 'Notify email preview' })"
                     style="font-size:12px; color:#2563eb; background:transparent; border:none; padding:0; cursor:pointer; text-decoration:underline; font-family:inherit;">
-                Heads-up email
+                Notify email
             </button>
             <button type="button"
                     x-on:click="$dispatch('sentinel-preview-open', { url: @js(route('statamic.cp.d3-sentinel.preview-freeze-completion')), title: 'All-clear email preview' })"
