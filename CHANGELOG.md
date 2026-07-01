@@ -35,6 +35,14 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Fixed
 
+- On a multisite install, the Status and Update report emails (and their CP previews) now
+  reference **every** site the install serves rather than only the primary. The dark header
+  and the email subject list each site's host, comma-separated (e.g. `a.test, b.test updates`);
+  the audit data itself is unchanged, as it is shared across all sites in one codebase. A
+  single-site install renders exactly as before. Site hosts come from Statamic's Sites system
+  with a silent fallback to `config('app.url')` when it is unavailable (e.g. an older Statamic),
+  so scheduled/CLI sends are unaffected.
+
 - The Sent Emails log no longer reports a report as **Sent** when the send actually failed.
   Previously the outcome was recorded the instant the mail was handed to the queue, so a job
   that later failed in the worker (bad SMTP config, rejected envelope) still showed green.

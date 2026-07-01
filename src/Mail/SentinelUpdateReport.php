@@ -5,6 +5,7 @@ namespace D3Creative\Sentinel\Mail;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Queue\SerializesModels;
+use D3Creative\Sentinel\Support\ReportHosts;
 
 class SentinelUpdateReport extends Mailable
 {
@@ -23,15 +24,17 @@ class SentinelUpdateReport extends Mailable
      */
     public function build(): static
     {
-        $host = parse_url(config('app.url'), PHP_URL_HOST) ?: 'site';
+        $hosts = ReportHosts::all();
+        $label = implode(', ', $hosts);
 
         $this->applySentinelFrom();
 
-        return $this->subject($host . ' updates')
+        return $this->subject($label . ' updates')
                     ->view('statamic-sentinel::emails.update-report')
                     ->with([
                         'report'    => $this->report,
-                        'host'      => $host,
+                        'host'      => $label,
+                        'hosts'     => $hosts,
                         'preheader' => 'Statamic Package Update Report',
                     ]);
     }

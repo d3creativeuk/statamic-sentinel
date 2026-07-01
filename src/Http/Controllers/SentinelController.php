@@ -13,6 +13,7 @@ use D3Creative\Sentinel\Services\ReportSender;
 use D3Creative\Sentinel\Services\ScheduleService;
 use D3Creative\Sentinel\Services\SentMailService;
 use D3Creative\Sentinel\Services\UpdateReportBuilder;
+use D3Creative\Sentinel\Support\ReportHosts;
 
 class SentinelController extends Controller
 {
@@ -174,7 +175,8 @@ class SentinelController extends Controller
 
         return $this->previewResponse(view('statamic-sentinel::emails.report', [
             'audit'     => $audit,
-            'host'      => parse_url(config('app.url'), PHP_URL_HOST) ?: 'site',
+            'host'      => ReportHosts::label(),
+            'hosts'     => ReportHosts::all(),
             'preheader' => 'Statamic Package Status Report',
         ])->render());
     }
@@ -204,7 +206,8 @@ class SentinelController extends Controller
 
         return $this->previewResponse(view('statamic-sentinel::emails.update-report', [
             'report'    => $report,
-            'host'      => parse_url(config('app.url'), PHP_URL_HOST) ?: 'site',
+            'host'      => ReportHosts::label(),
+            'hosts'     => ReportHosts::all(),
             'preheader' => 'Statamic Package Update Report',
         ])->render());
     }
