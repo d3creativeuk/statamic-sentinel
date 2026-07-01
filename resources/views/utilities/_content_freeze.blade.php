@@ -22,8 +22,15 @@
 
     $userEmailDefault = auth()->user()?->email ?? '';
 
-    $nowDefault = \Carbon\Carbon::now($tz)->format('Y-m-d\TH:i');
-    $freezeDefault = \Carbon\Carbon::now($tz)->addDays(3)->format('Y-m-d\TH:i');
+    // Round defaults up to the next 15-minute block so they satisfy the
+    // inputs' step="900" (15 min) constraint - otherwise the browser flags the
+    // pre-filled value as invalid. Basic Carbon methods only, for wide compat.
+    $ceil15 = function (\Carbon\Carbon $c) {
+        $r = $c->minute % 15;
+        return $r === 0 ? $c->copy() : $c->copy()->addMinutes(15 - $r);
+    };
+    $nowDefault = $ceil15(\Carbon\Carbon::now($tz))->format('Y-m-d\TH:i');
+    $freezeDefault = $ceil15(\Carbon\Carbon::now($tz)->addDays(3))->format('Y-m-d\TH:i');
 
     $currentStatus = $freeze_current['status'] ?? null;
 @endphp
@@ -119,6 +126,7 @@
                            name="notify_at"
                            value="{{ $nowDefault }}"
                            x-model="notifyAt"
+                           step="900"
                            required
                            style="font-size:13px; padding:7px 10px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#1e293b; outline:none; font-family:inherit;">
                 </label>
@@ -128,6 +136,7 @@
                            name="freeze_at"
                            value="{{ $freezeDefault }}"
                            x-model="freezeAt"
+                           step="900"
                            required
                            style="font-size:13px; padding:7px 10px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#1e293b; outline:none; font-family:inherit;">
                 </label>
@@ -139,6 +148,7 @@
                     <input type="datetime-local"
                            name="freeze_ends_at"
                            x-model="freezeEndsAt"
+                           step="900"
                            style="font-size:13px; padding:7px 10px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#1e293b; outline:none; font-family:inherit;">
                     <span style="font-size:11px; color:#64748b;">Optional. Used in the notification email.</span>
                 </label>

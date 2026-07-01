@@ -34,6 +34,10 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Changed
 
+- The Content Freeze time fields (notification, freeze start, freeze end) now step in 15-minute
+  blocks (`step="900"`), and the pre-filled defaults snap to the next 15-minute boundary. Times are
+  still parsed with full precision server-side, so this is purely a picker convenience.
+
 - The Content Freeze heads-up email's eyebrow label now reads **"Notification of Planned Work"**
   instead of "Heads up".
 
