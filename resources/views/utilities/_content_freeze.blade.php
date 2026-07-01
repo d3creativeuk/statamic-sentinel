@@ -130,6 +130,17 @@
               x-on:submit.prevent="submit($event.target)">
             @csrf
 
+            <label style="display:flex; flex-direction:column; gap:4px; margin-bottom:12px;">
+                <span style="font-size:12px; font-weight:600; color:#0f172a;">Notify (comma-separated emails)</span>
+                <input type="text"
+                       name="email"
+                       value="{{ $userEmailDefault }}"
+                       required
+                       placeholder="email@example.com, another@example.com"
+                       style="font-size:13px; padding:7px 12px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#1e293b; outline:none; font-family:inherit;">
+                <span style="font-size:11px; color:#64748b;">Maximum 10 recipients. They receive the heads-up email at the notification time, and the all-clear email when the freeze ends.</span>
+            </label>
+
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
                 <label style="display:flex; flex-direction:column; gap:4px;">
                     <span style="font-size:12px; font-weight:600; color:#0f172a;">Send notification at</span>
@@ -204,17 +215,6 @@
                  style="font-size:12px; color:#ef4444; margin:0 0 12px 0; line-height:1.5;">
                 End time must be later than start time.
             </div>
-
-            <label style="display:flex; flex-direction:column; gap:4px; margin-bottom:14px;">
-                <span style="font-size:12px; font-weight:600; color:#0f172a;">Notify (comma-separated emails)</span>
-                <input type="text"
-                       name="email"
-                       value="{{ $userEmailDefault }}"
-                       required
-                       placeholder="email@example.com, another@example.com"
-                       style="font-size:13px; padding:7px 12px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#1e293b; outline:none; font-family:inherit;">
-                <span style="font-size:11px; color:#64748b;">Maximum 10 recipients. They receive the heads-up email at the time above, and the all-clear email when the freeze ends.</span>
-            </label>
 
             <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
                 <button type="submit"
