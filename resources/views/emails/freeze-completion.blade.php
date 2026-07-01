@@ -36,7 +36,7 @@
     <div style="padding:24px 32px;">
 
         <p style="font-size:14px; color:#1e293b; margin:0 0 16px 0; line-height:1.55;">
-            The scheduled update for <strong>{{ $hostSentence ?? $host }}</strong> has finished. You can resume editing content as normal.
+            The scheduled update for <strong>{{ $hostSentence ?? $host }}</strong> has finished.
         </p>
 
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; margin:0 0 16px 0;">
@@ -49,7 +49,7 @@
         </table>
 
         <p style="font-size:14px; color:#475569; margin:0; line-height:1.55;">
-            Thanks for holding off on edits while the updates were done. If you spot anything unusual, please get in touch.
+            You can resume editing content as normal.
         </p>
 
     </div>
