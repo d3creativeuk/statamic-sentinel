@@ -2,6 +2,8 @@
 
 namespace D3Creative\Sentinel\Tests\Unit;
 
+use D3Creative\Sentinel\Mail\FreezeCompletionMail;
+use D3Creative\Sentinel\Mail\FreezeNotificationMail;
 use D3Creative\Sentinel\Mail\SentinelUpdateReport;
 use D3Creative\Sentinel\Support\ReportHosts;
 use D3Creative\Sentinel\Tests\TestCase;
@@ -86,5 +88,23 @@ class ReportHostsTest extends TestCase
         $mailable = (new SentinelUpdateReport([]))->build();
 
         $this->assertSame('a.test, b.test updates', $mailable->subject);
+    }
+
+    public function test_freeze_completion_subject_lists_all_hosts(): void
+    {
+        $this->bindSites(['https://a.test', 'https://b.test']);
+
+        $mailable = (new FreezeCompletionMail(['completed_at' => '2026-07-01T14:41:00Z']))->build();
+
+        $this->assertSame('a.test, b.test update complete: safe to log back in', $mailable->subject);
+    }
+
+    public function test_freeze_notification_subject_lists_all_hosts(): void
+    {
+        $this->bindSites(['https://a.test', 'https://b.test']);
+
+        $mailable = (new FreezeNotificationMail(['freeze_at' => '2026-07-01T13:41:00Z']))->build();
+
+        $this->assertStringStartsWith('a.test, b.test update scheduled for', $mailable->subject);
     }
 }

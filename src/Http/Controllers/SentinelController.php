@@ -218,7 +218,7 @@ class SentinelController extends Controller
 
         $freeze  = $this->previewFreezeRecord();
         $service = app(ContentFreezeService::class);
-        $host    = parse_url(config('app.url'), PHP_URL_HOST) ?: 'site';
+        $host    = ReportHosts::label();
 
         return $this->previewResponse(view('statamic-sentinel::emails.freeze-notification', [
             'freeze'          => $freeze,
@@ -234,7 +234,7 @@ class SentinelController extends Controller
 
         $freeze  = $this->previewFreezeRecord();
         $service = app(ContentFreezeService::class);
-        $host    = parse_url(config('app.url'), PHP_URL_HOST) ?: 'site';
+        $host    = ReportHosts::label();
 
         $completedAt = $freeze['completed_at'] ?? Carbon::now()->toIso8601String();
 

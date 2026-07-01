@@ -6,6 +6,7 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Queue\SerializesModels;
 use D3Creative\Sentinel\Services\ContentFreezeService;
+use D3Creative\Sentinel\Support\ReportHosts;
 
 class FreezeCompletionMail extends Mailable
 {
@@ -24,7 +25,7 @@ class FreezeCompletionMail extends Mailable
      */
     public function build(): static
     {
-        $host    = parse_url(config('app.url'), PHP_URL_HOST) ?: 'site';
+        $host    = ReportHosts::label();
         $service = app(ContentFreezeService::class);
 
         $this->applySentinelFrom();
