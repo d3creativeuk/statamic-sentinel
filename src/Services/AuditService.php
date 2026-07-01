@@ -457,13 +457,27 @@ class AuditService
     }
 
     /**
+     * True only for a genuine, successful HTTP response.
+     *
+     * `Http::pool()` does not throw on a per-request connection failure - the
+     * failing slot holds an `Illuminate\Http\Client\ConnectionException` object
+     * instead of a `Response`, so the surrounding try/catch never fires. Calling
+     * `->ok()` on that object is a fatal `Call to undefined method`. Guarding on
+     * `instanceof Response` skips both null and exception slots cleanly.
+     */
+    protected function isOkResponse($response): bool
+    {
+        return $response instanceof \Illuminate\Http\Client\Response && $response->ok();
+    }
+
+    /**
      * Pluck the newest stable (X.Y.Z) version from a Packagist p2 response.
      * The p2 API returns versions newest-first; dev / RC / beta releases are
      * filtered out by the regex.
      */
     protected function extractLatestStableVersion($response, string $packageKey): ?string
     {
-        if (! $response || ! $response->ok()) {
+        if (! $this->isOkResponse($response)) {
             return null;
         }
 
@@ -482,7 +496,7 @@ class AuditService
      */
     protected function extractEolBranches($response): ?array
     {
-        if (! $response || ! $response->ok()) {
+        if (! $this->isOkResponse($response)) {
             return null;
         }
 
@@ -908,7 +922,7 @@ class AuditService
 
             foreach ($chunk as $id) {
                 $response = $responses[$id] ?? null;
-                if (! $response || ! $response->ok()) continue;
+                if (! $this->isOkResponse($response)) continue;
 
                 $details[$id] = $response->json() ?? [];
             }
@@ -1018,7 +1032,7 @@ class AuditService
 
         foreach ($toCheck as $name) {
             $response = $responses[$name] ?? null;
-            if (! $response || ! $response->ok()) continue;
+            if (! $this->isOkResponse($response)) continue;
 
             $latest = null;
             foreach ($response->json("packages.{$name}", []) as $v) {
@@ -1109,7 +1123,7 @@ class AuditService
 
         foreach ($toCheck as $name) {
             $response = $responses[$name] ?? null;
-            if (! $response || ! $response->ok()) continue;
+            if (! $this->isOkResponse($response)) continue;
 
             $latest  = $response->json('version');
             if (! $latest) continue;

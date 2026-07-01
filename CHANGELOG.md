@@ -35,6 +35,14 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Fixed
 
+- A refresh/scan no longer crashes the utility with a `500` when an upstream API (Packagist,
+  the npm registry, or OSV) is briefly unreachable. `Http::pool()` returns a
+  `ConnectionException` object (not a `Response`) in the failed slot rather than throwing, so the
+  surrounding `try/catch` never fired and the old `$response->ok()` guard hit
+  `Call to undefined method ...ConnectionException::ok()`. All pool consumers now type-check the
+  slot via a shared `isOkResponse()` helper before touching it, so an unreachable endpoint fails
+  silently as intended.
+
 - Non-super users with the `access sentinel utility` permission no longer hit a `403 Forbidden`
   in the report preview (and on the Send / Schedule / Content Freeze controls). Those actions
   drive super-only endpoints, but the utility itself renders for anyone granted access, so the
