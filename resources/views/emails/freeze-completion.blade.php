@@ -25,14 +25,14 @@
     {{-- Header --}}
     <div style="background:#047857; padding:24px 32px;">
         <div style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.08em; color:#bbf7d0; margin-bottom:6px;">All clear</div>
-        <h1 style="font-size:20px; font-weight:600; color:#ffffff; margin:0; line-height:1.3;">Update complete on {{ $host }}</h1>
+        <h1 style="font-size:20px; font-weight:600; color:#ffffff; margin:0; line-height:1.3;">Update complete on {{ $hostSentence ?? $host }}</h1>
     </div>
 
     {{-- Body --}}
     <div style="padding:24px 32px;">
 
         <p style="font-size:14px; color:#1e293b; margin:0 0 16px 0; line-height:1.55;">
-            The scheduled update for <strong>{{ $host }}</strong> has finished. The control panel is safe to use again, and you can resume editing content as normal.
+            The scheduled update for <strong>{{ $hostSentence ?? $host }}</strong> has finished. The control panel is safe to use again, and you can resume editing content as normal.
         </p>
 
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; margin:0 0 16px 0;">

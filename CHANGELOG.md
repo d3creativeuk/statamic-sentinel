@@ -34,6 +34,12 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Changed
 
+- Content Freeze copy tweaks: the CP banner and "Learn more" modal now read "Notification of
+  planned work" (matching the email); on multisite the freeze emails list sites grammatically in
+  prose (`a.test and b.test`, `a.test, b.test and c.test`) rather than a bare comma list; the
+  heads-up email preview modal is titled "Notify email preview"; and the inline schedule warning
+  reads "End time must be later than start time."
+
 - Content Freeze times now show timezone letters (e.g. `BST`) **only when `SENTINEL_FREEZE_TIMEZONE`
   is explicitly set**. Unset (the default), times render in the app timezone without the
   abbreviation, e.g. `4 Jul 2026, 08:00`. Setting the var restores the abbreviation and the

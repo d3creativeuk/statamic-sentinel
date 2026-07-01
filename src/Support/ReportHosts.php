@@ -52,4 +52,21 @@ class ReportHosts
     {
         return implode(', ', self::all());
     }
+
+    /**
+     * Grammatical host list for prose: "a.test", "a.test and b.test",
+     * "a.test, b.test and c.test".
+     */
+    public static function sentence(): string
+    {
+        $hosts = self::all();
+
+        if (count($hosts) <= 1) {
+            return $hosts[0] ?? '';
+        }
+
+        $last = array_pop($hosts);
+
+        return implode(', ', $hosts) . ' and ' . $last;
+    }
 }

@@ -232,6 +232,7 @@ class SentinelController extends Controller
         return $this->previewResponse(view('statamic-sentinel::emails.freeze-notification', [
             'freeze'              => $freeze,
             'host'                => $host,
+            'hostSentence'        => ReportHosts::sentence(),
             'preheader'           => 'Statamic update scheduled. Banner will appear at ' . $service->formatTime($freeze['freeze_at']) . '.',
             'freezeAtDisplay'     => $service->formatTime($freeze['freeze_at']),
             'freezeEndsAtDisplay' => $extras['ends_display'],
@@ -253,6 +254,7 @@ class SentinelController extends Controller
         return $this->previewResponse(view('statamic-sentinel::emails.freeze-completion', [
             'freeze'             => $freeze + ['completed_at' => $completedAt],
             'host'               => $host,
+            'hostSentence'       => ReportHosts::sentence(),
             'preheader'          => 'Statamic update complete. The control panel is safe to use again.',
             'completedAtDisplay' => $service->formatTime($completedAt),
         ])->render());

@@ -104,7 +104,7 @@
             </div>
             <div style="display:flex; align-items:center; gap:10px;">
                 <button type="button"
-                        x-on:click="$dispatch('sentinel-preview-open', { url: previewHeadsUpUrl(), title: 'Heads-up email preview' })"
+                        x-on:click="$dispatch('sentinel-preview-open', { url: previewHeadsUpUrl(), title: 'Notify email preview' })"
                         style="font-size:12px; color:#2563eb; background:transparent; border:none; padding:0; cursor:pointer; text-decoration:underline; font-family:inherit;">
                     Preview heads-up email
                 </button>
@@ -202,7 +202,7 @@
 
             <div x-show="endsBeforeStart" x-cloak
                  style="font-size:12px; color:#ef4444; margin:0 0 12px 0; line-height:1.5;">
-                Freeze ends at must be after freeze starts at.
+                End time must be later than start time.
             </div>
 
             <label style="display:flex; flex-direction:column; gap:4px; margin-bottom:14px;">
@@ -456,7 +456,7 @@
         <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:14px; padding-top:12px; border-top:1px solid {{ $stateBorder }};">
             <span style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; color:{{ $stateColor }};">Preview emails</span>
             <button type="button"
-                    x-on:click="$dispatch('sentinel-preview-open', { url: @js(route('statamic.cp.d3-sentinel.preview-freeze-notification')), title: 'Heads-up email preview' })"
+                    x-on:click="$dispatch('sentinel-preview-open', { url: @js(route('statamic.cp.d3-sentinel.preview-freeze-notification')), title: 'Notify email preview' })"
                     style="font-size:12px; color:#2563eb; background:transparent; border:none; padding:0; cursor:pointer; text-decoration:underline; font-family:inherit;">
                 Heads-up email
             </button>

@@ -49,6 +49,10 @@ class ReportHostsTest extends TestCase
                 return $this->sites;
             }
         });
+
+        // The Site facade caches its resolved root; clear it so repeated
+        // bindSites() calls within one test see the new fake.
+        \Statamic\Facades\Site::clearResolvedInstances();
     }
 
     public function test_all_lists_every_site_host_deduped(): void
@@ -61,6 +65,18 @@ class ReportHostsTest extends TestCase
 
         $this->assertSame(['a.test', 'b.test'], ReportHosts::all());
         $this->assertSame('a.test, b.test', ReportHosts::label());
+    }
+
+    public function test_sentence_joins_hosts_grammatically(): void
+    {
+        $this->bindSites(['https://a.test']);
+        $this->assertSame('a.test', ReportHosts::sentence());
+
+        $this->bindSites(['https://a.test', 'https://b.test']);
+        $this->assertSame('a.test and b.test', ReportHosts::sentence());
+
+        $this->bindSites(['https://a.test', 'https://b.test', 'https://c.test']);
+        $this->assertSame('a.test, b.test and c.test', ReportHosts::sentence());
     }
 
     public function test_all_falls_back_to_app_url_when_sites_unavailable(): void

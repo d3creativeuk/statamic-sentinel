@@ -35,6 +35,7 @@ class FreezeCompletionMail extends Mailable
                     ->with([
                         'freeze'             => $this->freeze,
                         'host'               => $host,
+                        'hostSentence'       => ReportHosts::sentence(),
                         'preheader'          => 'Statamic update complete. The control panel is safe to use again.',
                         'completedAtDisplay' => $service->formatTime($this->freeze['completed_at'] ?? null),
                     ]);

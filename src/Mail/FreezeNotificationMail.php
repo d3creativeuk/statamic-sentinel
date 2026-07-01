@@ -49,6 +49,7 @@ class FreezeNotificationMail extends Mailable
                     ->with([
                         'freeze'              => $this->freeze,
                         'host'                => $host,
+                        'hostSentence'        => ReportHosts::sentence(),
                         'preheader'           => 'Statamic update scheduled. Banner will appear at ' . $freezeAtDisplay . '.',
                         'freezeAtDisplay'     => $freezeAtDisplay,
                         'freezeEndsAtDisplay' => $extras['ends_display'],
