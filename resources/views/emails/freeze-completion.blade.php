@@ -49,7 +49,7 @@
         </table>
 
         <p style="font-size:14px; color:#475569; margin:0; line-height:1.55;">
-            Thanks for holding off while we got the work done. If you spot anything unusual, please get in touch.
+            Thanks for holding off on edits while the updates were done. If you spot anything unusual, please get in touch.
         </p>
 
     </div>
