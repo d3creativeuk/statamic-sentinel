@@ -35,9 +35,22 @@
             sending: false,
             state: 'idle',
             message: '',
+            notifyAt: '{{ $nowDefault }}',
             freezeAt: '{{ $freezeDefault }}',
             freezeEndsAt: '',
+            expectedDuration: '',
+            expectedDurationUnit: 'minutes',
             get endsBeforeStart() { return this.freezeEndsAt !== '' && this.freezeEndsAt <= this.freezeAt; },
+            previewHeadsUpUrl() {
+                var params = new URLSearchParams({
+                    notify_at: this.notifyAt,
+                    freeze_at: this.freezeAt,
+                    freeze_ends_at: this.freezeEndsAt,
+                    expected_duration: this.expectedDuration,
+                    expected_duration_unit: this.expectedDurationUnit
+                });
+                return @js(route('statamic.cp.d3-sentinel.preview-freeze-notification')) + '?' + params.toString();
+            },
             submit(form) {
                 if (this.endsBeforeStart) { return; }
                 this.sending = true;
@@ -73,7 +86,7 @@
             </div>
             <div style="display:flex; align-items:center; gap:10px;">
                 <button type="button"
-                        x-on:click="$dispatch('sentinel-preview-open', { url: @js(route('statamic.cp.d3-sentinel.preview-freeze-notification')), title: 'Heads-up email preview' })"
+                        x-on:click="$dispatch('sentinel-preview-open', { url: previewHeadsUpUrl(), title: 'Heads-up email preview' })"
                         style="font-size:12px; color:#2563eb; background:transparent; border:none; padding:0; cursor:pointer; text-decoration:underline; font-family:inherit;">
                     Preview heads-up email
                 </button>
@@ -105,6 +118,7 @@
                     <input type="datetime-local"
                            name="notify_at"
                            value="{{ $nowDefault }}"
+                           x-model="notifyAt"
                            required
                            style="font-size:13px; padding:7px 10px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#1e293b; outline:none; font-family:inherit;">
                 </label>
@@ -135,8 +149,10 @@
                                name="expected_duration"
                                min="1"
                                placeholder="e.g. 30"
+                               x-model="expectedDuration"
                                style="flex:1; min-width:0; font-size:13px; padding:7px 10px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#1e293b; outline:none; font-family:inherit;">
                         <select name="expected_duration_unit"
+                                x-model="expectedDurationUnit"
                                 style="font-size:13px; padding:7px 10px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#1e293b; outline:none; font-family:inherit;">
                             <option value="minutes">Minutes</option>
                             <option value="hours">Hours</option>

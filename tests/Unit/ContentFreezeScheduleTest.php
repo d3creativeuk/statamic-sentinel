@@ -121,6 +121,44 @@ class ContentFreezeScheduleTest extends TestCase
         $this->assertSame('', $svc->formatDuration(0));
     }
 
+    public function test_draft_record_reflects_raw_form_input(): void
+    {
+        $svc = $this->service();
+
+        $freeze = $svc->draftRecord([
+            'freeze_at'              => '2026-07-04 15:40',
+            'freeze_ends_at'         => '2026-07-04 17:00',
+            'expected_duration'      => '45',
+            'expected_duration_unit' => 'minutes',
+        ]);
+
+        $this->assertNotNull($freeze['freeze_ends_at']);
+        $this->assertSame(45, $freeze['expected_duration_minutes']);
+
+        // The email's derived strings should match the entered window + duration.
+        $extras = $svc->notificationExtras($freeze);
+        $this->assertSame('1 hour 20 minutes', $extras['window_text']);
+        $this->assertSame('45 minutes', $extras['expected_text']);
+    }
+
+    public function test_draft_record_degrades_for_blank_and_bad_input(): void
+    {
+        $svc = $this->service();
+
+        // Blank end/duration -> no window/expected (preview shows no sentence).
+        $blank = $svc->draftRecord([
+            'freeze_at'         => '2026-07-04 15:40',
+            'freeze_ends_at'    => '',
+            'expected_duration' => '',
+        ]);
+        $this->assertNull($blank['freeze_ends_at']);
+        $this->assertNull($blank['expected_duration_minutes']);
+
+        // Unparseable start still yields a renderable record (falls back to now).
+        $bad = $svc->draftRecord(['freeze_at' => 'not a date']);
+        $this->assertNotNull($bad['freeze_at']);
+    }
+
     public function test_notification_extras_degrade_for_legacy_records(): void
     {
         $svc = $this->service();

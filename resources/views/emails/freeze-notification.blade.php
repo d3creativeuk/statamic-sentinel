@@ -53,7 +53,7 @@
             $windowText   = $windowText ?? null;
             $timeframe = null;
             if ($expectedText && $windowText) {
-                $timeframe = 'The update should only take up to ' . $expectedText . ', however a ' . $windowText . ' window has been allowed in case of any unforeseen circumstances.';
+                $timeframe = 'The update should only take up to ' . $expectedText . ', however a window of up to ' . $windowText . ' has been allowed in case of any unforeseen circumstances.';
             } elseif ($windowText) {
                 $timeframe = 'A maintenance window of up to ' . $windowText . ' has been allowed for this update.';
             } elseif ($expectedText) {

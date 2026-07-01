@@ -585,6 +585,60 @@ class ContentFreezeService
     }
 
     /**
+     * Best-effort freeze record built from raw schedule-form input, used by the
+     * heads-up email preview so it reflects what the user has typed rather than
+     * a placeholder. Unlike schedule() this neither validates nor persists:
+     * blank or unparseable values fall back to null (or now for the start/notify
+     * times) so the preview always renders. Datetime-local strings are parsed in
+     * the display timezone; expected duration is normalised to minutes.
+     *
+     * @param array<string, mixed> $input
+     */
+    public function draftRecord(array $input): array
+    {
+        $tz  = $this->timezone();
+        $now = Carbon::now()->toIso8601String();
+
+        $expectedMinutes = null;
+        $number          = filter_var($input['expected_duration'] ?? null, FILTER_VALIDATE_INT);
+        $unit            = strtolower(trim((string) ($input['expected_duration_unit'] ?? 'minutes'))) ?: 'minutes';
+        $multipliers     = ['minutes' => 1, 'hours' => 60, 'days' => 1440];
+
+        if ($number !== false && $number > 0 && isset($multipliers[$unit])) {
+            $expectedMinutes = $number * $multipliers[$unit];
+        }
+
+        return [
+            'notify_at'                 => $this->toUtcIso((string) ($input['notify_at'] ?? ''), $tz) ?? $now,
+            'freeze_at'                 => $this->toUtcIso((string) ($input['freeze_at'] ?? ''), $tz) ?? $now,
+            'freeze_ends_at'            => $this->toUtcIso((string) ($input['freeze_ends_at'] ?? ''), $tz),
+            'expected_duration_minutes' => $expectedMinutes,
+            'completed_at'              => $now,
+            'recipients'                => [],
+        ];
+    }
+
+    /**
+     * Parse a raw datetime string in the given timezone and return it as a UTC
+     * ISO-8601 string. Null for an empty or unparseable value - callers treat
+     * that as "not supplied".
+     */
+    protected function toUtcIso(string $raw, string $tz): ?string
+    {
+        $raw = trim($raw);
+
+        if ($raw === '') {
+            return null;
+        }
+
+        try {
+            return Carbon::parse($raw, $tz)->utc()->toIso8601String();
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
+    /**
      * Configured display timezone. Falls back to the Laravel app timezone
      * (and finally UTC) when the env var is unset or invalid.
      */

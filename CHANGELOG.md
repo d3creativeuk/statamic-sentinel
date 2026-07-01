@@ -49,6 +49,11 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Fixed
 
+- The Content Freeze **Preview heads-up email** now reflects the times and expected duration
+  currently entered in the schedule form, instead of a fixed placeholder. Previously the preview
+  always showed "now / +3 hours / 30 minutes" regardless of the form; it now renders the actual
+  Freeze-starts time, the real window (freeze start -> end), and the entered expected duration.
+
 - On a multisite install, the Status and Update report emails, the Content Freeze heads-up /
   all-clear emails, and their CP previews now reference **every** site the install serves rather
   than only the primary. Headers and subjects list each site's host, comma-separated (e.g.

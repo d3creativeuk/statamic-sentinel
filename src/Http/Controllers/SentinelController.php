@@ -216,10 +216,18 @@ class SentinelController extends Controller
     {
         abort_unless(auth()->user()?->isSuper(), 403);
 
-        $freeze  = $this->previewFreezeRecord();
         $service = app(ContentFreezeService::class);
-        $host    = ReportHosts::label();
-        $extras  = $service->notificationExtras($freeze);
+
+        // Prefer the values the user has entered in the schedule form (passed as
+        // query params) so the preview matches what will actually be sent; fall
+        // back to the placeholder/current record when opened without form context
+        // (e.g. the preview button shown once a freeze is already scheduled).
+        $freeze = $request->hasAny(['notify_at', 'freeze_at', 'freeze_ends_at', 'expected_duration'])
+            ? $service->draftRecord($request->only(['notify_at', 'freeze_at', 'freeze_ends_at', 'expected_duration', 'expected_duration_unit']))
+            : $this->previewFreezeRecord();
+
+        $host   = ReportHosts::label();
+        $extras = $service->notificationExtras($freeze);
 
         return $this->previewResponse(view('statamic-sentinel::emails.freeze-notification', [
             'freeze'              => $freeze,
