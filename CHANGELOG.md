@@ -54,6 +54,10 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Fixed
 
+- The Content Freeze heads-up email now shows a "Statamic maintenance ends" box (the "Freeze ends
+  at" time, in the same style as the "maintenance starts" box) beneath the timeframe sentence, when
+  an end time is set.
+
 - The Content Freeze **Preview heads-up email** now reflects the times and expected duration
   currently entered in the schedule form, instead of a fixed placeholder. Previously the preview
   always showed "now / +3 hours / 30 minutes" regardless of the form; it now renders the actual
