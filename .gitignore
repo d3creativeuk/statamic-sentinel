@@ -1,3 +1,7 @@
 /CLAUDE.md
 .claude/
 .playwright-mcp/**
+/vendor
+composer.lock
+/.phpunit.cache
+.phpunit.result.cache
