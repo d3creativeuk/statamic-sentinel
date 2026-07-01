@@ -177,7 +177,7 @@ class ContentFreezeService
             }
 
             if (! $endsAt->greaterThan($freezeAt)) {
-                return $this->failure('Freeze end must be after the freeze start time.');
+                return $this->failure('End time must be later than start time.');
             }
         }
 

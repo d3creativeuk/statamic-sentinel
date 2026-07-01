@@ -49,7 +49,7 @@ class ContentFreezeScheduleTest extends TestCase
         ]);
 
         $this->assertFalse($result['ok']);
-        $this->assertStringContainsString('Freeze end must be after', $result['message']);
+        $this->assertStringContainsString('End time must be later than start time', $result['message']);
     }
 
     public function test_valid_end_and_expected_duration_are_stored(): void
