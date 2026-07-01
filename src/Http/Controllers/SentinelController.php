@@ -31,6 +31,7 @@ class SentinelController extends Controller
 
         $status = match ($result['kind']) {
             ReportSender::KIND_SENT        => 200,
+            ReportSender::KIND_QUEUED      => 200,
             ReportSender::KIND_MAIL_FAILED => 500,
             default                        => 422,
         };
@@ -51,6 +52,7 @@ class SentinelController extends Controller
 
         $status = match ($result['kind']) {
             ReportSender::KIND_SENT        => 200,
+            ReportSender::KIND_QUEUED      => 200,
             ReportSender::KIND_MAIL_FAILED => 500,
             default                        => 422,
         };

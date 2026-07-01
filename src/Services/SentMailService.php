@@ -28,6 +28,7 @@ class SentMailService
     const TRIGGER_SCHEDULED = 'scheduled';
     const TRIGGER_FORCED    = 'forced';
 
+    const OUTCOME_QUEUED = 'queued';
     const OUTCOME_SENT   = 'sent';
     const OUTCOME_FAILED = 'failed';
 
@@ -98,6 +99,45 @@ class SentMailService
             return $id;
         } catch (\Throwable $e) {
             return null;
+        }
+    }
+
+    /**
+     * Flip an existing record's outcome (and optional error) in place. Used by
+     * the queued send job once the transport has actually accepted or rejected
+     * the message, so the row reflects the real result rather than "queued".
+     * Returns false if the id isn't on record. Silent on failure - bookkeeping
+     * must never break the send.
+     */
+    public function updateOutcome(string $id, string $outcome, ?string $error = null): bool
+    {
+        if (! self::isValidId($id)) {
+            return false;
+        }
+
+        try {
+            $entries = $this->all();
+            $found   = false;
+
+            foreach ($entries as &$entry) {
+                if (($entry['id'] ?? null) === $id) {
+                    $entry['outcome'] = $outcome;
+                    $entry['error']   = $error;
+                    $found = true;
+                    break;
+                }
+            }
+            unset($entry);
+
+            if (! $found) {
+                return false;
+            }
+
+            $this->writeIndex($entries);
+
+            return true;
+        } catch (\Throwable $e) {
+            return false;
         }
     }
 

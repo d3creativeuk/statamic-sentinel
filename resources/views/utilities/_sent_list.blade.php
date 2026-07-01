@@ -67,8 +67,9 @@
                                 $tColour    = $triggerColour[$trigger] ?? '#475569';
                                 $tLabel     = $triggerLabel[$trigger]  ?? ucfirst($trigger);
                                 $isFailed   = $outcome === 'failed';
-                                $oColour    = $isFailed ? '#ef4444' : '#047857';
-                                $oLabel     = $isFailed ? 'Failed' : 'Sent';
+                                $isQueued   = $outcome === 'queued';
+                                $oColour    = $isFailed ? '#ef4444' : ($isQueued ? '#b45309' : '#047857');
+                                $oLabel     = $isFailed ? 'Failed' : ($isQueued ? 'Queued' : 'Sent');
                                 $previewUrl = route('statamic.cp.d3-sentinel.preview-sent-report', ['id' => $entry['id']]);
                                 $previewTitle = ucfirst($kindLabel) . ' sent ' . $recordedAt;
                             @endphp

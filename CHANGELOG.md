@@ -35,6 +35,16 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Fixed
 
+- The Sent Emails log no longer reports a report as **Sent** when the send actually failed.
+  Previously the outcome was recorded the instant the mail was handed to the queue, so a job
+  that later failed in the worker (bad SMTP config, rejected envelope) still showed green.
+  The send now runs inside a dedicated queued job (`SendSentinelMail`): a record starts life
+  as **Queued** and the job flips it to **Sent** only after the transport accepts the message,
+  or to **Failed** (with the transport error) when it does not - mirroring the `queue:work`
+  DONE / FAIL outcome. On the `sync` queue this resolves inline; on a real queue the row shows
+  **Queued** until a worker processes it. (Detection stops at transport acceptance - inbox
+  delivery/bounce tracking needs provider webhooks and is out of scope.)
+
 - A refresh/scan no longer crashes the utility with a `500` when an upstream API (Packagist,
   the npm registry, or OSV) is briefly unreachable. `Http::pool()` returns a
   `ConnectionException` object (not a `Response`) in the failed slot rather than throwing, so the
