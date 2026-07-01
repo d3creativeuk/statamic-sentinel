@@ -104,10 +104,7 @@
 
             {{-- Notify recipients: its own box at the top, mirroring the report tabs' email box. --}}
             <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:14px 16px; margin-bottom:12px;">
-                <div style="display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin-bottom:10px;">
-                    <div style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; color:#64748b;">Notify recipients</div>
-                    <div style="font-size:11px; color:#64748b;">Max 10. Heads-up at the notification time, all-clear when the freeze ends.</div>
-                </div>
+                <div style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; color:#64748b; margin-bottom:10px;">Notify recipients</div>
                 <input type="text"
                        name="email"
                        value="{{ $userEmailDefault }}"
