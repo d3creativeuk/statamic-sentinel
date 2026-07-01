@@ -130,16 +130,16 @@
               x-on:submit.prevent="submit($event.target)">
             @csrf
 
-            <label style="display:flex; flex-direction:column; gap:4px; margin-bottom:12px;">
-                <span style="font-size:12px; font-weight:600; color:#0f172a;">Notify (comma-separated emails)</span>
-                <input type="text"
-                       name="email"
-                       value="{{ $userEmailDefault }}"
-                       required
-                       placeholder="email@example.com, another@example.com"
-                       style="font-size:13px; padding:7px 12px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#1e293b; outline:none; font-family:inherit;">
-                <span style="font-size:11px; color:#64748b;">Maximum 10 recipients. They receive the heads-up email at the notification time, and the all-clear email when the freeze ends.</span>
-            </label>
+            <div style="display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin-bottom:10px;">
+                <div style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; color:#64748b;">Notify recipients</div>
+                <div style="font-size:11px; color:#64748b;">Max 10. Heads-up at the notification time, all-clear when the freeze ends.</div>
+            </div>
+            <input type="text"
+                   name="email"
+                   value="{{ $userEmailDefault }}"
+                   required
+                   placeholder="email@example.com, another@example.com"
+                   style="width:100%; box-sizing:border-box; font-size:13px; padding:7px 12px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#1e293b; outline:none; margin-bottom:14px;">
 
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
                 <label style="display:flex; flex-direction:column; gap:4px;">
