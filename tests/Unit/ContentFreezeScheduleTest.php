@@ -111,6 +111,33 @@ class ContentFreezeScheduleTest extends TestCase
         $this->assertNull($result['freeze']['expected_duration_minutes']);
     }
 
+    public function test_format_time_omits_timezone_letters_when_freeze_tz_unset(): void
+    {
+        config(['statamic-sentinel.freeze.timezone' => null, 'app.timezone' => 'UTC']);
+
+        $this->assertSame('4 Jul 2026, 08:00', $this->service()->formatTime('2026-07-04T08:00:00Z'));
+    }
+
+    public function test_format_time_shows_letters_when_freeze_tz_set(): void
+    {
+        // Explicit zone that differs from the server -> dual time, both with letters.
+        config(['statamic-sentinel.freeze.timezone' => 'Europe/London', 'app.timezone' => 'UTC']);
+
+        $out = $this->service()->formatTime('2026-07-04T08:00:00Z');
+
+        $this->assertStringContainsString('BST', $out);   // 09:00 BST
+        $this->assertStringContainsString('UTC', $out);   // 08:00 UTC
+        $this->assertStringContainsString(' / ', $out);
+    }
+
+    public function test_format_time_shows_letters_when_freeze_tz_equals_app_tz(): void
+    {
+        // Explicitly set (even to the app tz) still shows letters, single time.
+        config(['statamic-sentinel.freeze.timezone' => 'UTC', 'app.timezone' => 'UTC']);
+
+        $this->assertSame('4 Jul 2026, 08:00 UTC', $this->service()->formatTime('2026-07-04T08:00:00Z'));
+    }
+
     public function test_format_duration_is_human_friendly(): void
     {
         $svc = $this->service();

@@ -41,12 +41,18 @@ return [
     | Display timezone for freeze times. Admins enter notify_at / freeze_at
     | in this timezone, and CP / email times are rendered in it. When this
     | differs from the server (Laravel app) timezone, both are shown
-    | side-by-side. Defaults to the app timezone.
+    | side-by-side.
+    |
+    | Leave SENTINEL_FREEZE_TIMEZONE unset (null) to use the app timezone and
+    | render times WITHOUT timezone letters (e.g. "4 Jul 2026, 08:00"). Set it
+    | to an explicit zone to render the timezone abbreviation too (e.g. "BST")
+    | and to enable the side-by-side dual-time display when it differs from the
+    | server timezone.
     |
     */
 
     'freeze' => [
-        'timezone' => env('SENTINEL_FREEZE_TIMEZONE', config('app.timezone')),
+        'timezone' => env('SENTINEL_FREEZE_TIMEZONE'),
     ],
 
     /*

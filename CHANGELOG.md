@@ -34,6 +34,12 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Changed
 
+- Content Freeze times now show timezone letters (e.g. `BST`) **only when `SENTINEL_FREEZE_TIMEZONE`
+  is explicitly set**. Unset (the default), times render in the app timezone without the
+  abbreviation, e.g. `4 Jul 2026, 08:00`. Setting the var restores the abbreviation and the
+  side-by-side dual-time display when it differs from the server timezone. (The config now defaults
+  to `null` rather than the app timezone; behaviour when set is unchanged.)
+
 - The Content Freeze time fields (notification, freeze start, freeze end) now use a date input plus
   a `type="time"` field that steps in 15-minute blocks (`step="900"`), instead of a free datetime
   input; the pre-filled defaults snap to the next 15-minute boundary. Times are still parsed with

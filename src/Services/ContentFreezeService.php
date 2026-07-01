@@ -516,12 +516,18 @@ class ContentFreezeService
         $displayTz = $this->timezone();
         $serverTz  = config('app.timezone') ?: 'UTC';
 
-        $primary = $time->copy()->setTimezone($displayTz)->format('j M Y, H:i T');
+        // Only show timezone letters (e.g. "BST") when a freeze timezone is
+        // explicitly configured. With no SENTINEL_FREEZE_TIMEZONE the times are
+        // simply in the app timezone, so the abbreviation is noise.
+        $showTz  = $this->configuredTimezone() !== null;
+        $primary = $time->copy()->setTimezone($displayTz)->format($showTz ? 'j M Y, H:i T' : 'j M Y, H:i');
 
         if ($displayTz === $serverTz) {
             return $primary;
         }
 
+        // Different zones only happen when a freeze timezone is explicitly set,
+        // so the secondary always carries its letters to disambiguate the two.
         $secondary = $time->copy()->setTimezone($serverTz)->format('H:i T');
 
         return $primary . ' / ' . $secondary;
@@ -639,12 +645,34 @@ class ContentFreezeService
     }
 
     /**
-     * Configured display timezone. Falls back to the Laravel app timezone
-     * (and finally UTC) when the env var is unset or invalid.
+     * The explicitly-configured freeze display timezone
+     * (SENTINEL_FREEZE_TIMEZONE), or null when it is unset or invalid. Null is
+     * the signal to render times in the app timezone without timezone letters.
+     */
+    protected function configuredTimezone(): ?string
+    {
+        $tz = config('statamic-sentinel.freeze.timezone');
+
+        if (empty($tz)) {
+            return null;
+        }
+
+        try {
+            new \DateTimeZone($tz);
+        } catch (\Throwable $e) {
+            return null;
+        }
+
+        return $tz;
+    }
+
+    /**
+     * Effective display timezone: the configured freeze timezone, else the
+     * Laravel app timezone (and finally UTC) when unset or invalid.
      */
     public function timezone(): string
     {
-        $tz = config('statamic-sentinel.freeze.timezone') ?: (config('app.timezone') ?: 'UTC');
+        $tz = $this->configuredTimezone() ?: (config('app.timezone') ?: 'UTC');
 
         try {
             new \DateTimeZone($tz);

@@ -44,7 +44,7 @@ Coordinate update windows with CP users. Schedule a heads-up email, show banners
 
 State transitions are driven by every-minute cron (`sentinel:freeze:tick-notifications`, `sentinel:freeze:tick-activations`) registered by the addon. Production sites should rely on the standard `* * * * * php artisan schedule:run` cron entry. A fallback middleware on the `statamic.cp` group also ticks state on every CP request, so dev environments and shared hosts without scheduler access still see the expected transitions while an editor is in the CP. Both paths are idempotent.
 
-Display timezone is configurable via `SENTINEL_FREEZE_TIMEZONE` (defaults to the Laravel app timezone). When the display tz differs from the server tz, times render in both side-by-side.
+Display timezone is configurable via `SENTINEL_FREEZE_TIMEZONE`. Unset, times use the Laravel app timezone and show no timezone letters; set, they show the timezone abbreviation (e.g. `BST`) and, when it differs from the server tz, render both side-by-side. See [Other settings](#other-settings).
 
 ## Installation
 
@@ -93,7 +93,9 @@ This renders Sentinel fully unbranded ("Sentinel for Statamic", no link, no CTA 
 
 ## Other settings
 
-- `SENTINEL_FREEZE_TIMEZONE` - display timezone for content-freeze times in the CP and freeze emails. Defaults to the Laravel app timezone. When different from the server tz, times render in both. Example: `SENTINEL_FREEZE_TIMEZONE='Europe/London'`.
+- `SENTINEL_FREEZE_TIMEZONE` - display timezone for content-freeze times in the CP and freeze emails. Example: `SENTINEL_FREEZE_TIMEZONE='Europe/London'`.
+  - **Unset (default):** times use the Laravel app timezone and render *without* timezone letters, e.g. `4 Jul 2026, 08:00`.
+  - **Set:** times render the timezone abbreviation too, e.g. `4 Jul 2026, 08:00 BST`. When the configured zone differs from the server (app) timezone, both are shown side-by-side, e.g. `4 Jul 2026, 09:00 BST / 08:00 UTC`.
 
 ## Publishing the config (survives `config:cache`)
 
