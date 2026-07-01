@@ -35,7 +35,11 @@
             sending: false,
             state: 'idle',
             message: '',
+            freezeAt: '{{ $freezeDefault }}',
+            freezeEndsAt: '',
+            get endsBeforeStart() { return this.freezeEndsAt !== '' && this.freezeEndsAt <= this.freezeAt; },
             submit(form) {
+                if (this.endsBeforeStart) { return; }
                 this.sending = true;
                 this.state = 'idle';
                 this.message = '';
@@ -109,9 +113,43 @@
                     <input type="datetime-local"
                            name="freeze_at"
                            value="{{ $freezeDefault }}"
+                           x-model="freezeAt"
                            required
                            style="font-size:13px; padding:7px 10px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#1e293b; outline:none; font-family:inherit;">
                 </label>
+            </div>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
+                <label style="display:flex; flex-direction:column; gap:4px;">
+                    <span style="font-size:12px; font-weight:600; color:#0f172a;">Freeze ends at</span>
+                    <input type="datetime-local"
+                           name="freeze_ends_at"
+                           x-model="freezeEndsAt"
+                           style="font-size:13px; padding:7px 10px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#1e293b; outline:none; font-family:inherit;">
+                    <span style="font-size:11px; color:#64748b;">Optional. Used in the notification email.</span>
+                </label>
+                <label style="display:flex; flex-direction:column; gap:4px;">
+                    <span style="font-size:12px; font-weight:600; color:#0f172a;">Expected duration</span>
+                    <div style="display:flex; gap:8px;">
+                        <input type="number"
+                               name="expected_duration"
+                               min="1"
+                               placeholder="e.g. 30"
+                               style="flex:1; min-width:0; font-size:13px; padding:7px 10px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#1e293b; outline:none; font-family:inherit;">
+                        <select name="expected_duration_unit"
+                                style="font-size:13px; padding:7px 10px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#1e293b; outline:none; font-family:inherit;">
+                            <option value="minutes">Minutes</option>
+                            <option value="hours">Hours</option>
+                            <option value="days">Days</option>
+                        </select>
+                    </div>
+                    <span style="font-size:11px; color:#64748b;">Optional. Shown in the notification email.</span>
+                </label>
+            </div>
+
+            <div x-show="endsBeforeStart" x-cloak
+                 style="font-size:12px; color:#ef4444; margin:0 0 12px 0; line-height:1.5;">
+                Freeze ends at must be after freeze starts at.
             </div>
 
             <label style="display:flex; flex-direction:column; gap:4px; margin-bottom:14px;">
@@ -127,7 +165,7 @@
 
             <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
                 <button type="submit"
-                        x-bind:disabled="sending"
+                        x-bind:disabled="sending || endsBeforeStart"
                         x-bind:style="{ background: state === 'success' ? '#047857' : (state === 'error' ? '#ef4444' : '#0f172a') }"
                         style="font-size:13px; font-weight:600; color:#fff; background:#0f172a; border:none; padding:8px 16px; border-radius:6px; cursor:pointer; font-family:inherit;">
                     <span x-show="sending" x-cloak style="display:inline-flex; align-items:center; gap:6px;">

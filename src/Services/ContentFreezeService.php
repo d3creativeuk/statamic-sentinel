@@ -3,6 +3,7 @@
 namespace D3Creative\Sentinel\Services;
 
 use Carbon\Carbon;
+use Carbon\CarbonInterval;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -142,7 +143,7 @@ class ContentFreezeService
      *
      * Times are accepted in the configured timezone and stored UTC.
      */
-    public function schedule(string $notifyAtRaw, string $freezeAtRaw, array $recipients, ?string $scheduledBy = null): array
+    public function schedule(string $notifyAtRaw, string $freezeAtRaw, array $recipients, ?string $scheduledBy = null, array $options = []): array
     {
         $tz = $this->timezone();
 
@@ -161,6 +162,38 @@ class ContentFreezeService
 
         if (! $freezeAt->greaterThan($notifyAt)) {
             return $this->failure('Freeze start must be after the notification time.');
+        }
+
+        // Optional freeze end + expected duration. Both are informational - used
+        // by the notification email only; they do not auto-end the freeze.
+        $endsAt    = null;
+        $endsAtRaw = trim((string) ($options['freeze_ends_at'] ?? ''));
+
+        if ($endsAtRaw !== '') {
+            try {
+                $endsAt = Carbon::parse($endsAtRaw, $tz);
+            } catch (\Throwable $e) {
+                return $this->failure('Could not parse the freeze end time. Use a format like 2026-05-13 12:00.');
+            }
+
+            if (! $endsAt->greaterThan($freezeAt)) {
+                return $this->failure('Freeze end must be after the freeze start time.');
+            }
+        }
+
+        $expectedDurationMinutes = null;
+        $expectedRaw             = $options['expected_duration'] ?? null;
+
+        if ($expectedRaw !== null && trim((string) $expectedRaw) !== '') {
+            $unit        = strtolower(trim((string) ($options['expected_duration_unit'] ?? 'minutes'))) ?: 'minutes';
+            $multipliers = ['minutes' => 1, 'hours' => 60, 'days' => 1440];
+            $number      = filter_var($expectedRaw, FILTER_VALIDATE_INT);
+
+            if ($number === false || $number <= 0 || ! isset($multipliers[$unit])) {
+                return $this->failure('Expected duration must be a positive number of minutes, hours, or days.');
+            }
+
+            $expectedDurationMinutes = $number * $multipliers[$unit];
         }
 
         $recipients = array_values(array_filter(array_map('trim', $recipients)));
@@ -187,6 +220,8 @@ class ContentFreezeService
             'id'             => 'freeze_' . Str::lower(Str::random(16)),
             'notify_at'      => $notifyAt->copy()->utc()->toIso8601String(),
             'freeze_at'      => $freezeAt->copy()->utc()->toIso8601String(),
+            'freeze_ends_at' => $endsAt ? $endsAt->copy()->utc()->toIso8601String() : null,
+            'expected_duration_minutes' => $expectedDurationMinutes,
             'notified_at'    => null,
             'activated_at'   => null,
             'completed_at'   => null,
@@ -490,6 +525,63 @@ class ContentFreezeService
         $secondary = $time->copy()->setTimezone($serverTz)->format('H:i T');
 
         return $primary . ' / ' . $secondary;
+    }
+
+    /**
+     * Human-friendly duration for a minute count: 30 -> "30 minutes",
+     * 180 -> "3 hours", 90 -> "1 hour 30 minutes". Empty string for a
+     * non-positive count or on any formatting error - callers treat that
+     * as "no duration to show".
+     */
+    public function formatDuration(int $minutes): string
+    {
+        if ($minutes <= 0) {
+            return '';
+        }
+
+        try {
+            return CarbonInterval::minutes($minutes)->cascade()->forHumans();
+        } catch (\Throwable $e) {
+            return '';
+        }
+    }
+
+    /**
+     * Derived strings the heads-up email needs from a freeze record: the
+     * formatted end time, the maintenance window (freeze_at -> freeze_ends_at),
+     * and the expected duration. Each is null when the source data is absent,
+     * so legacy freeze records (written before these fields existed) render
+     * the email exactly as before. Shared by the mailable and the preview so
+     * the two never drift.
+     *
+     * @return array{ends_display: ?string, window_text: ?string, expected_text: ?string}
+     */
+    public function notificationExtras(array $freeze): array
+    {
+        $startIso = $freeze['freeze_at'] ?? null;
+        $endsIso  = $freeze['freeze_ends_at'] ?? null;
+        $expected = $freeze['expected_duration_minutes'] ?? null;
+
+        $windowText = null;
+        if ($startIso && $endsIso) {
+            try {
+                $mins       = Carbon::parse($startIso)->diffInMinutes(Carbon::parse($endsIso));
+                $windowText = $this->formatDuration((int) $mins) ?: null;
+            } catch (\Throwable $e) {
+                $windowText = null;
+            }
+        }
+
+        $expectedText = null;
+        if (is_numeric($expected) && (int) $expected > 0) {
+            $expectedText = $this->formatDuration((int) $expected) ?: null;
+        }
+
+        return [
+            'ends_display'  => $endsIso ? $this->formatTime($endsIso) : null,
+            'window_text'   => $windowText,
+            'expected_text' => $expectedText,
+        ];
     }
 
     /**

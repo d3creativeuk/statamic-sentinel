@@ -10,7 +10,10 @@ class FreezeStartCommand extends Command
     protected $signature = 'sentinel:freeze:start
                             {notify_at : When to send the heads-up email (e.g. "2026-05-13 08:00")}
                             {freeze_at : When the banner switches on (e.g. "2026-05-13 09:00")}
-                            {--email=* : Recipient email addresses. Repeat the flag or supply a comma-separated string.}';
+                            {--email=* : Recipient email addresses. Repeat the flag or supply a comma-separated string.}
+                            {--freeze-ends-at= : Optional end of the maintenance window (e.g. "2026-05-13 12:00"), shown in the notification email.}
+                            {--expected-duration= : Optional expected duration number, shown in the notification email.}
+                            {--expected-duration-unit=minutes : Unit for --expected-duration: minutes, hours, or days.}';
 
     protected $description = 'Schedule a Sentinel content freeze. Times are interpreted in SENTINEL_FREEZE_TIMEZONE (or the app timezone).';
 
@@ -21,7 +24,11 @@ class FreezeStartCommand extends Command
 
         $emails = $this->collectEmails((array) $this->option('email'));
 
-        $result = $service->schedule($notifyAt, $freezeAt, $emails, ContentFreezeService::ACTOR_CLI);
+        $result = $service->schedule($notifyAt, $freezeAt, $emails, ContentFreezeService::ACTOR_CLI, [
+            'freeze_ends_at'         => (string) $this->option('freeze-ends-at'),
+            'expected_duration'      => $this->option('expected-duration'),
+            'expected_duration_unit' => (string) $this->option('expected-duration-unit'),
+        ]);
 
         if (! $result['ok']) {
             $this->error($result['message']);
@@ -34,6 +41,9 @@ class FreezeStartCommand extends Command
         $this->line('  ID:        ' . $freeze['id']);
         $this->line('  Notify at: ' . $service->formatTime($freeze['notify_at']));
         $this->line('  Freeze at: ' . $service->formatTime($freeze['freeze_at']));
+        if (! empty($freeze['freeze_ends_at'])) {
+            $this->line('  Freeze ends at: ' . $service->formatTime($freeze['freeze_ends_at']));
+        }
         $this->line('  Recipients (' . count($freeze['recipients']) . '): ' . implode(', ', $freeze['recipients']));
 
         return self::SUCCESS;

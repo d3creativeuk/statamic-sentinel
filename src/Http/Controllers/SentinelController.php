@@ -219,12 +219,16 @@ class SentinelController extends Controller
         $freeze  = $this->previewFreezeRecord();
         $service = app(ContentFreezeService::class);
         $host    = ReportHosts::label();
+        $extras  = $service->notificationExtras($freeze);
 
         return $this->previewResponse(view('statamic-sentinel::emails.freeze-notification', [
-            'freeze'          => $freeze,
-            'host'            => $host,
-            'preheader'       => 'Statamic update scheduled. Banner will appear at ' . $service->formatTime($freeze['freeze_at']) . '.',
-            'freezeAtDisplay' => $service->formatTime($freeze['freeze_at']),
+            'freeze'              => $freeze,
+            'host'                => $host,
+            'preheader'           => 'Statamic update scheduled. Banner will appear at ' . $service->formatTime($freeze['freeze_at']) . '.',
+            'freezeAtDisplay'     => $service->formatTime($freeze['freeze_at']),
+            'freezeEndsAtDisplay' => $extras['ends_display'],
+            'windowText'          => $extras['window_text'],
+            'expectedText'        => $extras['expected_text'],
         ])->render());
     }
 
@@ -259,13 +263,15 @@ class SentinelController extends Controller
             return $current;
         }
 
-        $now = Carbon::now()->toIso8601String();
+        $now = Carbon::now();
 
         return [
-            'notify_at'    => $now,
-            'freeze_at'    => $now,
-            'completed_at' => $now,
-            'recipients'   => [],
+            'notify_at'                 => $now->toIso8601String(),
+            'freeze_at'                 => $now->toIso8601String(),
+            'freeze_ends_at'            => $now->copy()->addHours(3)->toIso8601String(),
+            'expected_duration_minutes' => 30,
+            'completed_at'              => $now->toIso8601String(),
+            'recipients'                => [],
         ];
     }
 

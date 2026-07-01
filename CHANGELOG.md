@@ -8,6 +8,17 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ## [Unreleased]
 
+### Added
+
+- **Content Freeze: optional "Freeze ends at" and "Expected duration" fields.** The schedule form
+  (and `sentinel:freeze:start`) now accept an optional end time for the maintenance window and an
+  expected duration entered in minutes, hours, or days. Setting "Freeze ends at" before "Freeze
+  starts at" shows an inline warning and is rejected server-side. Both are informational - they do
+  not auto-end the freeze (that still happens on **Mark complete**) - and drive a new sentence in
+  the notification email, e.g. "The update should only take up to 30 minutes, however a 3 hour
+  window has been allowed in case of any unforeseen circumstances." Freezes scheduled without the
+  new fields render exactly as before.
+
 ### Changed (breaking)
 
 - **Config key renamed `sentinel` -> `statamic-sentinel`**, and the config file renamed
@@ -22,6 +33,9 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
     `config('statamic-sentinel...')`.
 
 ### Changed
+
+- The Content Freeze heads-up email's eyebrow label now reads **"Notification of Planned Work"**
+  instead of "Heads up".
 
 - **Branded for D3 Creative by default.** With no `SENTINEL_DEV_*` vars set, the widget,
   utility, and report emails now attribute to D3 Creative, link to the managed-maintenance

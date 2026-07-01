@@ -18,7 +18,12 @@ class FreezeController extends Controller
             (string) $request->input('notify_at', ''),
             (string) $request->input('freeze_at', ''),
             $recipients,
-            $this->actorId()
+            $this->actorId(),
+            [
+                'freeze_ends_at'          => (string) $request->input('freeze_ends_at', ''),
+                'expected_duration'       => $request->input('expected_duration'),
+                'expected_duration_unit'  => (string) $request->input('expected_duration_unit', 'minutes'),
+            ]
         );
 
         if (! $result['ok']) {

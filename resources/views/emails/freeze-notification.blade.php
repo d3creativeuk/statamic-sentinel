@@ -24,7 +24,7 @@
 
     {{-- Header --}}
     <div style="background:#0f172a; padding:24px 32px;">
-        <div style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.08em; color:#94a3b8; margin-bottom:6px;">Heads up</div>
+        <div style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.08em; color:#94a3b8; margin-bottom:6px;">Notification of Planned Work</div>
         <h1 style="font-size:20px; font-weight:600; color:#ffffff; margin:0; line-height:1.3;">A Statamic update is scheduled</h1>
         <div style="font-size:14px; font-weight:500; color:#cbd5e1; margin-top:4px;">
             {{-- Wrap in an explicit anchor so Gmail's auto-linker doesn't recolour the bare host to blue. --}}
@@ -47,6 +47,25 @@
                 </td>
             </tr>
         </table>
+
+        @php
+            $expectedText = $expectedText ?? null;
+            $windowText   = $windowText ?? null;
+            $timeframe = null;
+            if ($expectedText && $windowText) {
+                $timeframe = 'The update should only take up to ' . $expectedText . ', however a ' . $windowText . ' window has been allowed in case of any unforeseen circumstances.';
+            } elseif ($windowText) {
+                $timeframe = 'A maintenance window of up to ' . $windowText . ' has been allowed for this update.';
+            } elseif ($expectedText) {
+                $timeframe = 'The update should only take up to ' . $expectedText . '.';
+            }
+        @endphp
+
+        @if ($timeframe)
+            <p style="font-size:14px; color:#1e293b; margin:0 0 16px 0; line-height:1.55;">
+                {{ $timeframe }}
+            </p>
+        @endif
 
         <p style="font-size:14px; color:#1e293b; margin:0 0 12px 0; line-height:1.55;">
             <strong>What you need to do:</strong>

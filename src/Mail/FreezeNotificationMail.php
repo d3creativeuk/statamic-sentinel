@@ -30,6 +30,7 @@ class FreezeNotificationMail extends Mailable
         $service = app(ContentFreezeService::class);
 
         $freezeAtDisplay = $service->formatTime($this->freeze['freeze_at'] ?? null);
+        $extras          = $service->notificationExtras($this->freeze);
         $tz              = $service->timezone();
 
         $subjectDate = '-';
@@ -46,10 +47,13 @@ class FreezeNotificationMail extends Mailable
         return $this->subject($host . ' update scheduled for ' . $subjectDate)
                     ->view('statamic-sentinel::emails.freeze-notification')
                     ->with([
-                        'freeze'          => $this->freeze,
-                        'host'            => $host,
-                        'preheader'       => 'Statamic update scheduled. Banner will appear at ' . $freezeAtDisplay . '.',
-                        'freezeAtDisplay' => $freezeAtDisplay,
+                        'freeze'              => $this->freeze,
+                        'host'                => $host,
+                        'preheader'           => 'Statamic update scheduled. Banner will appear at ' . $freezeAtDisplay . '.',
+                        'freezeAtDisplay'     => $freezeAtDisplay,
+                        'freezeEndsAtDisplay' => $extras['ends_display'],
+                        'windowText'          => $extras['window_text'],
+                        'expectedText'        => $extras['expected_text'],
                     ]);
     }
 }
