@@ -25,7 +25,11 @@
     {{-- Header --}}
     <div style="background:#047857; padding:24px 32px;">
         <div style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.08em; color:#bbf7d0; margin-bottom:6px;">All clear</div>
-        <h1 style="font-size:20px; font-weight:600; color:#ffffff; margin:0; line-height:1.3;">Update complete on {{ $hostSentence ?? $host }}</h1>
+        <h1 style="font-size:20px; font-weight:600; color:#ffffff; margin:0; line-height:1.3;">Update complete</h1>
+        <div style="font-size:14px; font-weight:500; color:#d1fae5; margin-top:4px;">
+            {{-- Wrap in an explicit anchor so Gmail's auto-linker doesn't recolour the bare host to blue. --}}
+            <a href="{{ config('app.url') }}" style="color:#d1fae5; text-decoration:none;">{{ $hostSentence ?? $host }}</a>
+        </div>
     </div>
 
     {{-- Body --}}
