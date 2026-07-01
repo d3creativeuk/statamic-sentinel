@@ -28,7 +28,7 @@
         <h1 style="font-size:20px; font-weight:600; color:#ffffff; margin:0; line-height:1.3;">A Statamic update is scheduled</h1>
         <div style="font-size:14px; font-weight:500; color:#cbd5e1; margin-top:4px;">
             {{-- Wrap in an explicit anchor so Gmail's auto-linker doesn't recolour the bare host to blue. --}}
-            <a href="{{ config('app.url') }}" style="color:#cbd5e1; text-decoration:none;">{{ $host }}</a>
+            <a href="{{ config('app.url') }}" style="color:#cbd5e1; text-decoration:none;">{{ $hostSentence ?? $host }}</a>
         </div>
     </div>
 
