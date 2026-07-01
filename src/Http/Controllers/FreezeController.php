@@ -31,7 +31,7 @@ class FreezeController extends Controller
         }
 
         return response()->json([
-            'message' => 'Freeze scheduled.',
+            'message' => 'Update scheduled.',
             'freeze'  => $result['freeze'],
         ], 200);
     }
@@ -47,7 +47,7 @@ class FreezeController extends Controller
         }
 
         return response()->json([
-            'message' => 'Freeze marked as complete. All-clear email sent.',
+            'message' => 'Update marked as complete. All-clear email sent.',
             'freeze'  => $result['freeze'],
         ], 200);
     }
@@ -63,8 +63,8 @@ class FreezeController extends Controller
         }
 
         $message = ! empty($result['was_notified'])
-            ? 'Freeze cancelled. Recipients had already been emailed, so you may want to let them know separately.'
-            : 'Freeze cancelled.';
+            ? 'Update cancelled. Recipients had already been emailed, so you may want to let them know separately.'
+            : 'Update cancelled.';
 
         return response()->json([
             'message' => $message,

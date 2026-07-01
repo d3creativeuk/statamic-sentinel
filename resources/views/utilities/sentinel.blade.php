@@ -195,7 +195,7 @@
                     x-bind:style="tab === 'content-freeze'
                         ? 'cursor:pointer; background:transparent; border:0; border-bottom:2px solid #0f172a; padding:10px 14px; margin-bottom:-1px; margin-left:auto; font-size:13px; font-weight:600; font-family:inherit; color:#0f172a;'
                         : 'cursor:pointer; background:transparent; border:0; border-bottom:2px solid transparent; padding:10px 14px; margin-bottom:-1px; margin-left:auto; font-size:13px; font-weight:600; font-family:inherit; color:#64748b;'">
-                Content Freeze
+                Notify
                 @if (! empty($freeze_current) && ($freeze_current['status'] ?? null) === \D3Creative\Sentinel\Services\ContentFreezeService::STATUS_ACTIVE)
                     <span style="display:inline-block; margin-left:6px; padding:1px 7px; border-radius:9px; background:#fef3c7; color:#92400e; font-size:11px; font-weight:600;">Active</span>
                 @elseif (! empty($freeze_current))

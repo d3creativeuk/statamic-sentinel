@@ -34,6 +34,13 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Changed
 
+- **Content Freeze renamed to "Notify" in the CP.** The tab now reads **Notify**; the schedule
+  heading and button are **Schedule update**; the window fields are **Update starts** / **Update
+  ends**; the history list is **Past notifications**; and the active-state controls, confirm
+  dialogs, and toast/error messages no longer say "freeze". This is user-facing wording only -
+  routes, the `ContentFreezeService`, the `sentinel:freeze:*` commands, the `#content-freeze`
+  anchor, stored field keys, and config are unchanged.
+
 - Content Freeze copy tweaks: the CP banner and "Learn more" modal now read "Notification of
   planned work" (matching the email); on multisite the freeze emails list sites grammatically in
   prose (`a.test and b.test`, `a.test, b.test and c.test`) rather than a bare comma list; the

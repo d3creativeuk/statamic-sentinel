@@ -161,7 +161,7 @@ class ContentFreezeService
         }
 
         if (! $freezeAt->greaterThan($notifyAt)) {
-            return $this->failure('Freeze start must be after the notification time.');
+            return $this->failure('Update start must be after the notification time.');
         }
 
         // Optional freeze end + expected duration. Both are informational - used
@@ -173,7 +173,7 @@ class ContentFreezeService
             try {
                 $endsAt = Carbon::parse($endsAtRaw, $tz);
             } catch (\Throwable $e) {
-                return $this->failure('Could not parse the freeze end time. Use a format like 2026-05-13 12:00.');
+                return $this->failure('Could not parse the update end time. Use a format like 2026-05-13 12:00.');
             }
 
             if (! $endsAt->greaterThan($freezeAt)) {
@@ -213,7 +213,7 @@ class ContentFreezeService
         }
 
         if ($this->current() !== null) {
-            return $this->failure('A freeze is already scheduled or in progress. Mark it complete first.');
+            return $this->failure('An update is already scheduled or in progress. Mark it complete first.');
         }
 
         $freeze = [
@@ -233,7 +233,7 @@ class ContentFreezeService
         ];
 
         if (! $this->writeCurrent($freeze)) {
-            return $this->failure('Failed to save the freeze record. Check storage permissions.');
+            return $this->failure('Failed to save the update record. Check storage permissions.');
         }
 
         return ['ok' => true, 'freeze' => $freeze];
@@ -395,7 +395,7 @@ class ContentFreezeService
         $current = $this->current();
 
         if (! $current) {
-            return $this->failure('No freeze to complete.');
+            return $this->failure('No update to complete.');
         }
 
         $current['status']       = self::STATUS_COMPLETE;
@@ -445,23 +445,23 @@ class ContentFreezeService
         $current = $this->current();
 
         if (! $current) {
-            return $this->failure('No scheduled freeze to cancel.');
+            return $this->failure('No scheduled update to cancel.');
         }
 
         $status = $current['status'] ?? null;
 
         if ($status === self::STATUS_ACTIVE) {
-            return $this->failure('The freeze is already active. Mark it complete to send the all-clear email.');
+            return $this->failure('The update is already active. Mark it complete to send the all-clear email.');
         }
 
         if ($status !== self::STATUS_SCHEDULED && $status !== self::STATUS_NOTIFIED) {
-            return $this->failure('This freeze can no longer be cancelled.');
+            return $this->failure('This update can no longer be cancelled.');
         }
 
         try {
             Storage::disk('local')->delete(self::CURRENT_PATH);
         } catch (\Throwable $e) {
-            return $this->failure('Failed to remove the freeze record. Check storage permissions.');
+            return $this->failure('Failed to remove the update record. Check storage permissions.');
         }
 
         // Record the cancel timestamp so older completed freezes in history

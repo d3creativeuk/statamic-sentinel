@@ -117,7 +117,7 @@
             <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:16px 18px;">
 
                 <div style="display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; margin-bottom:12px;">
-                    <span style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; color:#64748b;">Schedule a content freeze</span>
+                    <span style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; color:#64748b;">Schedule update</span>
                     <span style="font-size:11px; color:#64748b; text-transform:none; letter-spacing:0;">{{ $tzHelper }}</span>
                 </div>
 
@@ -146,7 +146,7 @@
                     </div>
                 </label>
                 <label style="display:flex; flex-direction:column; gap:4px;">
-                    <span style="font-size:12px; font-weight:600; color:#0f172a;">Freeze starts at</span>
+                    <span style="font-size:12px; font-weight:600; color:#0f172a;">Update starts</span>
                     <div style="display:flex; gap:8px;">
                         <input type="date"
                                x-model="freezeDate"
@@ -166,7 +166,7 @@
 
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
                 <label style="display:flex; flex-direction:column; gap:4px;">
-                    <span style="font-size:12px; font-weight:600; color:#0f172a;">Freeze ends at</span>
+                    <span style="font-size:12px; font-weight:600; color:#0f172a;">Update ends</span>
                     <div style="display:flex; gap:8px;">
                         <input type="date"
                                x-model="freezeEndsDate"
@@ -216,7 +216,7 @@
                     </span>
                     <span x-show="!sending && state === 'success'" x-cloak>✓ Scheduled</span>
                     <span x-show="!sending && state === 'error'" x-cloak>✕ Failed</span>
-                    <span x-show="!sending && state === 'idle'">Schedule freeze</span>
+                    <span x-show="!sending && state === 'idle'">Schedule update</span>
                 </button>
                 <button type="button"
                         x-on:click="$dispatch('sentinel-preview-open', { url: previewHeadsUpUrl(), title: 'Notify email preview' })"
@@ -252,7 +252,7 @@
         $stateColor = $currentStatus === $statusActive ? '#92400e' : '#1e40af';
         $stateLabel = match ($currentStatus) {
             $statusActive    => 'Active',
-            $statusNotified  => 'Notified, waiting for freeze start',
+            $statusNotified  => 'Notified, waiting for update start',
             $statusScheduled => 'Scheduled',
             default          => ucfirst((string) $currentStatus),
         };
@@ -265,17 +265,17 @@
 
         @if ($currentStatus === $statusScheduled)
             <p style="font-size:14px; color:#0f172a; margin:0 0 8px 0; line-height:1.55;">
-                Notification will be sent at <strong style="font-variant-numeric:tabular-nums;">{{ $notifyAtDisplay }}</strong>. The freeze banner will appear at <strong style="font-variant-numeric:tabular-nums;">{{ $freezeAtDisplay }}</strong>.
+                Notification will be sent at <strong style="font-variant-numeric:tabular-nums;">{{ $notifyAtDisplay }}</strong>. The banner will appear at <strong style="font-variant-numeric:tabular-nums;">{{ $freezeAtDisplay }}</strong>.
             </p>
-            <p style="font-size:13px; color:#475569; margin:0; line-height:1.55;">{{ $recipientCount }} {{ \Illuminate\Support\Str::plural('recipient', $recipientCount) }} on this freeze.</p>
+            <p style="font-size:13px; color:#475569; margin:0; line-height:1.55;">{{ $recipientCount }} {{ \Illuminate\Support\Str::plural('recipient', $recipientCount) }} on this update.</p>
         @elseif ($currentStatus === $statusNotified)
             <p style="font-size:14px; color:#0f172a; margin:0 0 8px 0; line-height:1.55;">
-                Heads-up email sent at <strong style="font-variant-numeric:tabular-nums;">{{ $notifiedAtDisplay }}</strong>. The freeze banner switches on at <strong style="font-variant-numeric:tabular-nums;">{{ $freezeAtDisplay }}</strong>.
+                Notify email sent at <strong style="font-variant-numeric:tabular-nums;">{{ $notifiedAtDisplay }}</strong>. The banner switches on at <strong style="font-variant-numeric:tabular-nums;">{{ $freezeAtDisplay }}</strong>.
             </p>
             <p style="font-size:13px; color:#475569; margin:0; line-height:1.55;">Notified {{ $recipientCount }} {{ \Illuminate\Support\Str::plural('recipient', $recipientCount) }}.</p>
         @elseif ($currentStatus === $statusActive)
             <p style="font-size:14px; color:#0f172a; margin:0 0 12px 0; line-height:1.55;">
-                Freeze active since <strong style="font-variant-numeric:tabular-nums;">{{ $activatedDisplay }}</strong>. CP users are seeing the banner. Mark complete when the update is finished to send the all-clear email and clear the banner.
+                Active since <strong style="font-variant-numeric:tabular-nums;">{{ $activatedDisplay }}</strong>. CP users are seeing the banner. Mark complete when the update is finished to send the all-clear email and clear the banner.
             </p>
 
             <div x-data="{
@@ -335,11 +335,11 @@
         @if ($currentStatus === $statusScheduled || $currentStatus === $statusNotified)
             @php
                 $cancelConfirm = $currentStatus === $statusNotified
-                    ? 'Cancel this freeze? Recipients have already received the heads-up email, so you may want to email them about the cancellation separately.'
-                    : 'Cancel this scheduled freeze? No emails have been sent yet.';
+                    ? 'Cancel this update? Recipients have already received the notify email, so you may want to email them about the cancellation separately.'
+                    : 'Cancel this scheduled update? No emails have been sent yet.';
                 $completeConfirm = $currentStatus === $statusNotified
-                    ? 'End this freeze now? The all-clear email will be sent to recipients and the banner won\'t appear.'
-                    : 'End this freeze now? The all-clear email will be sent to recipients even though the heads-up email has not gone out yet.';
+                    ? 'End this update now? The all-clear email will be sent to recipients and the banner won\'t appear.'
+                    : 'End this update now? The all-clear email will be sent to recipients even though the notify email has not gone out yet.';
             @endphp
             <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:14px;">
                 <div x-data="{
@@ -378,7 +378,7 @@
                             x-bind:disabled="sending"
                             x-on:click="$dispatch('sentinel-confirm-open', {
                                 message: @js($cancelConfirm),
-                                confirmLabel: 'Cancel freeze',
+                                confirmLabel: 'Cancel',
                                 onConfirm: () => submit()
                             })"
                             style="font-size:13px; font-weight:600; color:#b91c1c; background:#fff; border:1px solid #fecaca; padding:7px 14px; border-radius:6px; cursor:pointer; font-family:inherit;">
@@ -388,7 +388,7 @@
                         </span>
                         <span x-show="!sending && state === 'success'" x-cloak>✓ Cancelled</span>
                         <span x-show="!sending && state === 'error'" x-cloak>✕ Failed</span>
-                        <span x-show="!sending && state === 'idle'">Cancel freeze</span>
+                        <span x-show="!sending && state === 'idle'">Cancel</span>
                     </button>
                     <div x-show="message" x-cloak
                          x-bind:style="{ color: state === 'success' ? '#047857' : '#b91c1c' }"
@@ -473,7 +473,7 @@
 {{-- History table --}}
 @if (! empty($freeze_history))
     <div style="margin-top:20px;">
-        <div style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; color:#64748b; margin-bottom:10px;">Past freezes</div>
+        <div style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; color:#64748b; margin-bottom:10px;">Past notifications</div>
         <div style="border:1px solid #e2e8f0; border-radius:8px; overflow:hidden;">
             <div style="overflow-x:auto;">
                 <table style="width:100%; border-collapse:collapse; font-size:13px;">
@@ -499,7 +499,7 @@
                                             'url'     => cp_route('d3-sentinel.freezes.actions.run'),
                                             'handle'  => 'delete_freeze_history',
                                             'id'      => $entry['id'],
-                                            'confirm' => 'Delete this past freeze record? The audit row will be removed permanently.',
+                                            'confirm' => 'Delete this past notification record? The audit row will be removed permanently.',
                                         ])
                                     @endif
                                 </td>
