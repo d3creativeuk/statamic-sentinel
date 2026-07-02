@@ -385,7 +385,9 @@
                                     $border   = $i < count($rows) - 1 ? 'border-bottom:1px solid #e2e8f0;' : '';
                                     $pad      = $isChild ? 'padding:6px 12px 6px 32px;' : 'padding:6px 12px;';
                                     $cveLabel = fn($v) => $v['cve'] ?? $v['id'] ?? 'Advisory';
-                                    // Grey pill by default; red only for the severities worth alarm.
+                                    // High/Critical advisories are highlighted red; the rest stay grey.
+                                    $codeColour = fn($sev) => in_array(strtoupper((string) $sev), ['CRITICAL', 'HIGH']) ? '#dc2626' : '#64748b';
+                                    // Fallback pill (pre-CVE snapshots) follows the same red-or-grey rule.
                                     $pillColour = fn($sev) => in_array(strtoupper((string) $sev), ['CRITICAL', 'HIGH']) ? '#dc2626' : '#475569';
                                 @endphp
                                 @if($hasVulns)
@@ -395,10 +397,7 @@
                                             <span style="font-size:13px; font-weight:{{ $isChild ? 500 : 600 }}; color:{{ $isChild ? '#334155' : '#0f172a' }};">{{ $pkg['name'] }}</span>
                                         </span>
                                         @foreach($vulns as $vi => $v)
-                                            <span style="display:inline-flex; align-items:center; white-space:nowrap;">
-                                                <a href="{{ $v['url'] }}" target="_blank" rel="noopener" style="font-size:11px; font-weight:500; color:#64748b; text-decoration:none; margin-right:5px; font-variant-numeric:tabular-nums;">{{ $cveLabel($v) }}</a>
-                                                <span style="display:inline-flex; align-items:center; font-size:11px; font-weight:500; padding:1px 7px; border-radius:4px; color:{{ $pillColour($v['severity']) }}; background:#fff; border:1px solid {{ $pillColour($v['severity']) }};">{{ ucfirst(strtolower($v['severity'])) }}</span>{{ $vi < count($vulns) - 1 ? ',' : '' }}
-                                            </span>
+                                            <span style="white-space:nowrap;"><a href="{{ $v['url'] }}" target="_blank" rel="noopener" style="font-size:12px; font-weight:500; color:{{ $codeColour($v['severity']) }}; text-decoration:none; font-variant-numeric:tabular-nums;">{{ $cveLabel($v) }}</a>{{ $vi < count($vulns) - 1 ? ',' : '' }}</span>
                                         @endforeach
                                     </div>
                                 @else
