@@ -219,13 +219,17 @@
             ['label' => 'PHP',      'version' => $php['version'],      'latest' => $php['latest']      ?? null, 'status' => $php['status'],      'security' => false],
         ] as $card)
             @php
-                $outdated   = ! empty($card['latest']) && version_compare($card['version'], $card['latest'], '<');
-                $isEol      = $card['status'] === 'eol';
-                $pillColour = ($card['security'] || $isEol) ? '#dc2626' : ($outdated ? '#0f172a' : '#047857');
+                $outdated = ! empty($card['latest']) && version_compare($card['version'], $card['latest'], '<');
+                $isEol    = $card['status'] === 'eol';
+                // Only alert states (security / EOL) keep the red pill; a plain
+                // outdated or up-to-date version renders as bare coloured text.
+                $isAlert    = $card['security'] || $isEol;
+                $pillColour = $isAlert ? '#dc2626' : ($outdated ? '#0f172a' : '#047857');
+                $pillChrome = $isAlert ? 'padding:1px 7px; border-radius:4px; background:#fff; border:1px solid ' . $pillColour . ';' : '';
             @endphp
             <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; padding:8px 14px; {{ ! $loop->last ? 'border-bottom:1px solid #e2e8f0;' : '' }}">
                 <span style="font-size:13px; font-weight:600; color:#0f172a;">{{ $card['label'] }}</span>
-                <span style="display:inline-flex; align-items:center; font-size:11px; font-weight:500; padding:1px 7px; border-radius:4px; color:{{ $pillColour }}; background:#fff; border:1px solid {{ $pillColour }}; flex-shrink:0; font-variant-numeric:tabular-nums;">
+                <span style="display:inline-flex; align-items:center; font-size:11px; font-weight:500; color:{{ $pillColour }}; flex-shrink:0; font-variant-numeric:tabular-nums; {{ $pillChrome }}">
                     @if($card['security'] && $outdated)
                         Security: {{ $card['version'] }} → {{ $card['latest'] }}
                     @elseif($outdated)
