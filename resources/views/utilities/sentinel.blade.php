@@ -19,7 +19,7 @@
 
 @section('content')
 
-<style>.d3-sentinel-cve:hover{text-decoration:underline;}</style>
+<style>.d3-sentinel-cve{text-decoration:none;}.d3-sentinel-cve:hover{text-decoration:underline;}</style>
 
 <div x-data x-init="$nextTick(() => window.scrollTo({ top: 0, behavior: 'instant' }))" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; color: #1e293b;">
 
@@ -399,7 +399,7 @@
                                             <span style="font-size:13px; font-weight:{{ $isChild ? 500 : 600 }}; color:{{ $isChild ? '#334155' : '#0f172a' }};">{{ $pkg['name'] }}</span>
                                         </span>
                                         @foreach($vulns as $vi => $v)
-                                            <span style="white-space:nowrap;"><a href="{{ $v['url'] }}" target="_blank" rel="noopener" class="d3-sentinel-cve" style="font-size:12px; font-weight:500; color:{{ $codeColour($v['severity']) }}; text-decoration:none; text-transform:uppercase; font-variant-numeric:tabular-nums;">{{ $cveLabel($v) }}</a>{{ $vi < count($vulns) - 1 ? ',' : '' }}</span>
+                                            <span style="white-space:nowrap;"><a href="{{ $v['url'] }}" target="_blank" rel="noopener" class="d3-sentinel-cve" style="font-size:12px; font-weight:500; color:{{ $codeColour($v['severity']) }}; text-transform:uppercase; font-variant-numeric:tabular-nums;">{{ $cveLabel($v) }}</a>{{ $vi < count($vulns) - 1 ? ',' : '' }}</span>
                                         @endforeach
                                     </div>
                                 @else
