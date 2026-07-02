@@ -374,53 +374,32 @@
                         <div x-show="open" x-cloak style="margin-top:8px; background:#fff; border:1px solid #e2e8f0; border-radius:6px; overflow:hidden;">
                             @foreach($rows as $i => $row)
                                 @php
-                                    $pkg        = $row['pkg'];
-                                    $isChild    = $row['kind'] === 'child';
-                                    $isHeader   = $row['kind'] === 'header';
-                                    $vulns      = $pkg['vulns'] ?? [];
-                                    $count      = $pkg['count'] ?? 0;
-                                    // Only multi-issue packages expand; single-issue rows show the
-                                    // CVE inline. Both need the per-advisory `vulns` list, absent on
-                                    // pre-CVE snapshots (those fall through to the plain row).
-                                    $expandable = ! $isHeader && $count >= 2 && ! empty($vulns);
-                                    $single     = ! $isHeader && $count === 1 && ! empty($vulns);
-                                    $sevColour  = $isHeader ? null : $severityColour($pkg['highest']);
-                                    $border     = $i < count($rows) - 1 ? 'border-bottom:1px solid #e2e8f0;' : '';
-                                    $pad        = $isChild ? 'padding:6px 12px 6px 32px;' : 'padding:6px 12px;';
-                                    $issuePad   = $isChild ? 'padding:5px 12px 5px 52px;' : 'padding:5px 12px 5px 32px;';
-                                    $cveLabel   = fn($v) => $v['cve'] ?? $v['id'] ?? 'Advisory';
+                                    $pkg      = $row['pkg'];
+                                    $isChild  = $row['kind'] === 'child';
+                                    $isHeader = $row['kind'] === 'header';
+                                    $vulns    = $pkg['vulns'] ?? [];
+                                    $count    = $pkg['count'] ?? 0;
+                                    // Every advisory lists inline on the package row; pre-CVE snapshots
+                                    // lack `vulns` and fall through to the plain count+pill row.
+                                    $hasVulns = ! $isHeader && ! empty($vulns);
+                                    $border   = $i < count($rows) - 1 ? 'border-bottom:1px solid #e2e8f0;' : '';
+                                    $pad      = $isChild ? 'padding:6px 12px 6px 32px;' : 'padding:6px 12px;';
+                                    $cveLabel = fn($v) => $v['cve'] ?? $v['id'] ?? 'Advisory';
+                                    // Grey pill by default; red only for the severities worth alarm.
+                                    $pillColour = fn($sev) => in_array(strtoupper((string) $sev), ['CRITICAL', 'HIGH']) ? '#dc2626' : '#475569';
                                 @endphp
-                                @if($expandable)
-                                    <div x-data="{ open: false }" style="{{ $border }}">
-                                        <div role="button" tabindex="0" x-bind:aria-expanded="open" aria-label="Toggle issues for {{ $pkg['name'] }}"
-                                             x-on:click="open = !open" x-on:keydown.enter.prevent="open = !open" x-on:keydown.space.prevent="open = !open"
-                                             style="display:flex; align-items:center; justify-content:space-between; gap:12px; {{ $pad }} cursor:pointer;">
-                                            @include('statamic-sentinel::utilities._security_row_label')
-                                            <span style="display:inline-flex; align-items:center; gap:8px; flex-shrink:0;">
-                                                <span style="font-size:11px; font-weight:500; color:#64748b;">{{ $count }} issues</span>
-                                                <span style="display:inline-flex; align-items:center; font-size:11px; font-weight:500; padding:1px 7px; border-radius:4px; color:{{ $sevColour }}; background:#fff; border:1px solid {{ $sevColour }};">{{ ucfirst(strtolower($pkg['highest'])) }}</span>
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="#94a3b8" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" x-bind:style="{ transform: open ? 'rotate(180deg)' : null }" style="display:block; flex-shrink:0; transition:transform 0.15s ease;"><path d="m4 6 4 4 4-4"></path></svg>
+                                @if($hasVulns)
+                                    <div style="display:flex; align-items:center; flex-wrap:wrap; gap:5px 8px; {{ $pad }} {{ $border }}">
+                                        <span style="display:inline-flex; align-items:center; gap:6px; margin-right:2px; min-width:0;">
+                                            @if($isChild)<span style="color:#94a3b8; font-size:13px; line-height:1; flex-shrink:0;">&#8627;</span>@endif
+                                            <span style="font-size:13px; font-weight:{{ $isChild ? 500 : 600 }}; color:{{ $isChild ? '#334155' : '#0f172a' }};">{{ $pkg['name'] }}</span>
+                                        </span>
+                                        @foreach($vulns as $vi => $v)
+                                            <span style="display:inline-flex; align-items:center; white-space:nowrap;">
+                                                <a href="{{ $v['url'] }}" target="_blank" rel="noopener" style="font-size:11px; font-weight:500; color:#64748b; text-decoration:none; margin-right:5px; font-variant-numeric:tabular-nums;">{{ $cveLabel($v) }}</a>
+                                                <span style="display:inline-flex; align-items:center; font-size:11px; font-weight:500; padding:1px 7px; border-radius:4px; color:{{ $pillColour($v['severity']) }}; background:#fff; border:1px solid {{ $pillColour($v['severity']) }};">{{ ucfirst(strtolower($v['severity'])) }}</span>{{ $vi < count($vulns) - 1 ? ',' : '' }}
                                             </span>
-                                        </div>
-                                        <div x-show="open" x-cloak>
-                                            @foreach($vulns as $v)
-                                                <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; {{ $issuePad }} border-top:1px solid #f1f5f9;">
-                                                    <div style="display:flex; align-items:center; gap:8px; min-width:0;">
-                                                        <span style="font-size:12px; font-weight:500; color:#334155; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ $pkg['name'] }}</span>
-                                                        <a href="{{ $v['url'] }}" target="_blank" rel="noopener" style="font-size:11px; font-weight:500; color:#64748b; text-decoration:none; white-space:nowrap; flex-shrink:0; font-variant-numeric:tabular-nums;">{{ $cveLabel($v) }}</a>
-                                                    </div>
-                                                    <span style="display:inline-flex; align-items:center; font-size:11px; font-weight:500; padding:1px 7px; border-radius:4px; color:{{ $severityColour($v['severity']) }}; background:#fff; border:1px solid {{ $severityColour($v['severity']) }}; flex-shrink:0;">{{ ucfirst(strtolower($v['severity'])) }}</span>
-                                                </div>
-                                            @endforeach
-                                        </div>
-                                    </div>
-                                @elseif($single)
-                                    <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; {{ $pad }} {{ $border }}">
-                                        <div style="display:flex; align-items:center; gap:8px; min-width:0;">
-                                            @include('statamic-sentinel::utilities._security_row_label')
-                                            <a href="{{ $vulns[0]['url'] }}" target="_blank" rel="noopener" style="font-size:11px; font-weight:500; color:#64748b; text-decoration:none; white-space:nowrap; flex-shrink:0; font-variant-numeric:tabular-nums;">{{ $cveLabel($vulns[0]) }}</a>
-                                        </div>
-                                        <span style="display:inline-flex; align-items:center; font-size:11px; font-weight:500; padding:1px 7px; border-radius:4px; color:{{ $sevColour }}; background:#fff; border:1px solid {{ $sevColour }}; flex-shrink:0;">{{ ucfirst(strtolower($pkg['highest'])) }}</span>
+                                        @endforeach
                                     </div>
                                 @else
                                     <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; {{ $pad }} {{ $border }}">
@@ -430,7 +409,7 @@
                                                 @if ($count > 1)
                                                     <span style="font-size:11px; font-weight:500; color:#64748b;">{{ $count }} issues</span>
                                                 @endif
-                                                <span style="display:inline-flex; align-items:center; font-size:11px; font-weight:500; padding:1px 7px; border-radius:4px; color:{{ $sevColour }}; background:#fff; border:1px solid {{ $sevColour }};">{{ ucfirst(strtolower($pkg['highest'])) }}</span>
+                                                <span style="display:inline-flex; align-items:center; font-size:11px; font-weight:500; padding:1px 7px; border-radius:4px; color:{{ $pillColour($pkg['highest']) }}; background:#fff; border:1px solid {{ $pillColour($pkg['highest']) }};">{{ ucfirst(strtolower($pkg['highest'])) }}</span>
                                             </span>
                                         @endunless
                                     </div>
