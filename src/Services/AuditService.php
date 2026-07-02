@@ -413,6 +413,11 @@ class AuditService
             'npm'
         );
 
+        // Attribute each vulnerable transitive package to the direct dependency
+        // that pulls it in, so the utility can nest it under that parent.
+        $composer = $this->annotateDependencyParents($composer, base_path('composer.lock'), 'composer');
+        $npm      = $this->annotateDependencyParents($npm, base_path('package-lock.json'), 'npm');
+
         $result = [
             'statamic'   => $this->statamicInfo($composer, $platform['statamic']),
             'laravel'    => $this->laravelInfo($composer, $platform['laravel']),
@@ -545,6 +550,190 @@ class AuditService
         $ecosystem['outdated']['vendor_security_updates_total']   = $vendorOnly;
 
         return $ecosystem;
+    }
+
+    // -------------------------------------------------------------------------
+    // Dependency parent attribution
+    //
+    // The Security Issues list scans the whole dependency tree, so it surfaces
+    // vulnerable transitive (indirect) packages the user can't `require`
+    // directly. For each such package we resolve the direct dependency that
+    // pulls it in, so the utility can nest it one level under that parent and
+    // make the relationship visible. Stored as
+    // `dependency_parents = ['indirect/pkg' => 'direct/parent', ...]`.
+    // -------------------------------------------------------------------------
+
+    protected function annotateDependencyParents(array $ecosystem, string $lockPath, string $type): array
+    {
+        $ecosystem['dependency_parents'] = [];
+
+        try {
+            $byPackage  = $ecosystem['by_package']
+                ?? self::groupBySeverity($ecosystem['severities'] ?? []);
+            $vulnerable = array_column($byPackage, 'name');
+            $direct     = array_keys($ecosystem['installed'] ?? []);
+
+            if (empty($vulnerable) || empty($direct)) {
+                return $ecosystem;
+            }
+
+            $lock = $this->readJsonFile($lockPath);
+
+            if ($lock === null) {
+                return $ecosystem;
+            }
+
+            $graph = $type === 'composer'
+                ? $this->composerRequireGraph($lock)
+                : $this->npmRequireGraph($lock);
+
+            if (empty($graph)) {
+                return $ecosystem;
+            }
+
+            $ecosystem['dependency_parents'] = $this->attributeIndirectToDirect(
+                $vulnerable, $direct, $graph
+            );
+        } catch (\Throwable $e) {
+            $ecosystem['dependency_parents'] = [];
+        }
+
+        return $ecosystem;
+    }
+
+    /**
+     * `name => [required names]` from composer.lock. Requires are filtered to
+     * packages that actually exist in the lock, dropping `php`, `ext-*` and
+     * other platform/meta requirements that aren't real packages.
+     */
+    protected function composerRequireGraph(array $lock): array
+    {
+        $all = array_merge($lock['packages'] ?? [], $lock['packages-dev'] ?? []);
+
+        $known = [];
+        foreach ($all as $pkg) {
+            if (! empty($pkg['name'])) {
+                $known[$pkg['name']] = true;
+            }
+        }
+
+        $graph = [];
+        foreach ($all as $pkg) {
+            $name = $pkg['name'] ?? null;
+            if ($name === null) continue;
+
+            $graph[$name] = array_values(array_filter(
+                array_keys($pkg['require'] ?? []),
+                fn($dep) => isset($known[$dep])
+            ));
+        }
+
+        return $graph;
+    }
+
+    /**
+     * `name => [dependency names]` from package-lock.json. Supports lock v2/v3
+     * (`packages` keyed by node_modules path) and v1 (nested `dependencies`
+     * with `requires`). A package appearing at several paths has its edges
+     * merged.
+     */
+    protected function npmRequireGraph(array $lock): array
+    {
+        $graph = [];
+
+        if (! empty($lock['packages'])) {
+            foreach ($lock['packages'] as $path => $data) {
+                if ($path === '') continue; // root project
+
+                // Strip every nesting prefix so "a/node_modules/@scope/b" -> "@scope/b".
+                $name = preg_replace('#^.*node_modules/#', '', $path);
+
+                $deps = array_merge(
+                    array_keys($data['dependencies'] ?? []),
+                    array_keys($data['optionalDependencies'] ?? [])
+                );
+
+                $graph[$name] = array_values(array_unique(
+                    array_merge($graph[$name] ?? [], $deps)
+                ));
+            }
+        } elseif (! empty($lock['dependencies'])) {
+            $walk = function ($deps) use (&$walk, &$graph) {
+                foreach ($deps as $name => $data) {
+                    $graph[$name] = array_values(array_unique(array_merge(
+                        $graph[$name] ?? [],
+                        array_keys($data['requires'] ?? [])
+                    )));
+
+                    if (! empty($data['dependencies'])) {
+                        $walk($data['dependencies']);
+                    }
+                }
+            };
+            $walk($lock['dependencies']);
+        }
+
+        return $graph;
+    }
+
+    /**
+     * Map each vulnerable *indirect* package to the direct dependency that
+     * pulls it in. Runs a BFS from every direct dependency; a target is
+     * attributed to the direct dep with the shortest path to it, tie-broken
+     * alphabetically so the result is deterministic. Targets unreachable from
+     * any direct dependency are left out (they render top-level).
+     */
+    protected function attributeIndirectToDirect(array $vulnerable, array $direct, array $graph): array
+    {
+        $directSet = array_flip($direct);
+
+        $targets = array_flip(array_filter(
+            $vulnerable,
+            fn($name) => ! isset($directSet[$name])
+        ));
+
+        if (empty($targets)) {
+            return [];
+        }
+
+        // best[child] = ['parent' => name, 'dist' => int]
+        $best = [];
+
+        foreach ($direct as $root) {
+            if (! isset($graph[$root])) continue;
+
+            $visited = [$root => true];
+            $queue   = [[$root, 0]];
+
+            while ($queue) {
+                [$node, $dist] = array_shift($queue);
+
+                foreach ($graph[$node] ?? [] as $dep) {
+                    if (isset($visited[$dep])) continue;
+                    $visited[$dep] = true;
+
+                    $childDist = $dist + 1;
+
+                    if (isset($targets[$dep])) {
+                        $current = $best[$dep] ?? null;
+                        if ($current === null
+                            || $childDist < $current['dist']
+                            || ($childDist === $current['dist'] && strcmp($root, $current['parent']) < 0)) {
+                            $best[$dep] = ['parent' => $root, 'dist' => $childDist];
+                        }
+                    }
+
+                    $queue[] = [$dep, $childDist];
+                }
+            }
+        }
+
+        $map = [];
+        foreach ($best as $child => $info) {
+            $map[$child] = $info['parent'];
+        }
+
+        return $map;
     }
 
     // -------------------------------------------------------------------------

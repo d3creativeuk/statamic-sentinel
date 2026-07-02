@@ -316,6 +316,53 @@
                         // fall back to live grouping for snapshots cached before that field existed.
                         $byPackage = $d['by_package']
                             ?? \D3Creative\Sentinel\Services\AuditService::groupBySeverity($d['severities'] ?? []);
+
+                        // dependency_parents maps a vulnerable transitive package to the
+                        // direct dependency that pulls it in (empty on pre-nesting snapshots).
+                        $parents = $d['dependency_parents'] ?? [];
+
+                        // Group children under their parent; everything else is top-level,
+                        // preserving the severity-sorted order of by_package.
+                        $childrenOf = [];
+                        foreach ($byPackage as $pkg) {
+                            $parent = $parents[$pkg['name']] ?? null;
+                            if ($parent !== null && $parent !== $pkg['name']) {
+                                $childrenOf[$parent][] = $pkg;
+                            }
+                        }
+
+                        $childNames = [];
+                        foreach ($childrenOf as $kids) {
+                            foreach ($kids as $k) { $childNames[$k['name']] = true; }
+                        }
+
+                        $vulnByName = [];
+                        foreach ($byPackage as $pkg) { $vulnByName[$pkg['name']] = true; }
+
+                        $topLevel = [];
+                        foreach ($byPackage as $pkg) {
+                            if (! isset($childNames[$pkg['name']])) {
+                                $topLevel[] = $pkg;
+                            }
+                        }
+
+                        // A resolved parent that isn't itself vulnerable needs a header-only
+                        // row so its vulnerable children have something to nest under.
+                        foreach (array_keys($childrenOf) as $parentName) {
+                            if (! isset($vulnByName[$parentName]) && ! isset($childNames[$parentName])) {
+                                $topLevel[] = ['name' => $parentName, 'highest' => null, 'count' => 0, '_header_only' => true];
+                            }
+                        }
+
+                        // Flatten to an ordered row list (parent then its children) so the
+                        // last-row border is trivial to compute across the nested groups.
+                        $rows = [];
+                        foreach ($topLevel as $pkg) {
+                            $rows[] = ['kind' => ! empty($pkg['_header_only']) ? 'header' : 'parent', 'pkg' => $pkg];
+                            foreach ($childrenOf[$pkg['name']] ?? [] as $child) {
+                                $rows[] = ['kind' => 'child', 'pkg' => $child];
+                            }
+                        }
                     @endphp
                     <div x-data="{ open: false }">
                         <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
@@ -326,22 +373,36 @@
                             </button>
                         </div>
                         <div x-show="open" x-cloak style="margin-top:8px; background:#fff; border:1px solid #e2e8f0; border-radius:6px; overflow:hidden;">
-                            @foreach($byPackage as $i => $pkg)
+                            @foreach($rows as $i => $row)
                                 @php
-                                    $sevColour  = $severityColour($pkg['highest']);
-                                    $lockColour = '#94a3b8';
+                                    $pkg     = $row['pkg'];
+                                    $isChild = $row['kind'] === 'child';
+                                    $isHeader = $row['kind'] === 'header';
+                                    $sevColour = $isHeader ? null : $severityColour($pkg['highest']);
+                                    $border  = $i < count($rows) - 1 ? 'border-bottom:1px solid #e2e8f0;' : '';
+                                    $pad     = $isChild ? 'padding:6px 12px 6px 32px;' : 'padding:6px 12px;';
                                 @endphp
-                                <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; padding:6px 12px; {{ $i < count($byPackage) - 1 ? 'border-bottom:1px solid #e2e8f0;' : '' }}">
+                                <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; {{ $pad }} {{ $border }}">
                                     <div style="display:flex; align-items:center; gap:6px; min-width:0;">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 20 20" fill="{{ $lockColour }}" style="flex-shrink:0;"><title>Security issue</title><path fill-rule="evenodd" d="M10 1a4.5 4.5 0 0 0-4.5 4.5V9H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-.5V5.5A4.5 4.5 0 0 0 10 1zm3 8V5.5a3 3 0 1 0-6 0V9h6z" clip-rule="evenodd"></path></svg>
-                                        <div style="font-size:13px; font-weight:600; color:#0f172a; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ $pkg['name'] }}</div>
-                                    </div>
-                                    <span style="display:inline-flex; align-items:center; gap:8px; flex-shrink:0;">
-                                        @if ($pkg['count'] > 1)
-                                            <span style="font-size:11px; font-weight:500; color:#64748b;">{{ $pkg['count'] }} issues</span>
+                                        @if($isChild)
+                                            <span style="color:#94a3b8; flex-shrink:0; font-size:13px; line-height:1;">&#8627;</span>
+                                            <div style="font-size:13px; font-weight:500; color:#334155; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ $pkg['name'] }}</div>
+                                        @elseif($isHeader)
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 20 20" fill="#94a3b8" style="flex-shrink:0;"><title>Parent dependency</title><path d="M10.362 1.093a.75.75 0 0 0-.724 0L2.523 5.018 10 9.143l7.477-4.125-7.115-3.925ZM18 6.443l-7.25 4v8.25l6.862-3.786A.75.75 0 0 0 18 14.25V6.443ZM9.25 18.693v-8.25l-7.25-4v7.807a.75.75 0 0 0 .388.657l6.862 3.786Z"></path></svg>
+                                            <div style="font-size:13px; font-weight:600; color:#475569; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ $pkg['name'] }}</div>
+                                        @else
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 20 20" fill="#94a3b8" style="flex-shrink:0;"><title>Security issue</title><path fill-rule="evenodd" d="M10 1a4.5 4.5 0 0 0-4.5 4.5V9H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-.5V5.5A4.5 4.5 0 0 0 10 1zm3 8V5.5a3 3 0 1 0-6 0V9h6z" clip-rule="evenodd"></path></svg>
+                                            <div style="font-size:13px; font-weight:600; color:#0f172a; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ $pkg['name'] }}</div>
                                         @endif
-                                        <span style="display:inline-flex; align-items:center; font-size:11px; font-weight:500; padding:1px 7px; border-radius:4px; color:{{ $sevColour }}; background:#fff; border:1px solid {{ $sevColour }};">{{ ucfirst(strtolower($pkg['highest'])) }}</span>
-                                    </span>
+                                    </div>
+                                    @unless($isHeader)
+                                        <span style="display:inline-flex; align-items:center; gap:8px; flex-shrink:0;">
+                                            @if ($pkg['count'] > 1)
+                                                <span style="font-size:11px; font-weight:500; color:#64748b;">{{ $pkg['count'] }} issues</span>
+                                            @endif
+                                            <span style="display:inline-flex; align-items:center; font-size:11px; font-weight:500; padding:1px 7px; border-radius:4px; color:{{ $sevColour }}; background:#fff; border:1px solid {{ $sevColour }};">{{ ucfirst(strtolower($pkg['highest'])) }}</span>
+                                        </span>
+                                    @endunless
                                 </div>
                             @endforeach
                         </div>
