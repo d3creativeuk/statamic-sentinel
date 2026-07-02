@@ -405,26 +405,24 @@
                                         </div>
                                         <div x-show="open" x-cloak>
                                             @foreach($vulns as $v)
-                                                <a href="{{ $v['url'] }}" target="_blank" rel="noopener"
-                                                   style="display:flex; align-items:center; justify-content:space-between; gap:12px; {{ $issuePad }} border-top:1px solid #f1f5f9; text-decoration:none;">
-                                                    <span style="display:flex; align-items:center; gap:6px; min-width:0;">
-                                                        <span style="color:#cbd5e1; flex-shrink:0;">&middot;</span>
-                                                        <span style="font-size:12px; font-weight:500; color:#1d4ed8; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-variant-numeric:tabular-nums;">{{ $cveLabel($v) }}</span>
-                                                    </span>
+                                                <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; {{ $issuePad }} border-top:1px solid #f1f5f9;">
+                                                    <div style="display:flex; align-items:center; gap:8px; min-width:0;">
+                                                        <span style="font-size:12px; font-weight:500; color:#334155; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ $pkg['name'] }}</span>
+                                                        <a href="{{ $v['url'] }}" target="_blank" rel="noopener" style="font-size:11px; font-weight:500; color:#64748b; text-decoration:none; white-space:nowrap; flex-shrink:0; font-variant-numeric:tabular-nums;">{{ $cveLabel($v) }}</a>
+                                                    </div>
                                                     <span style="display:inline-flex; align-items:center; font-size:11px; font-weight:500; padding:1px 7px; border-radius:4px; color:{{ $severityColour($v['severity']) }}; background:#fff; border:1px solid {{ $severityColour($v['severity']) }}; flex-shrink:0;">{{ ucfirst(strtolower($v['severity'])) }}</span>
-                                                </a>
+                                                </div>
                                             @endforeach
                                         </div>
                                     </div>
                                 @elseif($single)
-                                    <a href="{{ $vulns[0]['url'] }}" target="_blank" rel="noopener"
-                                       style="display:flex; align-items:center; justify-content:space-between; gap:12px; {{ $pad }} {{ $border }} text-decoration:none;">
-                                        @include('statamic-sentinel::utilities._security_row_label')
-                                        <span style="display:inline-flex; align-items:center; gap:8px; flex-shrink:0;">
-                                            <span style="font-size:11px; font-weight:500; color:#1d4ed8; font-variant-numeric:tabular-nums;">{{ $cveLabel($vulns[0]) }}</span>
-                                            <span style="display:inline-flex; align-items:center; font-size:11px; font-weight:500; padding:1px 7px; border-radius:4px; color:{{ $sevColour }}; background:#fff; border:1px solid {{ $sevColour }};">{{ ucfirst(strtolower($pkg['highest'])) }}</span>
-                                        </span>
-                                    </a>
+                                    <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; {{ $pad }} {{ $border }}">
+                                        <div style="display:flex; align-items:center; gap:8px; min-width:0;">
+                                            @include('statamic-sentinel::utilities._security_row_label')
+                                            <a href="{{ $vulns[0]['url'] }}" target="_blank" rel="noopener" style="font-size:11px; font-weight:500; color:#64748b; text-decoration:none; white-space:nowrap; flex-shrink:0; font-variant-numeric:tabular-nums;">{{ $cveLabel($vulns[0]) }}</a>
+                                        </div>
+                                        <span style="display:inline-flex; align-items:center; font-size:11px; font-weight:500; padding:1px 7px; border-radius:4px; color:{{ $sevColour }}; background:#fff; border:1px solid {{ $sevColour }}; flex-shrink:0;">{{ ucfirst(strtolower($pkg['highest'])) }}</span>
+                                    </div>
                                 @else
                                     <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; {{ $pad }} {{ $border }}">
                                         @include('statamic-sentinel::utilities._security_row_label')
