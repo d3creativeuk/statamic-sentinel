@@ -19,9 +19,10 @@
 
 @section('content')
 
-<style>.d3-sentinel-cve{text-decoration:none;}.d3-sentinel-cve:hover{text-decoration:underline;}</style>
-
-<div x-data x-init="$nextTick(() => window.scrollTo({ top: 0, behavior: 'instant' }))" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; color: #1e293b;">
+{{-- Statamic 6 extracts this view's content out of the CP layout, which drops a
+     static <style> tag, so inject the CVE hover rule into <head> (same pattern as
+     the spinner keyframes). --}}
+<div x-data x-init="if (! document.getElementById('d3-sentinel-cve-style')) { var s = document.createElement('style'); s.id = 'd3-sentinel-cve-style'; s.textContent = '.d3-sentinel-cve{text-decoration:none} .d3-sentinel-cve:hover{text-decoration:underline}'; document.head.appendChild(s); } $nextTick(() => window.scrollTo({ top: 0, behavior: 'instant' }))" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; color: #1e293b;">
 
 @if (! $audit)
 
