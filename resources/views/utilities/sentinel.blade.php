@@ -400,7 +400,7 @@
                                             <span style="font-size:13px; font-weight:{{ $isChild ? 500 : 600 }}; color:{{ $isChild ? '#334155' : '#0f172a' }};">{{ $pkg['name'] }}</span>
                                         </span>
                                         @foreach($vulns as $vi => $v)
-                                            <span style="white-space:nowrap;"><a href="{{ $v['url'] }}" target="_blank" rel="noopener" class="d3-sentinel-cve" style="font-size:12px; font-weight:500; color:{{ $codeColour($v['severity']) }}; text-transform:uppercase; font-variant-numeric:tabular-nums;">{{ $cveLabel($v) }}</a>{{ $vi < count($vulns) - 1 ? ',' : '' }}</span>
+                                            <span style="white-space:nowrap;"><a href="{{ $v['url'] }}" target="_blank" rel="noopener" class="d3-sentinel-cve" style="font-size:11px; font-weight:500; color:{{ $codeColour($v['severity']) }}; text-transform:uppercase; font-variant-numeric:tabular-nums;">{{ $cveLabel($v) }}</a>{{ $vi < count($vulns) - 1 ? ',' : '' }}</span>
                                         @endforeach
                                     </div>
                                 @else
