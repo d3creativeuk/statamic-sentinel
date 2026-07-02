@@ -221,7 +221,7 @@
             @php
                 $outdated   = ! empty($card['latest']) && version_compare($card['version'], $card['latest'], '<');
                 $isEol      = $card['status'] === 'eol';
-                $pillColour = ($card['security'] || $isEol) ? '#dc2626' : ($outdated ? '#1d4ed8' : '#047857');
+                $pillColour = ($card['security'] || $isEol) ? '#dc2626' : ($outdated ? '#0f172a' : '#047857');
             @endphp
             <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; padding:8px 14px; {{ ! $loop->last ? 'border-bottom:1px solid #e2e8f0;' : '' }}">
                 <span style="font-size:13px; font-weight:600; color:#0f172a;">{{ $card['label'] }}</span>
@@ -429,7 +429,7 @@
             <div x-data="{ open: false }" style="border-top:1px solid #e2e8f0; padding-top:12px;">
                 <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
                     <div style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; color:#64748b;">Updates Available</div>
-                    <button type="button" x-on:click="open = !open" aria-label="Toggle updates list" style="display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:500; padding:3px 10px; border-radius:5px; color:#1d4ed8; background:#fff; border:1px solid #1d4ed8; cursor:pointer; font-family:inherit;">
+                    <button type="button" x-on:click="open = !open" aria-label="Toggle updates list" style="display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:500; padding:3px 10px; border-radius:5px; color:#0f172a; background:#fff; border:1px solid #0f172a; cursor:pointer; font-family:inherit;">
                         <span>{{ count($packages) }} {{ count($packages) === 1 ? 'update' : 'updates' }} available</span>
                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" x-bind:style="{ transform: open ? 'rotate(180deg)' : null }" style="display:block; flex-shrink:0; transition:transform 0.15s ease;">
                             <path d="m4 6 4 4 4-4" />
