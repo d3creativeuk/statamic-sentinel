@@ -1029,6 +1029,16 @@ class AuditService
                 }
             }
 
+            // OSV `id` is usually a GHSA; the CVE (when one exists) lives in
+            // `aliases`. Surface it so the utility can label each issue by CVE.
+            $cve = null;
+            foreach ($vuln['aliases'] ?? [] as $alias) {
+                if (is_string($alias) && str_starts_with($alias, 'CVE-')) {
+                    $cve = $alias;
+                    break;
+                }
+            }
+
             $severities[$severity]['count']++;
 
             if (! in_array($pair['package'], $severities[$severity]['packages'])) {
@@ -1037,6 +1047,8 @@ class AuditService
 
             $severities[$severity]['vulns'][] = [
                 'id'            => $pair['id'],
+                'cve'           => $cve,
+                'severity'      => $severity,
                 'package'       => $pair['package'],
                 'summary'       => $vuln['summary'] ?? 'No description available.',
                 'fix_available' => $fixAvailable,
@@ -1072,12 +1084,21 @@ class AuditService
             foreach ($severities[$sev]['vulns'] ?? [] as $v) {
                 $name = $v['package'];
                 if (! isset($byPackage[$name])) {
-                    $byPackage[$name] = ['name' => $name, 'highest' => $sev, 'count' => 0];
+                    $byPackage[$name] = ['name' => $name, 'highest' => $sev, 'count' => 0, 'vulns' => []];
                 }
                 if ($rank[$sev] > $rank[$byPackage[$name]['highest']]) {
                     $byPackage[$name]['highest'] = $sev;
                 }
                 $byPackage[$name]['count']++;
+
+                // Per-advisory detail so the utility can drill into a package's
+                // issues. Iterating severities high-to-low keeps this ordered.
+                $byPackage[$name]['vulns'][] = [
+                    'id'       => $v['id'] ?? null,
+                    'cve'      => $v['cve'] ?? null,
+                    'severity' => $v['severity'] ?? $sev,
+                    'url'      => $v['url'] ?? null,
+                ];
             }
         }
 

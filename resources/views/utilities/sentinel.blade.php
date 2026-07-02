@@ -375,35 +375,69 @@
                         <div x-show="open" x-cloak style="margin-top:8px; background:#fff; border:1px solid #e2e8f0; border-radius:6px; overflow:hidden;">
                             @foreach($rows as $i => $row)
                                 @php
-                                    $pkg     = $row['pkg'];
-                                    $isChild = $row['kind'] === 'child';
-                                    $isHeader = $row['kind'] === 'header';
-                                    $sevColour = $isHeader ? null : $severityColour($pkg['highest']);
-                                    $border  = $i < count($rows) - 1 ? 'border-bottom:1px solid #e2e8f0;' : '';
-                                    $pad     = $isChild ? 'padding:6px 12px 6px 32px;' : 'padding:6px 12px;';
+                                    $pkg        = $row['pkg'];
+                                    $isChild    = $row['kind'] === 'child';
+                                    $isHeader   = $row['kind'] === 'header';
+                                    $vulns      = $pkg['vulns'] ?? [];
+                                    $count      = $pkg['count'] ?? 0;
+                                    // Only multi-issue packages expand; single-issue rows show the
+                                    // CVE inline. Both need the per-advisory `vulns` list, absent on
+                                    // pre-CVE snapshots (those fall through to the plain row).
+                                    $expandable = ! $isHeader && $count >= 2 && ! empty($vulns);
+                                    $single     = ! $isHeader && $count === 1 && ! empty($vulns);
+                                    $sevColour  = $isHeader ? null : $severityColour($pkg['highest']);
+                                    $border     = $i < count($rows) - 1 ? 'border-bottom:1px solid #e2e8f0;' : '';
+                                    $pad        = $isChild ? 'padding:6px 12px 6px 32px;' : 'padding:6px 12px;';
+                                    $issuePad   = $isChild ? 'padding:5px 12px 5px 52px;' : 'padding:5px 12px 5px 32px;';
+                                    $cveLabel   = fn($v) => $v['cve'] ?? $v['id'] ?? 'Advisory';
                                 @endphp
-                                <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; {{ $pad }} {{ $border }}">
-                                    <div style="display:flex; align-items:center; gap:6px; min-width:0;">
-                                        @if($isChild)
-                                            <span style="color:#94a3b8; flex-shrink:0; font-size:13px; line-height:1;">&#8627;</span>
-                                            <div style="font-size:13px; font-weight:500; color:#334155; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ $pkg['name'] }}</div>
-                                        @elseif($isHeader)
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 20 20" fill="#94a3b8" style="flex-shrink:0;"><title>Parent dependency</title><path d="M10.362 1.093a.75.75 0 0 0-.724 0L2.523 5.018 10 9.143l7.477-4.125-7.115-3.925ZM18 6.443l-7.25 4v8.25l6.862-3.786A.75.75 0 0 0 18 14.25V6.443ZM9.25 18.693v-8.25l-7.25-4v7.807a.75.75 0 0 0 .388.657l6.862 3.786Z"></path></svg>
-                                            <div style="font-size:13px; font-weight:600; color:#475569; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ $pkg['name'] }}</div>
-                                        @else
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 20 20" fill="#94a3b8" style="flex-shrink:0;"><title>Security issue</title><path fill-rule="evenodd" d="M10 1a4.5 4.5 0 0 0-4.5 4.5V9H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-.5V5.5A4.5 4.5 0 0 0 10 1zm3 8V5.5a3 3 0 1 0-6 0V9h6z" clip-rule="evenodd"></path></svg>
-                                            <div style="font-size:13px; font-weight:600; color:#0f172a; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ $pkg['name'] }}</div>
-                                        @endif
+                                @if($expandable)
+                                    <div x-data="{ open: false }" style="{{ $border }}">
+                                        <div role="button" tabindex="0" x-bind:aria-expanded="open" aria-label="Toggle issues for {{ $pkg['name'] }}"
+                                             x-on:click="open = !open" x-on:keydown.enter.prevent="open = !open" x-on:keydown.space.prevent="open = !open"
+                                             style="display:flex; align-items:center; justify-content:space-between; gap:12px; {{ $pad }} cursor:pointer;">
+                                            @include('statamic-sentinel::utilities._security_row_label')
+                                            <span style="display:inline-flex; align-items:center; gap:8px; flex-shrink:0;">
+                                                <span style="font-size:11px; font-weight:500; color:#64748b;">{{ $count }} issues</span>
+                                                <span style="display:inline-flex; align-items:center; font-size:11px; font-weight:500; padding:1px 7px; border-radius:4px; color:{{ $sevColour }}; background:#fff; border:1px solid {{ $sevColour }};">{{ ucfirst(strtolower($pkg['highest'])) }}</span>
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="#94a3b8" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" x-bind:style="{ transform: open ? 'rotate(180deg)' : null }" style="display:block; flex-shrink:0; transition:transform 0.15s ease;"><path d="m4 6 4 4 4-4"></path></svg>
+                                            </span>
+                                        </div>
+                                        <div x-show="open" x-cloak>
+                                            @foreach($vulns as $v)
+                                                <a href="{{ $v['url'] }}" target="_blank" rel="noopener"
+                                                   style="display:flex; align-items:center; justify-content:space-between; gap:12px; {{ $issuePad }} border-top:1px solid #f1f5f9; text-decoration:none;">
+                                                    <span style="display:flex; align-items:center; gap:6px; min-width:0;">
+                                                        <span style="color:#cbd5e1; flex-shrink:0;">&middot;</span>
+                                                        <span style="font-size:12px; font-weight:500; color:#1d4ed8; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-variant-numeric:tabular-nums;">{{ $cveLabel($v) }}</span>
+                                                    </span>
+                                                    <span style="display:inline-flex; align-items:center; font-size:11px; font-weight:500; padding:1px 7px; border-radius:4px; color:{{ $severityColour($v['severity']) }}; background:#fff; border:1px solid {{ $severityColour($v['severity']) }}; flex-shrink:0;">{{ ucfirst(strtolower($v['severity'])) }}</span>
+                                                </a>
+                                            @endforeach
+                                        </div>
                                     </div>
-                                    @unless($isHeader)
+                                @elseif($single)
+                                    <a href="{{ $vulns[0]['url'] }}" target="_blank" rel="noopener"
+                                       style="display:flex; align-items:center; justify-content:space-between; gap:12px; {{ $pad }} {{ $border }} text-decoration:none;">
+                                        @include('statamic-sentinel::utilities._security_row_label')
                                         <span style="display:inline-flex; align-items:center; gap:8px; flex-shrink:0;">
-                                            @if ($pkg['count'] > 1)
-                                                <span style="font-size:11px; font-weight:500; color:#64748b;">{{ $pkg['count'] }} issues</span>
-                                            @endif
+                                            <span style="font-size:11px; font-weight:500; color:#1d4ed8; font-variant-numeric:tabular-nums;">{{ $cveLabel($vulns[0]) }}</span>
                                             <span style="display:inline-flex; align-items:center; font-size:11px; font-weight:500; padding:1px 7px; border-radius:4px; color:{{ $sevColour }}; background:#fff; border:1px solid {{ $sevColour }};">{{ ucfirst(strtolower($pkg['highest'])) }}</span>
                                         </span>
-                                    @endunless
-                                </div>
+                                    </a>
+                                @else
+                                    <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; {{ $pad }} {{ $border }}">
+                                        @include('statamic-sentinel::utilities._security_row_label')
+                                        @unless($isHeader)
+                                            <span style="display:inline-flex; align-items:center; gap:8px; flex-shrink:0;">
+                                                @if ($count > 1)
+                                                    <span style="font-size:11px; font-weight:500; color:#64748b;">{{ $count }} issues</span>
+                                                @endif
+                                                <span style="display:inline-flex; align-items:center; font-size:11px; font-weight:500; padding:1px 7px; border-radius:4px; color:{{ $sevColour }}; background:#fff; border:1px solid {{ $sevColour }};">{{ ucfirst(strtolower($pkg['highest'])) }}</span>
+                                            </span>
+                                        @endunless
+                                    </div>
+                                @endif
                             @endforeach
                         </div>
                     </div>
