@@ -196,6 +196,7 @@ class AuditService
         if ($isLatest) {
             $info['security_update_available'] = false;
             $info['security_source']           = null;
+            $info['releases_behind']           = 0;
         }
 
         return $info;
@@ -215,6 +216,7 @@ class AuditService
 
         if ($isLatest) {
             $info['security_update_available'] = false;
+            $info['releases_behind']           = 0;
         }
 
         return $info;
@@ -233,6 +235,10 @@ class AuditService
 
         $info['version']   = $live;
         $info['is_latest'] = $latest && version_compare($live, $latest, '>=');
+
+        if ($info['is_latest']) {
+            $info['releases_behind'] = 0;
+        }
 
         return $info;
     }
@@ -336,7 +342,7 @@ class AuditService
     // Laravel
     // -------------------------------------------------------------------------
 
-    protected function laravelInfo(array $composerAudit, ?string $latest): array
+    protected function laravelInfo(array $composerAudit, ?string $latest, ?int $behind = null): array
     {
         $current = app()->version();
         $major   = (int) explode('.', $current)[0];
@@ -382,6 +388,7 @@ class AuditService
             'version'                   => $current,
             'latest'                    => $latest,
             'is_latest'                 => $isLatest,
+            'releases_behind'           => $isLatest ? 0 : $behind,
             'status'                    => $status,
             'label'                     => $labels[$status],
             'security_update_available' => ! $isLatest && $this->hasSecurityUpdateFor('laravel/framework', $composerAudit),
@@ -419,8 +426,8 @@ class AuditService
         $npm      = $this->annotateDependencyParents($npm, base_path('package-lock.json'), 'npm');
 
         $result = [
-            'statamic'   => $this->statamicInfo($composer, $platform['statamic']),
-            'laravel'    => $this->laravelInfo($composer, $platform['laravel']),
+            'statamic'   => $this->statamicInfo($composer, $platform['statamic'], $platform['statamic_behind'] ?? null),
+            'laravel'    => $this->laravelInfo($composer, $platform['laravel'], $platform['laravel_behind'] ?? null),
             'php'        => $this->phpInfo($platform['php']),
             'composer'   => $composer,
             'npm'        => $npm,
@@ -458,6 +465,9 @@ class AuditService
             'statamic' => $this->extractLatestStableVersion($responses['statamic'] ?? null, 'statamic/cms'),
             'laravel'  => $this->extractLatestStableVersion($responses['laravel']  ?? null, 'laravel/framework'),
             'php'      => $this->extractEolBranches($responses['php'] ?? null),
+            // How many stable releases the installed version is behind the newest.
+            'statamic_behind' => $this->countStableReleasesNewerThan($responses['statamic'] ?? null, 'statamic/cms', \Statamic\Statamic::version()),
+            'laravel_behind'  => $this->countStableReleasesNewerThan($responses['laravel']  ?? null, 'laravel/framework', app()->version()),
         ];
     }
 
@@ -494,6 +504,31 @@ class AuditService
         }
 
         return null;
+    }
+
+    /**
+     * Count stable (X.Y.Z) releases in a Packagist p2 response that are newer
+     * than the installed version - i.e. how many releases behind it is. Counts
+     * across majors (up to the newest), so the number can exceed what the core
+     * updater shows (which is scoped to the composer constraint).
+     */
+    protected function countStableReleasesNewerThan($response, string $packageKey, ?string $current): int
+    {
+        if (! $this->isOkResponse($response) || ! $current) {
+            return 0;
+        }
+
+        $current = ltrim($current, 'v');
+        $count   = 0;
+
+        foreach ($response->json("packages.$packageKey", []) as $version) {
+            $v = ltrim($version['version'] ?? '', 'v');
+            if (preg_match('/^[0-9]+\.[0-9]+\.[0-9]+$/', $v) && version_compare($v, $current, '>')) {
+                $count++;
+            }
+        }
+
+        return $count;
     }
 
     /**
@@ -740,7 +775,7 @@ class AuditService
     // Statamic
     // -------------------------------------------------------------------------
 
-    protected function statamicInfo(array $composerAudit, ?string $latest): array
+    protected function statamicInfo(array $composerAudit, ?string $latest, ?int $behind = null): array
     {
         $current  = \Statamic\Statamic::version();
         $isLatest = $latest && version_compare($current, $latest, '>=');
@@ -753,6 +788,7 @@ class AuditService
             'current'                   => $current,
             'latest'                    => $latest,
             'is_latest'                 => $isLatest,
+            'releases_behind'           => $isLatest ? 0 : $behind,
             'status'                    => $isLatest ? 'ok' : ($latest ? 'outdated' : 'unknown'),
             'security_update_available' => ! $isLatest && ($osvFlag || $vendorFlag),
             'security_source'           => $this->resolveSecuritySource($osvFlag, $vendorFlag),
@@ -806,6 +842,7 @@ class AuditService
         // "up to date" even when 8.5.x has shipped - matches how Statamic and
         // Laravel surface cross-major upgrades.
         $latest = $this->latestStablePhpVersion($branches);
+        $behind = $this->phpReleasesBehind($branches, $full);
 
         if ($branches) {
             try {
@@ -828,11 +865,12 @@ class AuditService
                     }
 
                     return [
-                        'version'   => $full,
-                        'latest'    => $latest,
-                        'is_latest' => $latest && version_compare($full, $latest, '>='),
-                        'status'    => $status,
-                        'label'     => $label,
+                        'version'         => $full,
+                        'latest'          => $latest,
+                        'is_latest'       => $latest && version_compare($full, $latest, '>='),
+                        'releases_behind' => $behind,
+                        'status'          => $status,
+                        'label'           => $label,
                     ];
                 }
             } catch (\Throwable $e) {
@@ -841,12 +879,71 @@ class AuditService
         }
 
         return [
-            'version'   => $full,
-            'latest'    => $latest,
-            'is_latest' => $latest && version_compare($full, $latest, '>='),
-            'status'    => 'unknown',
-            'label'     => 'Unknown',
+            'version'         => $full,
+            'latest'          => $latest,
+            'is_latest'       => $latest && version_compare($full, $latest, '>='),
+            'releases_behind' => $behind,
+            'status'          => 'unknown',
+            'label'           => 'Unknown',
         ];
+    }
+
+    /**
+     * Best-effort count of PHP releases the installed version is behind the
+     * newest. endoflife.date gives only each branch's latest patch (no full
+     * release list), so we derive counts from patch numbers: the remaining
+     * patches in the installed branch, plus every release (`latest patch + 1`,
+     * since patches start at .0) in each newer branch up to the latest. Exact
+     * for the common same-branch case (8.5.5 -> 8.5.7 = 2), approximate across
+     * branches. Skips future/unreleased branches like latestStablePhpVersion().
+     */
+    protected function phpReleasesBehind(?array $branches, string $current): int
+    {
+        if (! $branches) return 0;
+
+        $current  = ltrim($current, 'v');
+        $curParts = explode('.', $current);
+        if (count($curParts) < 3) return 0;
+
+        $curMinor = $curParts[0] . '.' . $curParts[1];
+        $curPatch = (int) $curParts[2];
+
+        $latest = $this->latestStablePhpVersion($branches);
+        if (! $latest) return 0;
+
+        $today  = now();
+        $behind = 0;
+
+        foreach ($branches as $branch) {
+            $cycle   = $branch['cycle']  ?? null;   // e.g. "8.5"
+            $bLatest = $branch['latest'] ?? null;   // e.g. "8.5.7"
+
+            if (! $cycle || ! $bLatest || ! preg_match('/^[0-9]+\.[0-9]+\.[0-9]+$/', $bLatest)) {
+                continue;
+            }
+
+            if (! empty($branch['releaseDate'])) {
+                try {
+                    if (\Carbon\Carbon::parse($branch['releaseDate'])->gt($today)) continue;
+                } catch (\Throwable $e) {
+                    // Bad date - fall through and consider the branch.
+                }
+            }
+
+            // Only branches from the installed one up to the latest count.
+            if (version_compare($cycle . '.0', $curMinor . '.0', '<')) continue;
+            if (version_compare($bLatest, $latest, '>')) continue;
+
+            $bLatestPatch = (int) explode('.', $bLatest)[2];
+
+            if ($cycle === $curMinor) {
+                $behind += max(0, $bLatestPatch - $curPatch);
+            } else {
+                $behind += $bLatestPatch + 1;
+            }
+        }
+
+        return $behind;
     }
 
     /**

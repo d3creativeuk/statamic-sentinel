@@ -214,9 +214,9 @@
     {{-- Version list: Statamic / Laravel / PHP --}}
     <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden; margin-bottom:12px;">
         @foreach ([
-            ['label' => 'Statamic', 'version' => $statamic['current'], 'latest' => $statamic['latest'] ?? null, 'status' => $statamic['status'], 'security' => $statamic['security_update_available'] ?? false],
-            ['label' => 'Laravel',  'version' => $laravel['version'],  'latest' => $laravel['latest']  ?? null, 'status' => $laravel['status'],  'security' => $laravel['security_update_available']  ?? false],
-            ['label' => 'PHP',      'version' => $php['version'],      'latest' => $php['latest']      ?? null, 'status' => $php['status'],      'security' => false],
+            ['label' => 'Statamic', 'version' => $statamic['current'], 'latest' => $statamic['latest'] ?? null, 'status' => $statamic['status'], 'security' => $statamic['security_update_available'] ?? false, 'behind' => $statamic['releases_behind'] ?? null],
+            ['label' => 'Laravel',  'version' => $laravel['version'],  'latest' => $laravel['latest']  ?? null, 'status' => $laravel['status'],  'security' => $laravel['security_update_available']  ?? false, 'behind' => $laravel['releases_behind'] ?? null],
+            ['label' => 'PHP',      'version' => $php['version'],      'latest' => $php['latest']      ?? null, 'status' => $php['status'],      'security' => false, 'behind' => $php['releases_behind'] ?? null],
         ] as $card)
             @php
                 $outdated = ! empty($card['latest']) && version_compare($card['version'], $card['latest'], '<');
@@ -226,9 +226,15 @@
                 $isAlert    = $card['security'] || $isEol;
                 $pillColour = $isAlert ? '#dc2626' : ($outdated ? '#0f172a' : '#047857');
                 $pillChrome = $isAlert ? 'padding:1px 7px; border-radius:4px; background:#fff; border:1px solid ' . $pillColour . ';' : '';
+                $behind     = (int) ($card['behind'] ?? 0);
             @endphp
             <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; padding:8px 14px; {{ ! $loop->last ? 'border-bottom:1px solid #e2e8f0;' : '' }}">
-                <span style="font-size:13px; font-weight:600; color:#0f172a;">{{ $card['label'] }}</span>
+                <span style="display:inline-flex; align-items:baseline; gap:8px; min-width:0;">
+                    <span style="font-size:13px; font-weight:600; color:#0f172a;">{{ $card['label'] }}</span>
+                    @if($behind > 0)
+                        <span style="font-size:11px; font-weight:500; color:#64748b;">{{ $behind }} behind</span>
+                    @endif
+                </span>
                 <span style="display:inline-flex; align-items:center; font-size:11px; font-weight:500; color:{{ $pillColour }}; flex-shrink:0; font-variant-numeric:tabular-nums; {{ $pillChrome }}">
                     @if($card['security'] && $outdated)
                         Security: {{ $card['version'] }} → {{ $card['latest'] }}
