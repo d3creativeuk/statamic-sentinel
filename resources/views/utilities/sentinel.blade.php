@@ -442,7 +442,7 @@
                             <div style="display:flex; align-items:center; gap:6px; min-width:0;">
                                 <div style="font-size:13px; font-weight:600; color:#0f172a; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ $pkg['name'] }}</div>
                             </div>
-                            <span style="display:inline-flex; align-items:center; font-size:11px; font-weight:500; padding:1px 7px; border-radius:4px; color:#1d4ed8; background:#fff; border:1px solid #1d4ed8; flex-shrink:0; font-variant-numeric:tabular-nums;">{{ $pkg['current'] }} → {{ $pkg['latest'] }}</span>
+                            <span style="font-size:11px; font-weight:500; color:#1d4ed8; flex-shrink:0; font-variant-numeric:tabular-nums;">{{ $pkg['current'] }} → {{ $pkg['latest'] }}</span>
                         </div>
                     @endforeach
                 </div>
