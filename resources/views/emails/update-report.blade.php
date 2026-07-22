@@ -148,29 +148,6 @@
             </table>
         @endforeach
 
-        {{-- Statamic license row (only when licensing is available) --}}
-        @if (($license['to'] ?? null) !== null || ($license['from'] ?? null) !== null)
-            @php
-                $licenseBadgeColour = $licenseAlert ? '#ef4444' : ($licenseChanged ? '#10b981' : '#94a3b8');
-            @endphp
-            <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden; margin-bottom:10px;">
-                <tr>
-                    <td class="sentinel-row-cell" style="padding:12px 16px; vertical-align:middle;">
-                        <div style="font-size:13px; font-weight:600; color:#0f172a;">Statamic License</div>
-                        <div style="font-size:12px; color:#475569; margin-top:3px;">The commercial licence for your CMS</div>
-                    </td>
-                    <td class="sentinel-row-cell sentinel-row-meta" style="padding:12px 16px; font-size:12px; color:#475569; font-variant-numeric:tabular-nums; vertical-align:middle; text-align:right; white-space:nowrap;">
-                        @if ($licenseChanged)
-                            {{ $licenseLabel($license['from']) }} <span style="color:#94a3b8;">→</span> <strong style="color:#0f172a;">{{ $licenseLabel($license['to']) }}</strong>
-                        @else
-                            {{ $licenseLabel($license['to'] ?? $license['from']) }}
-                        @endif
-                        <span class="sentinel-pill" style="display:inline-block; margin-left:10px; font-size:11px; font-weight:600; padding:2px 8px; border-radius:4px; color:{{ $licenseBadgeColour }}; border:1px solid {{ $licenseBadgeColour }}; background:#fff;">{{ $licenseChanged ? 'Changed' : 'No change' }}</span>
-                    </td>
-                </tr>
-            </table>
-        @endif
-
         {{-- Composer section --}}
         @php $cs = $ecosystemSummary($composer); @endphp
         <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden; margin-bottom:10px;">
@@ -288,6 +265,31 @@
                                 @endif
                             </div>
                         @endif
+                    </td>
+                </tr>
+            </table>
+        @endif
+
+        {{-- Statamic licence: shown on its own below the packages, since it's
+             not a dependency like the rows above. A rule separates the two. --}}
+        @if (($license['to'] ?? null) !== null || ($license['from'] ?? null) !== null)
+            @php
+                $licenseBadgeColour = $licenseAlert ? '#ef4444' : ($licenseChanged ? '#10b981' : '#94a3b8');
+            @endphp
+            <div style="border-top:1px solid #e2e8f0; margin:18px 0;"></div>
+            <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden; margin-bottom:10px;">
+                <tr>
+                    <td class="sentinel-row-cell" style="padding:12px 16px; vertical-align:middle;">
+                        <div style="font-size:13px; font-weight:600; color:#0f172a;">Statamic License</div>
+                        <div style="font-size:12px; color:#475569; margin-top:3px;">The commercial licence for your CMS</div>
+                    </td>
+                    <td class="sentinel-row-cell sentinel-row-meta" style="padding:12px 16px; font-size:12px; color:#475569; font-variant-numeric:tabular-nums; vertical-align:middle; text-align:right; white-space:nowrap;">
+                        @if ($licenseChanged)
+                            {{ $licenseLabel($license['from']) }} <span style="color:#94a3b8;">→</span> <strong style="color:#0f172a;">{{ $licenseLabel($license['to']) }}</strong>
+                        @else
+                            {{ $licenseLabel($license['to'] ?? $license['from']) }}
+                        @endif
+                        <span class="sentinel-pill" style="display:inline-block; margin-left:10px; font-size:11px; font-weight:600; padding:2px 8px; border-radius:4px; color:{{ $licenseBadgeColour }}; border:1px solid {{ $licenseBadgeColour }}; background:#fff;">{{ $licenseChanged ? 'Changed' : 'No change' }}</span>
                     </td>
                 </tr>
             </table>
