@@ -483,20 +483,14 @@
                                 <div style="font-size:13px; font-weight:600; color:#0f172a; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ $pkg['name'] }}</div>
                                 @if(!empty($pkg['blocked']))
                                     <span title="Held by npm's min-release-age guard until {{ $pkg['blocked_until'] }}"
-                                          style="display:inline-flex; align-items:center; gap:4px; flex-shrink:0; font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:0.04em; padding:1px 6px; border-radius:4px; color:#92400e; background:#fef3c7; border:1px solid #fcd34d; cursor:default;">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-                                            <rect x="3" y="7" width="10" height="7" rx="1.5" />
-                                            <path d="M5 7V5a3 3 0 0 1 6 0v2" />
-                                        </svg>
-                                        Blocked
-                                    </span>
+                                          style="display:inline-flex; align-items:center; flex-shrink:0; font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:0.04em; padding:1px 7px; border-radius:4px; color:#64748b; background:#fff; border:1px solid #cbd5e1; cursor:default;">Blocked</span>
                                 @endif
                             </div>
-                            <span style="display:flex; flex-direction:column; align-items:flex-end; gap:1px; flex-shrink:0;">
-                                <span style="font-size:11px; font-weight:500; color:#0f172a; font-variant-numeric:tabular-nums;">{{ $pkg['current'] }} → {{ $pkg['latest'] }}</span>
+                            <span style="display:inline-flex; align-items:center; gap:8px; flex-shrink:0;">
                                 @if(!empty($pkg['blocked']))
-                                    <span style="font-size:10px; color:#b45309; font-variant-numeric:tabular-nums;">available in {{ $pkg['available_in_days'] }} {{ $pkg['available_in_days'] === 1 ? 'day' : 'days' }}</span>
+                                    <span style="font-size:11px; color:#64748b; font-variant-numeric:tabular-nums;">available in {{ $pkg['available_in_days'] }} {{ $pkg['available_in_days'] === 1 ? 'day' : 'days' }}</span>
                                 @endif
+                                <span style="font-size:11px; font-weight:500; color:#0f172a; font-variant-numeric:tabular-nums;">{{ $pkg['current'] }} → {{ $pkg['latest'] }}</span>
                             </span>
                         </div>
                     @endforeach
