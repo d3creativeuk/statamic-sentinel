@@ -429,6 +429,7 @@ class AuditService
             'statamic'   => $this->statamicInfo($composer, $platform['statamic'], $platform['statamic_behind'] ?? null),
             'laravel'    => $this->laravelInfo($composer, $platform['laravel'], $platform['laravel_behind'] ?? null),
             'php'        => $this->phpInfo($platform['php']),
+            'license'    => $this->licenseInfo(),
             'composer'   => $composer,
             'npm'        => $npm,
             'audited_at' => now()->format('j M Y, H:i'),
@@ -808,6 +809,98 @@ class AuditService
         if ($osv)            return 'osv';
         if ($vendor)         return 'vendor';
         return null;
+    }
+
+    // -------------------------------------------------------------------------
+    // Statamic license
+    //
+    // Statamic models "renewal" as a version range, not a calendar date: when a
+    // Pro license no longer covers the running version, the Outpost response
+    // carries reason `outside_license_range` and StatamicLicense::needsRenewal()
+    // returns true. There is no renewal-date field in the API - the actual date
+    // lives in the customer's statamic.com account, which SiteLicense::url()
+    // deep-links to. We read from Statamic's own cached Outpost response
+    // (Cache::store('outpost'), 1-hour TTL); reading is normally offline, but a
+    // cold cache can trigger one POST to outpost.statamic.com - acceptable here
+    // since refresh() is already the network path. Everything is guarded so the
+    // addon degrades to an "unsupported" shell on installs where the licensing
+    // classes/methods are absent (very old Statamic) or licensing isn't booted.
+    //
+    // The derived `status` collapses the flags into one value the views switch on:
+    //   free    - site isn't running Statamic Pro (nothing to license)
+    //   trial   - Pro on a test/development domain (Statamic's own trial mode)
+    //   unknown - could not verify (Outpost request failed / offline)
+    //   renewal - license valid, but doesn't cover the installed version
+    //   invalid - license invalid for another reason
+    //   ok       - licensed and covering the installed version
+    // -------------------------------------------------------------------------
+
+    protected function licenseInfo(): array
+    {
+        if (! class_exists(\Statamic\Licensing\LicenseManager::class) || ! class_exists(\Statamic\Statamic::class)) {
+            return ['supported' => false];
+        }
+
+        try {
+            $manager  = app(\Statamic\Licensing\LicenseManager::class);
+            $statamic = $manager->statamic();
+
+            $pro           = \Statamic\Statamic::pro();
+            $requestFailed = method_exists($manager, 'requestFailed')   ? (bool) $manager->requestFailed()   : false;
+            $onTestDomain  = method_exists($manager, 'isOnTestDomain')  ? (bool) $manager->isOnTestDomain()  : false;
+            $needsRenewal  = method_exists($statamic, 'needsRenewal')   ? (bool) $statamic->needsRenewal()   : false;
+            $valid         = method_exists($manager, 'statamicValid')   ? (bool) $manager->statamicValid()
+                           : (method_exists($manager, 'valid')         ? (bool) $manager->valid() : true);
+
+            // The licensed version window (versions, not dates). Present only
+            // when the license explicitly falls outside its covered range.
+            $range = null;
+            $raw   = method_exists($manager, 'response') ? $manager->response('statamic', []) : [];
+            if (is_array($raw) && ($raw['reason'] ?? null) === 'outside_license_range' && ! empty($raw['range'])) {
+                $range = ['start' => $raw['range'][0] ?? null, 'end' => $raw['range'][1] ?? null];
+            }
+
+            // Deep link to the statamic.com account page, where the real
+            // renewal date lives. Guarded - SiteLicense may be absent.
+            $accountUrl = null;
+            try {
+                $site = method_exists($manager, 'site') ? $manager->site() : null;
+                if ($site && method_exists($site, 'url')) {
+                    $accountUrl = $site->url();
+                }
+            } catch (\Throwable $e) {
+                // No account URL - not fatal.
+            }
+
+            if (! $pro) {
+                $status = 'free';
+            } elseif ($onTestDomain) {
+                $status = 'trial';
+            } elseif ($requestFailed) {
+                $status = 'unknown';
+            } elseif ($needsRenewal) {
+                $status = 'renewal';
+            } elseif (! $valid) {
+                $status = 'invalid';
+            } else {
+                $status = 'ok';
+            }
+
+            return [
+                'supported'      => true,
+                'status'         => $status,
+                'pro'            => $pro,
+                'valid'          => $valid,
+                'needs_renewal'  => $needsRenewal,
+                'request_failed' => $requestFailed,
+                'on_test_domain' => $onTestDomain,
+                'version'        => \Statamic\Statamic::version(),
+                'range'          => $range,
+                'account_url'    => $accountUrl,
+            ];
+        } catch (\Throwable $e) {
+            return ['supported' => false];
+        }
     }
 
     /**

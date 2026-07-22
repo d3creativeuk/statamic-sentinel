@@ -28,6 +28,14 @@ class ScanCommand extends Command
         $this->line("  Composer: {$composerVulns} security issue(s), {$composerOut} update(s) available");
         $this->line("  npm:      {$npmVulns} security issue(s), {$npmOut} update(s) available");
 
+        if (! empty($result['license']['supported'])) {
+            $licenseLabel = [
+                'ok' => 'licensed', 'renewal' => 'renewal due', 'invalid' => 'not licensed',
+                'trial' => 'trial', 'free' => 'free edition', 'unknown' => 'could not verify',
+            ][$result['license']['status'] ?? 'unknown'] ?? 'could not verify';
+            $this->line("  License:  {$licenseLabel}");
+        }
+
         return self::SUCCESS;
     }
 }

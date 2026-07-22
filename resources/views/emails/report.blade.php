@@ -36,6 +36,7 @@
     $php      = $audit['php'];
     $composer = $audit['composer'];
     $npm      = $audit['npm'];
+    $license  = $audit['license'] ?? ['supported' => false];
 
     // Build the badge for each row: pill text + colour, and an optional
     // `detail` line shown to its left. A null `text` means no pill.
@@ -119,13 +120,38 @@
         return ['text' => 'Up to date', 'colour' => '#10b981', 'detail' => ''];
     };
 
+    // Statamic reports a "needs renewal" state (the licence no longer covers
+    // the running version) rather than a renewal date - map it to a pill. The
+    // optional `detail` shows the covered version window when Statamic gives one.
+    $licenseBadge = function (array $l) {
+        $status = $l['status'] ?? 'unknown';
+        $range  = $l['range'] ?? null;
+        $window = ($range && ! empty($range['start']) && ! empty($range['end']))
+            ? $range['start'] . ' to ' . $range['end']
+            : null;
+
+        switch ($status) {
+            case 'ok':      return ['text' => 'Licensed',     'colour' => '#10b981', 'detail' => $window ? 'Covers ' . $window : ''];
+            case 'renewal': return ['text' => 'Renewal due',  'colour' => '#b45309', 'detail' => $window ? 'Licensed for ' . $window : ''];
+            case 'invalid': return ['text' => 'Not licensed', 'colour' => '#dc2626', 'detail' => ''];
+            case 'trial':   return ['text' => 'Trial',        'colour' => '#94a3b8', 'detail' => 'Development domain'];
+            case 'free':    return ['text' => 'Free edition', 'colour' => '#94a3b8', 'detail' => ''];
+            default:        return ['text' => 'Unverified',   'colour' => '#94a3b8', 'detail' => 'Could not verify'];
+        }
+    };
+
     $rows = [
         ['kind' => 'platform', 'label' => 'Statamic', 'description' => 'The CMS that powers your website',           'data' => $statamic],
         ['kind' => 'platform', 'label' => 'Laravel',  'description' => 'The framework Statamic is built on',         'data' => $laravel],
         ['kind' => 'platform', 'label' => 'PHP',      'description' => 'The server-side language that runs everything', 'data' => $php],
-        ['kind' => 'eco',      'label' => 'Composer', 'description' => 'Third-party PHP packages your site uses',    'data' => $composer],
-        ['kind' => 'eco',      'label' => 'npm',      'description' => 'Third-party JavaScript packages your site uses', 'data' => $npm],
     ];
+
+    if (! empty($license['supported'])) {
+        $rows[] = ['kind' => 'license', 'label' => 'Statamic License', 'description' => 'The commercial licence for your CMS', 'data' => $license];
+    }
+
+    $rows[] = ['kind' => 'eco', 'label' => 'Composer', 'description' => 'Third-party PHP packages your site uses',       'data' => $composer];
+    $rows[] = ['kind' => 'eco', 'label' => 'npm',      'description' => 'Third-party JavaScript packages your site uses', 'data' => $npm];
 
     $totalVulns    = ($composer['total_vulns']        ?? 0) + ($npm['total_vulns']        ?? 0)
                    + ($composer['outdated']['vendor_security_updates_total'] ?? 0)
@@ -139,7 +165,12 @@
     $securityUpdate = ($statamic['security_update_available'] ?? false)
                    || ($laravel['security_update_available']  ?? false);
 
-    $needsAttention = $totalVulns > 0 || $platformEol || $securityUpdate;
+    // An invalid licence is a real operational problem (raise the red banner);
+    // a renewal-due licence is a heads-up handled at the amber tier below.
+    $licenseInvalid = ! empty($license['supported']) && ($license['status'] ?? '') === 'invalid';
+    $licenseRenewal = ! empty($license['supported']) && ($license['status'] ?? '') === 'renewal';
+
+    $needsAttention = $totalVulns > 0 || $platformEol || $securityUpdate || $licenseInvalid;
 
     // Mirror the row-level "Outdated" amber pill at the banner: any platform
     // a full major behind earns its own tier between needs-attention (red)
@@ -159,6 +190,10 @@
         $intro        = 'Your Statamic website needs attention';
         $introDetail  = 'Security or platform issues were found.';
         $statusAccent = '#ef4444';
+    } elseif ($licenseRenewal) {
+        $intro        = 'Your Statamic license is due for renewal.';
+        $introDetail  = 'The license no longer covers your installed version.';
+        $statusAccent = '#b45309';
     } elseif ($platformMajorBehind) {
         $intro        = 'One or more platforms a major version behind.';
         $statusAccent = '#b45309';
@@ -196,7 +231,9 @@
         {{-- Always-visible rows: Statamic / Laravel / PHP / Composer / npm --}}
         @foreach ($rows as $row)
             @php
-                $b = $row['kind'] === 'platform' ? $platformBadge($row['data'], $row['label']) : $ecosystemBadge($row['data']);
+                $b = $row['kind'] === 'platform'
+                    ? $platformBadge($row['data'], $row['label'])
+                    : ($row['kind'] === 'license' ? $licenseBadge($row['data']) : $ecosystemBadge($row['data']));
             @endphp
             <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden; margin-bottom:10px;">
                 <tr>

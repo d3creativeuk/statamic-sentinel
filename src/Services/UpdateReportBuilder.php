@@ -34,6 +34,11 @@ class UpdateReportBuilder
             'php'      => self::diffPlatform($previous['php']      ?? null, $latest['php']      ?? null),
         ];
 
+        // Statamic license status (ok/renewal/invalid/...) between the two
+        // snapshots. Reuses diffPlatform's from/to/changed shape. Null on
+        // installs without licensing - the email skips the row in that case.
+        $license = self::diffPlatform($previous['license_status'] ?? null, $latest['license_status'] ?? null);
+
         $composer = self::diffPackages(
             $previous['composer_packages'] ?? [],
             $latest['composer_packages']   ?? []
@@ -67,6 +72,7 @@ class UpdateReportBuilder
         $hasChanges = $platform['statamic']['changed']
             || $platform['laravel']['changed']
             || $platform['php']['changed']
+            || $license['changed']
             || ! empty($composer['updated']) || ! empty($composer['added']) || ! empty($composer['removed'])
             || ! empty($npm['updated'])      || ! empty($npm['added'])      || ! empty($npm['removed'])
             || $vulns['composer_resolved']   || $vulns['composer_introduced']
@@ -77,6 +83,7 @@ class UpdateReportBuilder
             'from_recorded_at' => $previous['recorded_at'] ?? null,
             'to_recorded_at'   => $latest['recorded_at']   ?? null,
             'platform'         => $platform,
+            'license'          => $license,
             'composer'         => $composer,
             'npm'              => $npm,
             'vulns'            => $vulns,

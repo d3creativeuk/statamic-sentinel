@@ -59,6 +59,10 @@
 @php
     extract($audit, EXTR_SKIP);
 
+    // Older cached snapshots (pre-license) lack this key, so extract() won't
+    // define $license - fall back explicitly so the row below never errors.
+    $license = $audit['license'] ?? ['supported' => false];
+
     $statusColours = [
         'ok'         => '#047857',
         'active'     => '#047857',
@@ -248,6 +252,31 @@
                 </span>
             </div>
         @endforeach
+        @if(! empty($license['supported']))
+            @php
+                // Statamic reports "needs renewal" (license doesn't cover the
+                // running version) rather than a renewal date; the real date
+                // lives in the statamic.com account the link points to.
+                $licenseText   = ['ok' => 'Licensed', 'renewal' => 'Renewal due', 'invalid' => 'Not licensed', 'trial' => 'Trial', 'free' => 'Free edition', 'unknown' => 'Unverified'][$license['status'] ?? 'unknown'] ?? 'Unverified';
+                $licenseAlert  = in_array($license['status'] ?? '', ['renewal', 'invalid']);
+                $licenseColour = $licenseAlert ? '#dc2626' : (($license['status'] ?? '') === 'ok' ? '#047857' : '#64748b');
+                $licenseChrome = $licenseAlert ? 'padding:1px 7px; border-radius:4px; background:#fff; border:1px solid ' . $licenseColour . ';' : '';
+                $range         = $license['range'] ?? null;
+                $window        = ($range && ! empty($range['start']) && ! empty($range['end'])) ? ('Licensed for ' . $range['start'] . ' to ' . $range['end']) : null;
+            @endphp
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; padding:8px 14px; border-top:1px solid #e2e8f0;">
+                <span style="display:inline-flex; align-items:baseline; gap:8px; min-width:0; flex-wrap:wrap;">
+                    <span style="font-size:13px; font-weight:600; color:#0f172a;">License</span>
+                    @if($window)
+                        <span style="font-size:11px; font-weight:500; color:#64748b;">{{ $window }}</span>
+                    @endif
+                    @if(! empty($license['account_url']) && $licenseAlert)
+                        <a href="{{ $license['account_url'] }}" target="_blank" rel="noopener" style="font-size:11px; font-weight:500; color:#1d4ed8; text-decoration:none;">View renewal date &#8599;</a>
+                    @endif
+                </span>
+                <span style="display:inline-flex; align-items:center; font-size:11px; font-weight:500; color:{{ $licenseColour }}; flex-shrink:0; {{ $licenseChrome }}">{{ $licenseText }}</span>
+            </div>
+        @endif
     </div>
 
     {{-- Package audit sections --}}

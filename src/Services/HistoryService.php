@@ -21,6 +21,7 @@ class HistoryService
         'statamic',
         'laravel',
         'php',
+        'license_status',
         'composer_outdated',
         'npm_outdated',
         'composer_security_updates',
@@ -144,6 +145,11 @@ class HistoryService
             'statamic'                  => $audit['statamic']['current'] ?? null,
             'laravel'                   => $audit['laravel']['version']  ?? null,
             'php'                       => $audit['php']['version']      ?? null,
+            // Statamic license status (ok/renewal/invalid/trial/free/unknown), or
+            // null on installs where licensing isn't available. A status change
+            // (e.g. renewal -> ok after renewing) drives a new snapshot + shows
+            // in the update report.
+            'license_status'            => $audit['license']['status']   ?? null,
             'composer_outdated'         => (int) ($audit['composer']['outdated']['total']                  ?? 0),
             'npm_outdated'              => (int) ($audit['npm']['outdated']['total']                       ?? 0),
             'composer_security_updates' => (int) ($audit['composer']['outdated']['security_updates_total'] ?? 0),
