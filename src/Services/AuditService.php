@@ -1534,6 +1534,126 @@ class AuditService
             }
         }
 
+        // Annotate each outdated package with npm's min-release-age guard so the
+        // UI can explain why `npm update` leaves them behind.
+        $outdated = $this->annotateReleaseAge($outdated);
+
         return ['total' => count($outdated), 'packages' => $outdated];
+    }
+
+    /**
+     * Read npm's `min-release-age` guard (in days) from the nearest .npmrc.
+     * Project .npmrc wins over the user's ~/.npmrc, mirroring npm's own
+     * precedence; an absent key falls through to the next file. Returns 0 when
+     * the guard is missing or disabled, in which case nothing is ever blocked.
+     *
+     * Parsed in pure PHP on purpose: Sentinel never shells out to npm, so it
+     * keeps working under Herd's PHP-FPM where Node is off the PATH.
+     */
+    protected function npmMinReleaseAgeDays(): int
+    {
+        $candidates = [
+            base_path('.npmrc'),
+            rtrim((string) getenv('HOME'), '/') . '/.npmrc',
+        ];
+
+        foreach ($candidates as $path) {
+            if (! is_file($path) || ! is_readable($path)) {
+                continue;
+            }
+
+            foreach (file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {
+                $line = trim($line);
+
+                if ($line === '' || str_starts_with($line, '#') || str_starts_with($line, ';')) {
+                    continue;
+                }
+
+                if (! str_contains($line, '=')) {
+                    continue;
+                }
+
+                [$key, $value] = array_map('trim', explode('=', $line, 2));
+
+                if ($key === 'min-release-age') {
+                    return max(0, (int) $value);
+                }
+            }
+        }
+
+        return 0;
+    }
+
+    /**
+     * Flag outdated npm packages whose latest release is younger than the
+     * project's `min-release-age` guard. npm refuses to install these until they
+     * age past the window, so `npm update` no-ops and Sentinel would otherwise
+     * look wrong. We read each latest version's publish time from the full
+     * registry document (the `/latest` manifest omits it) and mark the package
+     * blocked, with the date it becomes installable.
+     *
+     * Fails open: a disabled guard or any registry error leaves every package
+     * unblocked, so a genuine update is never hidden.
+     */
+    protected function annotateReleaseAge(array $packages): array
+    {
+        // Default everything to "not blocked" first.
+        foreach ($packages as &$pkg) {
+            $pkg['blocked']           = false;
+            $pkg['blocked_until']     = null;
+            $pkg['available_in_days'] = null;
+        }
+        unset($pkg);
+
+        $days = $this->npmMinReleaseAgeDays();
+
+        if ($days < 1 || empty($packages)) {
+            return $packages;
+        }
+
+        $names = array_column($packages, 'name');
+
+        try {
+            $docs = Http::pool(fn ($pool) => array_map(
+                fn ($name) => $pool->as($name)->timeout(5)->get("https://registry.npmjs.org/{$name}"),
+                $names
+            ));
+        } catch (\Throwable $e) {
+            return $packages;
+        }
+
+        $now    = \Carbon\CarbonImmutable::now('UTC');
+        $cutoff = $now->subDays($days);
+
+        foreach ($packages as &$pkg) {
+            $doc = $docs[$pkg['name']] ?? null;
+
+            if (! $this->isOkResponse($doc)) {
+                continue;
+            }
+
+            // Version keys contain dots, so index the array directly rather than
+            // using dot-notation data_get, which would treat "4.3.3" as a path.
+            $time        = $doc->json('time') ?? [];
+            $publishedAt = $time[$pkg['latest']] ?? null;
+
+            if (! $publishedAt) {
+                continue;
+            }
+
+            $published = \Carbon\CarbonImmutable::parse($publishedAt)->utc();
+
+            if ($published->greaterThan($cutoff)) {
+                $available   = $published->addDays($days);
+                $secondsLeft = $available->getTimestamp() - $now->getTimestamp();
+
+                $pkg['blocked']           = true;
+                $pkg['blocked_until']     = $available->toDateString();
+                $pkg['available_in_days'] = max(1, (int) ceil($secondsLeft / 86400));
+            }
+        }
+        unset($pkg);
+
+        return $packages;
     }
 }
