@@ -140,18 +140,15 @@
         }
     };
 
+    // Licence sits on its own below the packages (rendered after this loop),
+    // so it's intentionally left out of $rows here.
     $rows = [
         ['kind' => 'platform', 'label' => 'Statamic', 'description' => 'The CMS that powers your website',           'data' => $statamic],
         ['kind' => 'platform', 'label' => 'Laravel',  'description' => 'The framework Statamic is built on',         'data' => $laravel],
         ['kind' => 'platform', 'label' => 'PHP',      'description' => 'The server-side language that runs everything', 'data' => $php],
+        ['kind' => 'eco',      'label' => 'Composer', 'description' => 'Third-party PHP packages your site uses',       'data' => $composer],
+        ['kind' => 'eco',      'label' => 'npm',      'description' => 'Third-party JavaScript packages your site uses', 'data' => $npm],
     ];
-
-    if (! empty($license['supported'])) {
-        $rows[] = ['kind' => 'license', 'label' => 'Statamic License', 'description' => 'The commercial licence for your CMS', 'data' => $license];
-    }
-
-    $rows[] = ['kind' => 'eco', 'label' => 'Composer', 'description' => 'Third-party PHP packages your site uses',       'data' => $composer];
-    $rows[] = ['kind' => 'eco', 'label' => 'npm',      'description' => 'Third-party JavaScript packages your site uses', 'data' => $npm];
 
     $totalVulns    = ($composer['total_vulns']        ?? 0) + ($npm['total_vulns']        ?? 0)
                    + ($composer['outdated']['vendor_security_updates_total'] ?? 0)
@@ -231,9 +228,7 @@
         {{-- Always-visible rows: Statamic / Laravel / PHP / Composer / npm --}}
         @foreach ($rows as $row)
             @php
-                $b = $row['kind'] === 'platform'
-                    ? $platformBadge($row['data'], $row['label'])
-                    : ($row['kind'] === 'license' ? $licenseBadge($row['data']) : $ecosystemBadge($row['data']));
+                $b = $row['kind'] === 'platform' ? $platformBadge($row['data'], $row['label']) : $ecosystemBadge($row['data']);
             @endphp
             <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden; margin-bottom:10px;">
                 <tr>
@@ -252,6 +247,29 @@
                 </tr>
             </table>
         @endforeach
+
+        {{-- Statamic licence: shown on its own below the packages, since it's
+             not a dependency like the rows above. A rule separates the two. --}}
+        @if (! empty($license['supported']))
+            @php $lb = $licenseBadge($license); @endphp
+            <div style="border-top:1px solid #e2e8f0; margin:18px 0;"></div>
+            <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden; margin-bottom:10px;">
+                <tr>
+                    <td class="sentinel-row-cell" style="padding:12px 16px; vertical-align:middle;">
+                        <div style="font-size:13px; font-weight:600; color:#0f172a;">Statamic License</div>
+                        <div style="font-size:12px; color:#475569; margin-top:3px;">The commercial licence for your CMS</div>
+                    </td>
+                    <td align="right" class="sentinel-row-cell sentinel-row-meta" style="padding:12px 16px; font-size:12px; color:#475569; vertical-align:middle; white-space:nowrap; font-variant-numeric:tabular-nums;">
+                        @if (! empty($lb['detail']))
+                            <span style="color:#475569;">{{ $lb['detail'] }}</span>
+                        @endif
+                        @if (! empty($lb['text']))
+                            <span class="sentinel-pill" style="display:inline-block; margin-left:10px; font-size:11px; font-weight:600; padding:2px 8px; border-radius:4px; color:{{ $lb['colour'] }}; border:1px solid {{ $lb['colour'] }}; background:#fff;">{{ $lb['text'] }}</span>
+                        @endif
+                    </td>
+                </tr>
+            </table>
+        @endif
 
         @if (! empty($sentinelDevEmail))
             {{-- CTA --}}
