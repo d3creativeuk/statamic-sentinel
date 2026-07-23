@@ -136,7 +136,7 @@
                 $licenseColour = in_array($license['status'] ?? '', ['renewal', 'invalid']) ? '#dc2626' : (($license['status'] ?? '') === 'ok' ? '#047857' : '#64748b');
             @endphp
             <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; padding:6px 12px; border-top:1px solid #e2e8f0;">
-                <span style="font-size:11px; font-weight:600; color:#0f172a;">License</span>
+                <span style="font-size:11px; font-weight:600; color:#0f172a;">Statamic License Status</span>
                 <span style="display:inline-flex; align-items:center; font-size:10px; font-weight:500; padding:1px 7px; border-radius:4px; color:{{ $licenseColour }}; background:#fff; border:1px solid {{ $licenseColour }}; flex-shrink:0;">{{ $licenseText }}</span>
             </div>
         @endif
