@@ -21,6 +21,7 @@ use D3Creative\Sentinel\Http\Middleware\InjectFreezeBanner;
 use D3Creative\Sentinel\Services\AuditService;
 use D3Creative\Sentinel\Services\ContentFreezeService;
 use D3Creative\Sentinel\Services\HistoryService;
+use D3Creative\Sentinel\Services\MaintenancePlanService;
 use D3Creative\Sentinel\Services\ScheduleService;
 use D3Creative\Sentinel\Services\SentMailService;
 
@@ -106,6 +107,21 @@ class ServiceProvider extends AddonServiceProvider
                 'd3-sentinel/save-schedule',
                 [SentinelController::class, 'saveSchedule']
             )->middleware('throttle:30,1')->name('d3-sentinel.save-schedule');
+
+            \Illuminate\Support\Facades\Route::post(
+                'd3-sentinel/send-maintenance-report',
+                [SentinelController::class, 'sendMaintenanceReport']
+            )->middleware('throttle:6,1')->name('d3-sentinel.send-maintenance-report');
+
+            \Illuminate\Support\Facades\Route::get(
+                'd3-sentinel/preview-maintenance-report',
+                [SentinelController::class, 'previewMaintenanceReport']
+            )->middleware('throttle:30,1')->name('d3-sentinel.preview-maintenance-report');
+
+            \Illuminate\Support\Facades\Route::post(
+                'd3-sentinel/save-maintenance-plan',
+                [SentinelController::class, 'saveMaintenancePlan']
+            )->middleware('throttle:30,1')->name('d3-sentinel.save-maintenance-plan');
 
             // Per-resource Action endpoints. Statamic-native contract:
             // POST /actions       runs an action against {action, selections, context}
@@ -209,8 +225,11 @@ class ServiceProvider extends AddonServiceProvider
                             'schedule'        => app(ScheduleService::class)->all(),
                             'sent_status'     => $sentMail->forKind(SentMailService::KIND_STATUS),
                             'sent_update'     => $sentMail->forKind(SentMailService::KIND_UPDATE),
+                            'sent_maintenance' => $sentMail->forKind(SentMailService::KIND_MAINTENANCE),
                             'last_status_recipients' => $sentMail->lastManualRecipients(SentMailService::KIND_STATUS),
                             'last_update_recipients' => $sentMail->lastManualRecipients(SentMailService::KIND_UPDATE),
+                            'last_maintenance_recipients' => $sentMail->lastManualRecipients(SentMailService::KIND_MAINTENANCE),
+                            'maintenance_plan' => app(MaintenancePlanService::class)->all(),
                             'freeze'          => $freeze,
                             'freeze_current'  => $freeze->current(),
                             'freeze_history'  => $freeze->history(),

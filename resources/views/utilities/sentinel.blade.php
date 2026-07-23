@@ -111,6 +111,9 @@
     // the most recent manual send recorded by SentMailService.
     $statusEmail = ! empty($last_status_recipients ?? []) ? implode(', ', $last_status_recipients) : $userEmail;
     $updateEmail = ! empty($last_update_recipients ?? []) ? implode(', ', $last_update_recipients) : $userEmail;
+    $maintenanceEmail = ! empty($last_maintenance_recipients ?? []) ? implode(', ', $last_maintenance_recipients) : $userEmail;
+
+    $plan = $maintenance_plan ?? [];
 @endphp
 
     {{-- Header --}}
@@ -141,7 +144,7 @@
     <div x-data="{
         tab: 'current',
         init() {
-            var valid = {!! $isSuper ? "['current', 'history', 'status-report', 'update-report', 'content-freeze']" : "['current']" !!};
+            var valid = {!! $isSuper ? "['current', 'history', 'status-report', 'update-report', 'maintenance-report', 'content-freeze']" : "['current']" !!};
             var hash = (window.location.hash || '').replace('#', '');
             if (valid.indexOf(hash) !== -1) this.tab = hash;
             this.$watch('tab', function (v) {
@@ -194,6 +197,15 @@
                         ? 'cursor:pointer; background:transparent; border:0; border-bottom:2px solid #0f172a; padding:10px 14px; margin-bottom:-1px; font-size:13px; font-weight:600; font-family:inherit; color:#0f172a;'
                         : 'cursor:pointer; background:transparent; border:0; border-bottom:2px solid transparent; padding:10px 14px; margin-bottom:-1px; font-size:13px; font-weight:600; font-family:inherit; color:#64748b;'">
                 Update Report
+            </button>
+            <button type="button"
+                    role="tab"
+                    x-on:click="tab = 'maintenance-report'"
+                    x-bind:aria-selected="tab === 'maintenance-report'"
+                    x-bind:style="tab === 'maintenance-report'
+                        ? 'cursor:pointer; background:transparent; border:0; border-bottom:2px solid #0f172a; padding:10px 14px; margin-bottom:-1px; font-size:13px; font-weight:600; font-family:inherit; color:#0f172a;'
+                        : 'cursor:pointer; background:transparent; border:0; border-bottom:2px solid transparent; padding:10px 14px; margin-bottom:-1px; font-size:13px; font-weight:600; font-family:inherit; color:#64748b;'">
+                Maintenance Report
             </button>
             <button type="button"
                     role="tab"
@@ -786,6 +798,168 @@
             @include('statamic-sentinel::utilities._sent_list', [
                 'kind'    => 'update',
                 'entries' => $sent_update,
+            ])
+        </div>
+
+        {{-- Maintenance Report tab --}}
+        <div x-show="tab === 'maintenance-report'" role="tabpanel" x-cloak>
+
+            {{-- Plan details --}}
+            <div x-data="{
+                    saving: false,
+                    state: 'idle',
+                    message: '',
+                    save(form) {
+                        this.saving = true;
+                        this.state = 'idle';
+                        this.message = '';
+                        fetch(form.action, {
+                            method: 'POST',
+                            body: new FormData(form),
+                            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
+                        })
+                        .then(res => res.json().then(body => ({ ok: res.ok, body })))
+                        .then(res => {
+                            this.saving = false;
+                            this.state = res.ok ? 'success' : 'error';
+                            this.message = res.body.message;
+                            if (res.ok) setTimeout(() => { this.state = 'idle'; this.message = ''; }, 4000);
+                        })
+                        .catch(() => {
+                            this.saving = false;
+                            this.state = 'error';
+                            this.message = 'Something went wrong. Please try again.';
+                        });
+                    }
+                 }"
+                 style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:14px 16px; margin-bottom:12px;">
+                <div style="display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin-bottom:12px;">
+                    <div style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; color:#64748b;">Maintenance plan details</div>
+                    <div style="font-size:11px; color:#64748b;">Shown in the report intro</div>
+                </div>
+                <form action="{{ route('statamic.cp.d3-sentinel.save-maintenance-plan') }}"
+                      method="POST"
+                      x-on:submit.prevent="save($event.target)">
+                    @csrf
+                    <div style="display:flex; flex-wrap:wrap; gap:12px;">
+                        <label style="flex:1 1 100%; min-width:0; font-size:12px; color:#475569;">
+                            <span style="display:block; margin-bottom:4px; font-weight:600; color:#0f172a;">Plan name</span>
+                            <input type="text" name="plan_name" value="{{ $plan['plan_name'] ?? '' }}" placeholder="e.g. Gold Care Plan"
+                                   style="width:100%; box-sizing:border-box; font-size:13px; padding:7px 12px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#1e293b; outline:none;">
+                        </label>
+                        <label style="flex:1 1 160px; min-width:0; font-size:12px; color:#475569;">
+                            <span style="display:block; margin-bottom:4px; font-weight:600; color:#0f172a;">Start date</span>
+                            <input type="date" name="start_date" value="{{ $plan['start_date'] ?? '' }}"
+                                   style="width:100%; box-sizing:border-box; font-size:13px; padding:7px 12px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#1e293b; outline:none;">
+                        </label>
+                        <label style="flex:1 1 160px; min-width:0; font-size:12px; color:#475569;">
+                            <span style="display:block; margin-bottom:4px; font-weight:600; color:#0f172a;">Expiry date</span>
+                            <input type="date" name="expiry_date" value="{{ $plan['expiry_date'] ?? '' }}"
+                                   style="width:100%; box-sizing:border-box; font-size:13px; padding:7px 12px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#1e293b; outline:none;">
+                        </label>
+                    </div>
+                    <div style="display:flex; flex-wrap:wrap; align-items:center; gap:14px; margin-top:12px;">
+                        <label style="display:inline-flex; align-items:center; gap:8px; font-size:13px; color:#0f172a; cursor:pointer;">
+                            <input type="checkbox" name="show_reminder" value="1" {{ ($plan['show_reminder'] ?? true) ? 'checked' : '' }}
+                                   style="width:15px; height:15px; cursor:pointer;">
+                            Include renewal reminder line
+                        </label>
+                        <label style="display:inline-flex; align-items:center; gap:8px; font-size:13px; color:#475569;">
+                            <input type="number" name="reminder_days" value="{{ $plan['reminder_days'] ?? 30 }}" min="1" max="365"
+                                   style="width:64px; font-size:13px; padding:6px 8px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#1e293b; outline:none; font-variant-numeric:tabular-nums;">
+                            days before expiry
+                        </label>
+                        <button type="submit"
+                                x-bind:disabled="saving"
+                                x-bind:style="{ background: state === 'success' ? '#047857' : (state === 'error' ? '#ef4444' : '#0f172a') }"
+                                style="margin-left:auto; flex-shrink:0; font-size:13px; font-weight:600; color:#fff; background:#0f172a; border:none; padding:7px 16px; border-radius:6px; cursor:pointer; white-space:nowrap;">
+                            <span x-show="saving" x-cloak>Saving…</span>
+                            <span x-show="!saving && state === 'success'" x-cloak>✓ Saved</span>
+                            <span x-show="!saving && state === 'error'" x-cloak>✕ Failed</span>
+                            <span x-show="!saving && state === 'idle'">Save Plan Details</span>
+                        </button>
+                    </div>
+                    <div style="font-size:11px; color:#64748b; margin-top:10px; line-height:1.5;">The reminder line is text only - Sentinel does not send a reminder email. Leave it unchecked if you handle renewals another way.</div>
+                    <div x-show="message" x-cloak
+                         x-bind:style="{ color: state === 'success' ? '#047857' : '#ef4444' }"
+                         style="font-size:13px; margin-top:8px;"
+                         x-text="message"></div>
+                </form>
+            </div>
+
+            {{-- Send --}}
+            <div x-data="{
+                    sending: false,
+                    state: 'idle',
+                    message: '',
+                    send(form) {
+                        this.sending = true;
+                        this.state = 'idle';
+                        this.message = '';
+                        fetch(form.action, {
+                            method: 'POST',
+                            body: new FormData(form),
+                            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
+                        })
+                        .then(res => res.json().then(body => ({ ok: res.ok, body })))
+                        .then(res => {
+                            this.sending = false;
+                            this.state = res.ok ? 'success' : 'error';
+                            this.message = res.body.message;
+                            if (res.ok) setTimeout(() => { this.state = 'idle'; this.message = ''; }, 4000);
+                        })
+                        .catch(() => {
+                            this.sending = false;
+                            this.state = 'error';
+                            this.message = 'Something went wrong. Please try again.';
+                        });
+                    }
+                 }"
+                 style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:14px 16px;">
+                <div style="display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin-bottom:10px;">
+                    <div style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; color:#64748b;">Email maintenance report</div>
+                    <div style="font-size:11px; color:#64748b;">Update counts since the plan started</div>
+                </div>
+                <form action="{{ route('statamic.cp.d3-sentinel.send-maintenance-report') }}"
+                      method="POST"
+                      x-on:submit.prevent="send($event.target)"
+                      style="display:flex; gap:8px; align-items:center;">
+                    @csrf
+                    <input type="text"
+                           name="email"
+                           value="{{ $maintenanceEmail }}"
+                           required
+                           placeholder="email@example.com, another@example.com"
+                           style="flex:1; font-size:13px; padding:7px 12px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#1e293b; outline:none; min-width:0;">
+                    <button type="button"
+                            x-on:click="$dispatch('sentinel-preview-open', { url: @js(route('statamic.cp.d3-sentinel.preview-maintenance-report')), title: 'Maintenance report preview' })"
+                            style="flex-shrink:0; font-size:13px; font-weight:600; color:#0f172a; background:#fff; border:1px solid #e2e8f0; padding:7px 12px; border-radius:6px; cursor:pointer; white-space:nowrap;">
+                        Preview
+                    </button>
+                    <button type="submit"
+                            x-bind:disabled="sending"
+                            x-bind:style="{ background: state === 'success' ? '#047857' : (state === 'error' ? '#ef4444' : '#0f172a') }"
+                            style="flex-shrink:0; font-size:13px; font-weight:600; color:#fff; background:#0f172a; border:none; padding:7px 14px; border-radius:6px; cursor:pointer; white-space:nowrap;">
+                        <span x-show="sending" x-cloak style="display:inline-flex; align-items:center; gap:6px;">
+                            <span aria-hidden="true" style="display:inline-block; font-size:14px; line-height:1; transform-origin:center; animation:sentinel-spin 1s linear infinite;">↻</span>
+                            Sending…
+                        </span>
+                        <span x-show="!sending && state === 'success'" x-cloak>✓ Sent</span>
+                        <span x-show="!sending && state === 'error'" x-cloak>✕ Failed</span>
+                        <span x-show="!sending && state === 'idle'">Send Maintenance Report</span>
+                    </button>
+                </form>
+                <div x-show="message" x-cloak
+                     x-bind:style="{ color: state === 'success' ? '#047857' : '#ef4444' }"
+                     style="font-size:13px; margin-top:8px;"
+                     x-text="message"></div>
+            </div>
+
+            <div style="font-size:11px; color:#64748b; margin-top:10px; line-height:1.5;">Counts reflect changes recorded by Sentinel scans - run a scan (or hit Refresh) after each maintenance session for complete figures.</div>
+
+            @include('statamic-sentinel::utilities._sent_list', [
+                'kind'    => 'maintenance',
+                'entries' => $sent_maintenance,
             ])
         </div>
 

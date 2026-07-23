@@ -21,8 +21,9 @@ use Carbon\Carbon;
  */
 class SentMailService
 {
-    const KIND_STATUS = 'status';
-    const KIND_UPDATE = 'update';
+    const KIND_STATUS      = 'status';
+    const KIND_UPDATE      = 'update';
+    const KIND_MAINTENANCE = 'maintenance';
 
     const TRIGGER_MANUAL    = 'manual';
     const TRIGGER_SCHEDULED = 'scheduled';

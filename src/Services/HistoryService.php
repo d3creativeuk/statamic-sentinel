@@ -166,6 +166,12 @@ class HistoryService
             // two snapshots, not just the total delta.
             'composer_vuln_packages'    => self::vulnPackageMap($audit['composer']['by_package'] ?? []),
             'npm_vuln_packages'         => self::vulnPackageMap($audit['npm']['by_package']      ?? []),
+            // Per-package highest severity (`[name => 'CRITICAL'|'HIGH'|...]`), so
+            // the maintenance report can break security-related updates down by
+            // severity. Additive + forward-only: snapshots recorded before this
+            // field simply lack it, and consumers handle its absence.
+            'composer_vuln_severities'  => self::vulnSeverityMap($audit['composer']['by_package'] ?? []),
+            'npm_vuln_severities'       => self::vulnSeverityMap($audit['npm']['by_package']      ?? []),
         ];
     }
 
@@ -176,6 +182,22 @@ class HistoryService
             $name = $entry['name'] ?? null;
             if ($name === null) continue;
             $map[$name] = (int) ($entry['count'] ?? 0);
+        }
+        return $map;
+    }
+
+    /**
+     * `[name => highest severity]` from a by_package list (each entry already
+     * carries `highest`, e.g. CRITICAL/HIGH/MEDIUM/LOW/UNKNOWN). Lets the
+     * maintenance report attribute a severity to each security-related update.
+     */
+    protected static function vulnSeverityMap(array $byPackage): array
+    {
+        $map = [];
+        foreach ($byPackage as $entry) {
+            $name = $entry['name'] ?? null;
+            if ($name === null) continue;
+            $map[$name] = $entry['highest'] ?? 'UNKNOWN';
         }
         return $map;
     }

@@ -90,7 +90,7 @@ class UpdateReportBuilder
         ];
     }
 
-    protected static function diffPlatform(?string $from, ?string $to): array
+    public static function diffPlatform(?string $from, ?string $to): array
     {
         return [
             'from'    => $from,
@@ -102,7 +102,7 @@ class UpdateReportBuilder
     /**
      * Diff two `[name => version]` maps into updated/added/removed lists.
      */
-    protected static function diffPackages(array $previous, array $latest): array
+    public static function diffPackages(array $previous, array $latest): array
     {
         $updated = [];
         $added   = [];

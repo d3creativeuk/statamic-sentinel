@@ -9,6 +9,8 @@ use Carbon\Carbon;
 use D3Creative\Sentinel\Services\AuditService;
 use D3Creative\Sentinel\Services\ContentFreezeService;
 use D3Creative\Sentinel\Services\HistoryService;
+use D3Creative\Sentinel\Services\MaintenancePlanService;
+use D3Creative\Sentinel\Services\MaintenanceReportBuilder;
 use D3Creative\Sentinel\Services\ReportSender;
 use D3Creative\Sentinel\Services\ScheduleService;
 use D3Creative\Sentinel\Services\SentMailService;
@@ -64,6 +66,83 @@ class SentinelController extends Controller
         }
 
         return response()->json($payload, $status);
+    }
+
+    public function sendMaintenanceReport(Request $request)
+    {
+        abort_unless(auth()->user()?->isSuper(), 403);
+
+        $recipientResult = $this->validateRecipientsInput($request->input('email', ''));
+        if ($recipientResult instanceof \Illuminate\Http\JsonResponse) {
+            return $recipientResult;
+        }
+
+        $result = (new ReportSender())->sendMaintenance($recipientResult);
+
+        $status = match ($result['kind']) {
+            ReportSender::KIND_SENT        => 200,
+            ReportSender::KIND_QUEUED      => 200,
+            ReportSender::KIND_MAIL_FAILED => 500,
+            default                        => 422,
+        };
+
+        return response()->json(['message' => $result['message']], $status);
+    }
+
+    public function saveMaintenancePlan(Request $request)
+    {
+        abort_unless(auth()->user()?->isSuper(), 403);
+
+        $validator = Validator::make($request->all(), [
+            'plan_name'     => ['nullable', 'string', 'max:100'],
+            'start_date'    => ['nullable', 'date'],
+            'expiry_date'   => ['nullable', 'date'],
+            'show_reminder' => ['nullable', 'boolean'],
+            'reminder_days' => ['nullable', 'integer', 'min:1', 'max:365'],
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['message' => $validator->errors()->first()], 422);
+        }
+
+        $input = $validator->validated();
+
+        $start  = $this->normaliseDate($input['start_date']  ?? null);
+        $expiry = $this->normaliseDate($input['expiry_date'] ?? null);
+
+        if ($start && $expiry && $expiry < $start) {
+            return response()->json(['message' => 'The expiry date must be on or after the start date.'], 422);
+        }
+
+        $saved = app(MaintenancePlanService::class)->save([
+            'plan_name'     => ($input['plan_name'] ?? '') !== '' ? $input['plan_name'] : null,
+            'start_date'    => $start,
+            'expiry_date'   => $expiry,
+            'show_reminder' => isset($input['show_reminder']) ? filter_var($input['show_reminder'], FILTER_VALIDATE_BOOLEAN) : false,
+            'reminder_days' => (int) ($input['reminder_days'] ?? 30),
+        ]);
+
+        if (! $saved) {
+            return response()->json(['message' => 'Failed to save plan details. Check storage permissions.'], 500);
+        }
+
+        return response()->json(['message' => 'Plan details saved.'], 200);
+    }
+
+    /**
+     * Normalise a validated date input to a plain Y-m-d string, or null.
+     */
+    protected function normaliseDate(?string $value): ?string
+    {
+        if (! $value) {
+            return null;
+        }
+
+        try {
+            return Carbon::parse($value)->format('Y-m-d');
+        } catch (\Throwable $e) {
+            return null;
+        }
     }
 
     public function saveSchedule(Request $request)
@@ -209,6 +288,22 @@ class SentinelController extends Controller
             'host'      => ReportHosts::label(),
             'hosts'     => ReportHosts::all(),
             'preheader' => 'Statamic Package Update Report',
+        ])->render());
+    }
+
+    public function previewMaintenanceReport(Request $request)
+    {
+        abort_unless(auth()->user()?->isSuper(), 403);
+
+        $history = app(HistoryService::class)->all();
+        $plan    = app(MaintenancePlanService::class)->all();
+        $report  = MaintenanceReportBuilder::build($history, $plan);
+
+        return $this->previewResponse(view('statamic-sentinel::emails.maintenance-report', [
+            'report'    => $report,
+            'host'      => ReportHosts::label(),
+            'hosts'     => ReportHosts::all(),
+            'preheader' => 'Statamic Maintenance Activity Report',
         ])->render());
     }
 

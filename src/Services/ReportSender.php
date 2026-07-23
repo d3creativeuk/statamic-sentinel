@@ -4,6 +4,7 @@ namespace D3Creative\Sentinel\Services;
 
 use Illuminate\Support\Facades\Mail;
 use D3Creative\Sentinel\Jobs\SendSentinelMail;
+use D3Creative\Sentinel\Mail\SentinelMaintenanceReport;
 use D3Creative\Sentinel\Mail\SentinelReport;
 use D3Creative\Sentinel\Mail\SentinelUpdateReport;
 
@@ -113,6 +114,33 @@ class ReportSender
             'sent'   => 'Update report sent successfully.',
             'queued' => 'Update report queued for delivery.',
             'failed' => 'Failed to send update report. Please check your mail configuration.',
+        ]);
+    }
+
+    public function sendMaintenance(array $recipients, string $trigger = SentMailService::TRIGGER_MANUAL): array
+    {
+        if (empty($recipients)) {
+            return $this->result(self::KIND_NO_RECIPIENTS, 'No recipients configured.');
+        }
+
+        try {
+            $history  = app(HistoryService::class)->all();
+            $plan     = app(MaintenancePlanService::class)->all();
+            $report   = MaintenanceReportBuilder::build($history, $plan);
+            $mailable = new SentinelMaintenanceReport($report);
+            $html     = $this->safeRender($mailable);
+        } catch (\Throwable $e) {
+            $this->record(SentMailService::KIND_MAINTENANCE, $recipients, $trigger, SentMailService::OUTCOME_FAILED, '', $e->getMessage());
+
+            return $this->result(self::KIND_MAIL_FAILED, 'Failed to send maintenance report. Please check your mail configuration.');
+        }
+
+        $id = $this->record(SentMailService::KIND_MAINTENANCE, $recipients, $trigger, SentMailService::OUTCOME_QUEUED, $html);
+
+        return $this->dispatchAndReconcile($id, $recipients, $mailable, [
+            'sent'   => 'Maintenance report sent successfully.',
+            'queued' => 'Maintenance report queued for delivery.',
+            'failed' => 'Failed to send maintenance report. Please check your mail configuration.',
         ]);
     }
 

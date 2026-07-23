@@ -7,7 +7,11 @@
       - $kind     string 'status' or 'update' - used only in copy
 --}}
 @php
-    $kindLabel = $kind === 'status' ? 'status report' : 'update report';
+    $kindLabel = [
+        'status'      => 'status report',
+        'update'      => 'update report',
+        'maintenance' => 'maintenance report',
+    ][$kind] ?? 'report';
 
     $triggerLabel = [
         'manual'    => 'Manual',
