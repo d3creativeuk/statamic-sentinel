@@ -121,8 +121,9 @@
     };
 
     // Statamic reports a "needs renewal" state (the licence no longer covers
-    // the running version) rather than a renewal date - map it to a pill. The
-    // optional `detail` shows the covered version window when Statamic gives one.
+    // the running version) rather than a renewal date. The status lives in the
+    // row's description line; a pill is only raised for the states that need
+    // action (renewal / invalid), so a healthy licence stays quiet.
     $licenseBadge = function (array $l) {
         $status = $l['status'] ?? 'unknown';
         $range  = $l['range'] ?? null;
@@ -131,12 +132,12 @@
             : null;
 
         switch ($status) {
-            case 'ok':      return ['text' => 'Licensed',     'colour' => '#10b981', 'detail' => $window ? 'Covers ' . $window : ''];
-            case 'renewal': return ['text' => 'Renewal due',  'colour' => '#b45309', 'detail' => $window ? 'Licensed for ' . $window : ''];
-            case 'invalid': return ['text' => 'Not licensed', 'colour' => '#dc2626', 'detail' => ''];
-            case 'trial':   return ['text' => 'Trial',        'colour' => '#94a3b8', 'detail' => 'Development domain'];
-            case 'free':    return ['text' => 'Free edition', 'colour' => '#94a3b8', 'detail' => ''];
-            default:        return ['text' => 'Unverified',   'colour' => '#94a3b8', 'detail' => 'Could not verify'];
+            case 'ok':      return ['description' => $window ? 'Active, covering Statamic ' . $window . '.' : 'Active and covering your installed version.', 'text' => null,          'colour' => null,      'detail' => ''];
+            case 'renewal': return ['description' => 'Due for renewal. It no longer covers your installed version.',                                          'text' => 'Renewal due',  'colour' => '#b45309', 'detail' => $window ? 'Licensed for ' . $window : ''];
+            case 'invalid': return ['description' => 'The licence could not be validated.',                                                                   'text' => 'Not licensed', 'colour' => '#dc2626', 'detail' => ''];
+            case 'trial':   return ['description' => 'Trial licence on a development domain.',                                                                 'text' => null,          'colour' => null,      'detail' => ''];
+            case 'free':    return ['description' => 'Running the free edition. No licence required.',                                                         'text' => null,          'colour' => null,      'detail' => ''];
+            default:        return ['description' => 'The licence status could not be verified.',                                                              'text' => null,          'colour' => null,      'detail' => ''];
         }
     };
 
@@ -257,7 +258,7 @@
                 <tr>
                     <td class="sentinel-row-cell" style="padding:12px 16px; vertical-align:middle;">
                         <div style="font-size:13px; font-weight:600; color:#0f172a;">Statamic License</div>
-                        <div style="font-size:12px; color:#475569; margin-top:3px;">The commercial licence for your CMS</div>
+                        <div style="font-size:12px; color:#475569; margin-top:3px;">{{ $lb['description'] }}</div>
                     </td>
                     <td align="right" class="sentinel-row-cell sentinel-row-meta" style="padding:12px 16px; font-size:12px; color:#475569; vertical-align:middle; white-space:nowrap; font-variant-numeric:tabular-nums;">
                         @if (! empty($lb['detail']))
