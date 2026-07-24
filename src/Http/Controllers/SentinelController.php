@@ -303,7 +303,7 @@ class SentinelController extends Controller
             'report'    => $report,
             'host'      => ReportHosts::label(),
             'hosts'     => ReportHosts::all(),
-            'preheader' => 'Statamic Maintenance Activity Report',
+            'preheader' => 'Statamic Plan Summary',
         ])->render());
     }
 

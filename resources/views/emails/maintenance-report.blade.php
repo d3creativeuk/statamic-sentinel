@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="x-apple-disable-message-reformatting">
     <meta name="format-detection" content="telephone=no,address=no,email=no,date=no,url=no">
-    <title>Statamic Maintenance Activity Report</title>
+    <title>Statamic Plan Summary</title>
     <style>
         @media only screen and (max-width:480px) {
             .sentinel-row-cell { display:block !important; width:100% !important; }
@@ -103,7 +103,7 @@
     {{-- Header --}}
     <div style="background:#0f172a; padding:24px 32px;">
         <div style="font-size:18px; font-weight:700; letter-spacing:-0.02em;">@foreach ($hosts as $i => $h)@if ($i)<span style="color:#cbd5e1;">, </span>@endif<a href="https://{{ $h }}" style="color:#ffffff; text-decoration:none;">{{ $h }}</a>@endforeach</div>
-        <div style="font-size:13px; color:#cbd5e1; margin-top:4px;">Maintenance Activity Report<span>@if ($rangeText)&nbsp;·&nbsp;{{ $rangeText }}@endif</span></div>
+        <div style="font-size:13px; color:#cbd5e1; margin-top:4px;">Plan Summary<span>@if ($rangeText)&nbsp;·&nbsp;{{ $rangeText }}@endif</span></div>
     </div>
 
     <div style="padding:28px 32px;">

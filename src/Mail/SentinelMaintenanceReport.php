@@ -29,13 +29,13 @@ class SentinelMaintenanceReport extends Mailable
 
         $this->applySentinelFrom();
 
-        return $this->subject($label . ' maintenance activity')
+        return $this->subject($label . ' plan summary')
                     ->view('statamic-sentinel::emails.maintenance-report')
                     ->with([
                         'report'    => $this->report,
                         'host'      => $label,
                         'hosts'     => $hosts,
-                        'preheader' => 'Statamic Maintenance Activity Report',
+                        'preheader' => 'Statamic Plan Summary',
                     ]);
     }
 }

@@ -10,7 +10,7 @@
     $kindLabel = [
         'status'      => 'status report',
         'update'      => 'update report',
-        'maintenance' => 'maintenance report',
+        'maintenance' => 'plan summary',
     ][$kind] ?? 'report';
 
     $triggerLabel = [

@@ -132,15 +132,15 @@ class ReportSender
         } catch (\Throwable $e) {
             $this->record(SentMailService::KIND_MAINTENANCE, $recipients, $trigger, SentMailService::OUTCOME_FAILED, '', $e->getMessage());
 
-            return $this->result(self::KIND_MAIL_FAILED, 'Failed to send maintenance report. Please check your mail configuration.');
+            return $this->result(self::KIND_MAIL_FAILED, 'Failed to send plan summary. Please check your mail configuration.');
         }
 
         $id = $this->record(SentMailService::KIND_MAINTENANCE, $recipients, $trigger, SentMailService::OUTCOME_QUEUED, $html);
 
         return $this->dispatchAndReconcile($id, $recipients, $mailable, [
-            'sent'   => 'Maintenance report sent successfully.',
-            'queued' => 'Maintenance report queued for delivery.',
-            'failed' => 'Failed to send maintenance report. Please check your mail configuration.',
+            'sent'   => 'Plan summary sent successfully.',
+            'queued' => 'Plan summary queued for delivery.',
+            'failed' => 'Failed to send plan summary. Please check your mail configuration.',
         ]);
     }
 

@@ -7,7 +7,7 @@ use Carbon\CarbonImmutable;
 /**
  * Aggregates HistoryService snapshots into per-category maintenance activity
  * counts since a plan's start date - the data behind the client-facing
- * "Maintenance Activity Report".
+ * "Plan Summary" report.
  *
  * Every recorded change between two consecutive snapshots is one unit of work:
  * a platform version bump counts as one update; each package whose version

@@ -205,7 +205,7 @@
                     x-bind:style="tab === 'maintenance-report'
                         ? 'cursor:pointer; background:transparent; border:0; border-bottom:2px solid #0f172a; padding:10px 14px; margin-bottom:-1px; font-size:13px; font-weight:600; font-family:inherit; color:#0f172a;'
                         : 'cursor:pointer; background:transparent; border:0; border-bottom:2px solid transparent; padding:10px 14px; margin-bottom:-1px; font-size:13px; font-weight:600; font-family:inherit; color:#64748b;'">
-                Maintenance Report
+                Plan Summary
             </button>
             <button type="button"
                     role="tab"
@@ -801,7 +801,7 @@
             ])
         </div>
 
-        {{-- Maintenance Report tab --}}
+        {{-- Plan Summary tab --}}
         <div x-show="tab === 'maintenance-report'" role="tabpanel" x-cloak>
 
             {{-- Plan details --}}
@@ -834,8 +834,8 @@
                  }"
                  style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:14px 16px; margin-bottom:12px;">
                 <div style="display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin-bottom:12px;">
-                    <div style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; color:#64748b;">Maintenance plan details</div>
-                    <div style="font-size:11px; color:#64748b;">Shown in the report intro</div>
+                    <div style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; color:#64748b;">Plan details</div>
+                    <div style="font-size:11px; color:#64748b;">Shown in the summary intro</div>
                 </div>
                 <form action="{{ route('statamic.cp.d3-sentinel.save-maintenance-plan') }}"
                       method="POST"
@@ -917,7 +917,7 @@
                  }"
                  style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:14px 16px;">
                 <div style="display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin-bottom:10px;">
-                    <div style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; color:#64748b;">Email maintenance report</div>
+                    <div style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; color:#64748b;">Email plan summary</div>
                     <div style="font-size:11px; color:#64748b;">Update counts since the plan started</div>
                 </div>
                 <form action="{{ route('statamic.cp.d3-sentinel.send-maintenance-report') }}"
@@ -932,7 +932,7 @@
                            placeholder="email@example.com, another@example.com"
                            style="flex:1; font-size:13px; padding:7px 12px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#1e293b; outline:none; min-width:0;">
                     <button type="button"
-                            x-on:click="$dispatch('sentinel-preview-open', { url: @js(route('statamic.cp.d3-sentinel.preview-maintenance-report')), title: 'Maintenance report preview' })"
+                            x-on:click="$dispatch('sentinel-preview-open', { url: @js(route('statamic.cp.d3-sentinel.preview-maintenance-report')), title: 'Plan summary preview' })"
                             style="flex-shrink:0; font-size:13px; font-weight:600; color:#0f172a; background:#fff; border:1px solid #e2e8f0; padding:7px 12px; border-radius:6px; cursor:pointer; white-space:nowrap;">
                         Preview
                     </button>
@@ -946,7 +946,7 @@
                         </span>
                         <span x-show="!sending && state === 'success'" x-cloak>✓ Sent</span>
                         <span x-show="!sending && state === 'error'" x-cloak>✕ Failed</span>
-                        <span x-show="!sending && state === 'idle'">Send Maintenance Report</span>
+                        <span x-show="!sending && state === 'idle'">Send Plan Summary</span>
                     </button>
                 </form>
                 <div x-show="message" x-cloak
