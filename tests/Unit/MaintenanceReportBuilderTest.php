@@ -125,6 +125,17 @@ class MaintenanceReportBuilderTest extends TestCase
         $this->assertSame(0, $report['npm']['updates']);
     }
 
+    public function test_header_range_starts_at_the_plan_start_date(): void
+    {
+        // Plan starts well before the earliest snapshot (2026-04-01); the header
+        // "since" must still show the plan start so it matches the intro line,
+        // rather than being clamped to the first recorded scan.
+        $report = MaintenanceReportBuilder::build($this->history(), ['start_date' => '2026-01-14']);
+
+        $this->assertSame('14 Jan 2026', $report['since']);
+        $this->assertSame('10 May 2026', $report['to']); // newest snapshot
+    }
+
     public function test_empty_history_has_no_data(): void
     {
         $report = MaintenanceReportBuilder::build([], ['start_date' => '2026-04-14']);

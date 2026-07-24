@@ -97,10 +97,9 @@ class MaintenanceReportBuilder
             }
         }
 
-        // Effective coverage start: we can't report before the earliest snapshot,
-        // even if the plan started earlier (365-day retention).
-        $earliest = self::parse($ordered[0]['recorded_at'] ?? null);
-        $since    = ($earliest !== null && $earliest->greaterThan($windowStart)) ? $earliest : $windowStart;
+        // Report from the plan start (or the earliest snapshot when no plan start
+        // is set), so the header range matches the "since your plan started" intro.
+        $since = $windowStart;
 
         $totalUpdates = $platform['statamic']['count'] + $platform['laravel']['count'] + $platform['php']['count']
             + $composer['updates'] + $npm['updates'];
