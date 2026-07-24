@@ -39,16 +39,31 @@
 
     $planLabel = ! empty($plan['name']) ? $plan['name'] : 'maintenance plan';
 
-    // Intro line - only the plan name, date and update count are bold; the rest
-    // is normal weight. Dynamic parts are escaped before being marked up.
+    // Intro line - only the plan name, date and the update counts are bold; the
+    // rest is normal weight. Dynamic parts are escaped before being marked up.
     $strong        = fn ($s) => '<strong style="font-weight:600;">' . e($s) . '</strong>';
     $updatesPhrase = $totalUpdates . ' ' . \Illuminate\Support\Str::plural('update', $totalUpdates);
 
+    // Combined critical/high across both ecosystems for the security clause.
+    $secCritical = (int) ($composer['security_by_severity']['CRITICAL'] ?? 0) + (int) ($npm['security_by_severity']['CRITICAL'] ?? 0);
+    $secHigh     = (int) ($composer['security_by_severity']['HIGH']     ?? 0) + (int) ($npm['security_by_severity']['HIGH']     ?? 0);
+
+    $securityClause = '';
+    if ($totalSec > 0) {
+        $securityClause = ', including ' . $strong($totalSec . ' security ' . \Illuminate\Support\Str::plural('update', $totalSec));
+        $sevParts = [];
+        if ($secCritical > 0) { $sevParts[] = $secCritical . ' critical'; }
+        if ($secHigh > 0)     { $sevParts[] = $secHigh . ' high'; }
+        if (! empty($sevParts)) {
+            $securityClause .= ' (' . implode(', ', $sevParts) . ')';
+        }
+    }
+
     if (! empty($plan['start'])) {
         $intro = 'Since your ' . $strong($planLabel) . ' started on ' . $strong($plan['start'])
-               . ', your site has received ' . $strong($updatesPhrase) . '.';
+               . ', your site has received ' . $strong($updatesPhrase) . $securityClause . '.';
     } else {
-        $intro = 'Your site has received ' . $strong($updatesPhrase) . ' over this period.';
+        $intro = 'Your site has received ' . $strong($updatesPhrase) . ' over this period' . $securityClause . '.';
     }
 
     // Formatted human date range for the header.
@@ -117,17 +132,8 @@
 
     @else
 
-        {{-- Intro --}}
-        <div style="font-size:15px; font-weight:400; color:#0f172a; line-height:1.5; margin-bottom:20px;">{!! $intro !!}</div>
-
-        {{-- Security callout - the strongest value line --}}
-        @if ($totalSec > 0)
-            <div style="background:#dc26261a; border-left:3px solid #dc2626; padding:12px 16px; border-radius:6px; margin-bottom:24px;">
-                <div style="font-size:14px; font-weight:600; color:#0f172a; line-height:1.45;">{{ $totalSec }} of these {{ $totalSec === 1 ? 'was a security update' : 'were security updates' }}, keeping known vulnerabilities patched.</div>
-            </div>
-        @else
-            <div style="height:8px; line-height:8px; font-size:0;">&nbsp;</div>
-        @endif
+        {{-- Intro (headline update + security counts live here) --}}
+        <div style="font-size:15px; font-weight:400; color:#0f172a; line-height:1.5; margin-bottom:24px;">{!! $intro !!}</div>
 
         {{-- Platform rows --}}
         @foreach ([
@@ -170,7 +176,7 @@
                         @endif
                     </td>
                     <td align="right" class="sentinel-row-cell sentinel-row-meta" style="padding:12px 16px; font-size:12px; color:#475569; vertical-align:middle; white-space:nowrap; font-variant-numeric:tabular-nums;">
-                        <span class="sentinel-pill" style="display:inline-block; font-size:11px; font-weight:600; padding:2px 8px; border-radius:4px; color:{{ $updates > 0 ? '#475569' : '#94a3b8' }}; border:1px solid {{ $updates > 0 ? '#475569' : '#94a3b8' }}; background:#fff;">{{ $updates }} package {{ \Illuminate\Support\Str::plural('update', $updates) }}</span>
+                        <span class="sentinel-pill" style="display:inline-block; font-size:11px; font-weight:600; padding:2px 8px; border-radius:4px; color:{{ $updates > 0 ? '#475569' : '#94a3b8' }}; border:1px solid {{ $updates > 0 ? '#475569' : '#94a3b8' }}; background:#fff;">{{ $updates }} {{ \Illuminate\Support\Str::plural('update', $updates) }}</span>
                     </td>
                 </tr>
             </table>
