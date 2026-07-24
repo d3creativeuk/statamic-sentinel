@@ -185,8 +185,6 @@
             </div>
         @endif
 
-        <div style="font-size:11px; color:#94a3b8; line-height:1.5; margin-top:14px;">Figures reflect changes recorded by Sentinel scans over the period shown.</div>
-
     @endif
 
     </div>
