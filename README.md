@@ -10,6 +10,7 @@ Sentinel cross-references your installed versions against the OSV vulnerability 
 
 - [Usage](USAGE.md) - how scanning works, where data lives
 - [Security](SECURITY.md) - reporting vulnerabilities
+- [Changelog](CHANGELOG.md) - release history
 
 ## What it shows
 
