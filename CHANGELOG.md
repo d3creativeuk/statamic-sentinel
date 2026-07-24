@@ -8,6 +8,15 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ## [Unreleased]
 
+### Added
+
+- **Users tab (who's online).** A new super-only tab in the utility lists every CP user with a live
+  status (green dot + "Active ..." when seen within the online window, else "Last seen ...") and
+  their last login. Statamic has no built-in "online users" concept, so a lightweight CP middleware
+  records each authenticated user's last-active time (throttled to ~1 write/min per user, persisted
+  so it survives `cache:clear`). Disable with `SENTINEL_TRACK_ACTIVITY=false`; tune the window with
+  `SENTINEL_ONLINE_WINDOW` (minutes, default 5). Only timestamps are stored - no IP/user-agent.
+
 ### Fixed
 
 - Plan Summary email header now dates from the plan start rather than the earliest recorded scan,

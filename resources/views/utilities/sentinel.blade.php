@@ -114,6 +114,15 @@
     $maintenanceEmail = ! empty($last_maintenance_recipients ?? []) ? implode(', ', $last_maintenance_recipients) : $userEmail;
 
     $plan = $maintenance_plan ?? [];
+
+    // Users tab: how many CP users are "online" (active within the window).
+    $onlineWindow = (int) ($online_window ?? 5);
+    $onlineCount  = 0;
+    foreach (($users ?? []) as $u) {
+        if (\D3Creative\Sentinel\Services\LastActiveService::isOnline($u['last_active'] ?? null, $onlineWindow)) {
+            $onlineCount++;
+        }
+    }
 @endphp
 
     {{-- Header --}}
@@ -144,7 +153,7 @@
     <div x-data="{
         tab: 'current',
         init() {
-            var valid = {!! $isSuper ? "['current', 'history', 'status-report', 'update-report', 'maintenance-report', 'content-freeze']" : "['current']" !!};
+            var valid = {!! $isSuper ? "['current', 'history', 'status-report', 'update-report', 'maintenance-report', 'users', 'content-freeze']" : "['current']" !!};
             var hash = (window.location.hash || '').replace('#', '');
             if (valid.indexOf(hash) !== -1) this.tab = hash;
             this.$watch('tab', function (v) {
@@ -206,6 +215,18 @@
                         ? 'cursor:pointer; background:transparent; border:0; border-bottom:2px solid #0f172a; padding:10px 14px; margin-bottom:-1px; font-size:13px; font-weight:600; font-family:inherit; color:#0f172a;'
                         : 'cursor:pointer; background:transparent; border:0; border-bottom:2px solid transparent; padding:10px 14px; margin-bottom:-1px; font-size:13px; font-weight:600; font-family:inherit; color:#64748b;'">
                 Plan Summary
+            </button>
+            <button type="button"
+                    role="tab"
+                    x-on:click="tab = 'users'"
+                    x-bind:aria-selected="tab === 'users'"
+                    x-bind:style="tab === 'users'
+                        ? 'cursor:pointer; background:transparent; border:0; border-bottom:2px solid #0f172a; padding:10px 14px; margin-bottom:-1px; font-size:13px; font-weight:600; font-family:inherit; color:#0f172a;'
+                        : 'cursor:pointer; background:transparent; border:0; border-bottom:2px solid transparent; padding:10px 14px; margin-bottom:-1px; font-size:13px; font-weight:600; font-family:inherit; color:#64748b;'">
+                Users
+                @if ($onlineCount > 0)
+                    <span style="display:inline-flex; align-items:center; gap:4px; margin-left:6px; padding:1px 7px; border-radius:9px; background:#dcfce7; color:#166534; font-size:11px; font-weight:600;"><span style="display:inline-block; width:6px; height:6px; border-radius:50%; background:#16a34a;"></span>{{ $onlineCount }}</span>
+                @endif
             </button>
             <button type="button"
                     role="tab"
@@ -950,6 +971,84 @@
                 'kind'    => 'maintenance',
                 'entries' => $sent_maintenance,
             ])
+        </div>
+
+        {{-- Users tab --}}
+        <div x-show="tab === 'users'" role="tabpanel" x-cloak>
+
+            @if (empty($users))
+
+                <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:48px 24px; text-align:center;">
+                    <p style="font-size:15px; font-weight:600; color:#0f172a; margin:0 0 6px 0;">No CP users found</p>
+                    <p style="font-size:13px; color:#64748b; margin:0; line-height:1.55; max-width:420px; margin-left:auto; margin-right:auto;">Once other control-panel users sign in and browse, their activity and last login will appear here.</p>
+                </div>
+
+            @else
+
+                <div style="border:1px solid #e2e8f0; border-radius:8px; overflow:hidden;">
+                    <div style="overflow-x:auto;">
+                        <table style="width:100%; border-collapse:collapse; font-size:13px;">
+                            <thead>
+                                <tr style="background:#f8fafc; border-bottom:1px solid #e2e8f0;">
+                                    <th style="text-align:left; padding:10px 14px; font-weight:600; color:#475569; white-space:nowrap;">User</th>
+                                    <th style="text-align:left; padding:10px 14px; font-weight:600; color:#475569; white-space:nowrap;">Status</th>
+                                    <th style="text-align:left; padding:10px 14px; font-weight:600; color:#475569; white-space:nowrap;">Last login</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach ($users as $i => $u)
+                                    @php
+                                        $online = \D3Creative\Sentinel\Services\LastActiveService::isOnline($u['last_active'] ?? null, $onlineWindow);
+
+                                        try {
+                                            $activeHuman = ! empty($u['last_active']) ? \Carbon\Carbon::parse($u['last_active'])->diffForHumans() : null;
+                                        } catch (\Throwable $e) {
+                                            $activeHuman = null;
+                                        }
+                                        try {
+                                            $loginHuman = ! empty($u['last_login']) ? \Carbon\Carbon::parse($u['last_login'])->diffForHumans() : null;
+                                        } catch (\Throwable $e) {
+                                            $loginHuman = null;
+                                        }
+
+                                        if ($online) {
+                                            $dotColour = '#16a34a'; $statusColour = '#166534'; $statusText = 'Active ' . $activeHuman;
+                                        } elseif ($activeHuman) {
+                                            $dotColour = '#cbd5e1'; $statusColour = '#64748b'; $statusText = 'Last seen ' . $activeHuman;
+                                        } else {
+                                            $dotColour = '#cbd5e1'; $statusColour = '#94a3b8'; $statusText = 'No recent activity';
+                                        }
+                                    @endphp
+                                    <tr @if (! $loop->last) style="border-bottom:1px solid #f1f5f9;" @endif>
+                                        <td style="padding:10px 14px; vertical-align:top;">
+                                            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                                                <span style="font-weight:600; color:#0f172a;">{{ $u['name'] ?? $u['email'] ?? 'Unknown' }}</span>
+                                                @if (! empty($u['is_super']))
+                                                    <span style="display:inline-flex; align-items:center; font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:0.04em; padding:1px 6px; border-radius:4px; color:#64748b; background:#fff; border:1px solid #cbd5e1;">Super</span>
+                                                @endif
+                                            </div>
+                                            @if (! empty($u['email']) && ($u['name'] ?? null) !== $u['email'])
+                                                <div style="font-size:12px; color:#64748b; margin-top:2px;">{{ $u['email'] }}</div>
+                                            @endif
+                                        </td>
+                                        <td style="padding:10px 14px; white-space:nowrap; vertical-align:top;">
+                                            <span style="display:inline-flex; align-items:center; gap:7px; color:{{ $statusColour }}; font-weight:500;">
+                                                <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:{{ $dotColour }}; flex-shrink:0;"></span>
+                                                {{ $statusText }}
+                                            </span>
+                                        </td>
+                                        <td style="padding:10px 14px; color:#475569; white-space:nowrap; vertical-align:top;">{{ $loginHuman ?? 'Never' }}</td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <p style="font-size:12px; color:#64748b; margin:10px 2px 0 2px;">&ldquo;Online&rdquo; means active in the control panel within the last {{ $onlineWindow }} {{ $onlineWindow === 1 ? 'minute' : 'minutes' }} - an open but idle tab drops to &ldquo;last seen&rdquo;.</p>
+
+            @endif
+
         </div>
 
         {{-- Content Freeze tab --}}

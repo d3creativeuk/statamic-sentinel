@@ -18,9 +18,11 @@ use D3Creative\Sentinel\Http\Controllers\SentinelController;
 use D3Creative\Sentinel\Http\Controllers\SentMailActionController;
 use D3Creative\Sentinel\Http\Middleware\AdvanceFreezeState;
 use D3Creative\Sentinel\Http\Middleware\InjectFreezeBanner;
+use D3Creative\Sentinel\Http\Middleware\RecordLastActive;
 use D3Creative\Sentinel\Services\AuditService;
 use D3Creative\Sentinel\Services\ContentFreezeService;
 use D3Creative\Sentinel\Services\HistoryService;
+use D3Creative\Sentinel\Services\LastActiveService;
 use D3Creative\Sentinel\Services\MaintenancePlanService;
 use D3Creative\Sentinel\Services\ScheduleService;
 use D3Creative\Sentinel\Services\SentMailService;
@@ -66,6 +68,12 @@ class ServiceProvider extends AddonServiceProvider
         // are wrapped in their own middleware group.
         $this->app['router']->pushMiddlewareToGroup('statamic.cp', AdvanceFreezeState::class);
         $this->app['router']->pushMiddlewareToGroup('statamic.cp', InjectFreezeBanner::class);
+
+        // Record each authenticated CP user's last-active time (throttled to
+        // ~1 write/min per user), so the utility's Users tab can show who's
+        // recently online. Appended after Statamic's AuthGuard, so the CP user
+        // is resolvable inside the middleware.
+        $this->app['router']->pushMiddlewareToGroup('statamic.cp', RecordLastActive::class);
 
         $this->registerCpRoutes(function () {
             \Illuminate\Support\Facades\Route::post(
@@ -230,6 +238,10 @@ class ServiceProvider extends AddonServiceProvider
                             'last_update_recipients' => $sentMail->lastManualRecipients(SentMailService::KIND_UPDATE),
                             'last_maintenance_recipients' => $sentMail->lastManualRecipients(SentMailService::KIND_MAINTENANCE),
                             'maintenance_plan' => app(MaintenancePlanService::class)->all(),
+                            // Who's-online list - super-only (it exposes every CP
+                            // user's activity), so don't even build it otherwise.
+                            'users'           => auth()->user()?->isSuper() === true ? $this->buildUserActivity() : [],
+                            'online_window'   => (int) config('statamic-sentinel.users.online_window', 5),
                             'freeze'          => $freeze,
                             'freeze_current'  => $freeze->current(),
                             'freeze_history'  => $freeze->history(),
@@ -247,6 +259,50 @@ class ServiceProvider extends AddonServiceProvider
                 FreezeTickNotificationsCommand::class,
                 FreezeTickActivationsCommand::class,
             ]);
+        }
+    }
+
+    /**
+     * Join every CP user to their recorded last-active time (from
+     * LastActiveService) and their last login (from Statamic), shaped for the
+     * utility's Users tab and sorted most-recently-active first, then by name.
+     * Guarded so an older/absent User API can never break utility rendering.
+     */
+    protected function buildUserActivity(): array
+    {
+        try {
+            $active = app(LastActiveService::class)->all();
+
+            $users = \Statamic\Facades\User::all()->map(function ($user) use ($active) {
+                $id        = (string) $user->id();
+                $lastLogin = $user->lastLogin();
+
+                return [
+                    'id'          => $id,
+                    'name'        => $user->name(),
+                    'email'       => $user->email(),
+                    'initials'    => method_exists($user, 'initials') ? $user->initials() : '',
+                    'is_super'    => (bool) $user->isSuper(),
+                    'last_active' => $active[$id] ?? null,
+                    'last_login'  => $lastLogin ? $lastLogin->toIso8601String() : null,
+                ];
+            })->all();
+
+            usort($users, function ($a, $b) {
+                $aa = $a['last_active'];
+                $bb = $b['last_active'];
+                if ($aa === null && $bb === null) {
+                    return strcasecmp((string) $a['name'], (string) $b['name']);
+                }
+                if ($aa === null) return 1;   // no activity sorts last
+                if ($bb === null) return -1;
+                if ($aa !== $bb) return strcmp($bb, $aa); // ISO-8601, descending
+                return strcasecmp((string) $a['name'], (string) $b['name']);
+            });
+
+            return $users;
+        } catch (\Throwable $e) {
+            return [];
         }
     }
 }

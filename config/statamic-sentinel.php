@@ -73,4 +73,26 @@ return [
 
     'vendor_security_check' => env('SENTINEL_VENDOR_SECURITY_CHECK', true),
 
+    /*
+    |--------------------------------------------------------------------------
+    | User activity ("who's online")
+    |--------------------------------------------------------------------------
+    |
+    | Sentinel records each CP user's last-active time (throttled to ~1 write
+    | per minute per user) so the utility's Users tab can show who's recently
+    | online, alongside their last login. Statamic has no built-in "online
+    | users" concept, so this is tracked by a lightweight CP middleware.
+    |
+    | Set SENTINEL_TRACK_ACTIVITY=false to disable the tracking entirely (the
+    | Users tab then shows last-login only). SENTINEL_ONLINE_WINDOW is how many
+    | minutes of inactivity still count as "online" - since activity only
+    | advances on a CP request, this is "active in the last N minutes".
+    |
+    */
+
+    'users' => [
+        'track_activity' => env('SENTINEL_TRACK_ACTIVITY', true),
+        'online_window'  => (int) env('SENTINEL_ONLINE_WINDOW', 5),
+    ],
+
 ];

@@ -27,6 +27,18 @@ Sentinel cross-references your installed versions against the OSV vulnerability 
 - **Scheduled status reports** - the Status Report tab includes schedule controls (daily/weekly/monthly cadence, time, recipient list) below the manual send form. The addon auto-registers the matching Laravel scheduler entry on boot, and each scheduled run does a fresh scan first - so the email is current AND the CP's cached audit + history get updated for free. Update reports aren't scheduled - they're meant to verify a manual update + scan, so they're send-on-demand only. Requires the standard `* * * * * php artisan schedule:run` cron entry on the host.
 - Both email send endpoints are rate-limited to 6 requests per minute.
 
+## Users (who's online)
+
+The utility's **Users** tab (super admins only) lists every control-panel user with their current activity and last login:
+
+- **Status** - a green dot and "Active ..." when the user has made a CP request within the online window (default 5 minutes), otherwise a grey dot with "Last seen ..." or "No recent activity". A count of who's online shows on the tab.
+- **Last login** - Statamic's own last-login timestamp, shown relative (or "Never").
+
+Statamic has no built-in "who's online" concept, so Sentinel tracks it with a lightweight CP middleware that records each authenticated user's last-active time (throttled to about one write per minute per user, persisted so it survives `cache:clear`). Because activity only advances on a CP request, "online" means "active in the last few minutes" - an open but idle tab drops to "last seen". Only timestamps are stored (no IP or user-agent).
+
+- `SENTINEL_TRACK_ACTIVITY=false` disables the tracking entirely (the tab then shows last-login only).
+- `SENTINEL_ONLINE_WINDOW` sets the minutes of inactivity still counted as online (default `5`).
+
 ## Content Freeze
 
 Coordinate update windows with CP users. Schedule a heads-up email, show banners through the lifecycle of the work, and send an all-clear when done. Useful for client sites where editors and developers share the CP.
