@@ -6,6 +6,13 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). Releases are git-tag driven
 (`composer.json` carries no `version` field).
 
+## [Unreleased]
+
+### Fixed
+
+- Plan Summary email header now dates from the plan start rather than the earliest recorded scan,
+  so the "5 May 2026 to ..." range matches the "since your plan started on ..." intro line.
+
 ## [2.1.0] - 2026-07-24
 
 ### Added
