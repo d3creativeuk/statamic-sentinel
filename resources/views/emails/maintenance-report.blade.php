@@ -39,13 +39,16 @@
 
     $planLabel = ! empty($plan['name']) ? $plan['name'] : 'maintenance plan';
 
-    // Intro line - woven from the plan dates when set.
+    // Intro line - only the plan name, date and update count are bold; the rest
+    // is normal weight. Dynamic parts are escaped before being marked up.
+    $strong        = fn ($s) => '<strong style="font-weight:600;">' . e($s) . '</strong>';
+    $updatesPhrase = $totalUpdates . ' ' . \Illuminate\Support\Str::plural('update', $totalUpdates);
+
     if (! empty($plan['start'])) {
-        $intro = 'Since your ' . $planLabel . ' started on ' . $plan['start'] . ', your site has received '
-               . $totalUpdates . ' ' . \Illuminate\Support\Str::plural('update', $totalUpdates) . '.';
+        $intro = 'Since your ' . $strong($planLabel) . ' started on ' . $strong($plan['start'])
+               . ', your site has received ' . $strong($updatesPhrase) . '.';
     } else {
-        $intro = 'Your site has received ' . $totalUpdates . ' '
-               . \Illuminate\Support\Str::plural('update', $totalUpdates) . ' over this period.';
+        $intro = 'Your site has received ' . $strong($updatesPhrase) . ' over this period.';
     }
 
     // Formatted human date range for the header.
@@ -115,7 +118,7 @@
     @else
 
         {{-- Intro --}}
-        <div style="font-size:15px; font-weight:600; color:#0f172a; line-height:1.5; margin-bottom:20px;">{{ $intro }}</div>
+        <div style="font-size:15px; font-weight:400; color:#0f172a; line-height:1.5; margin-bottom:20px;">{!! $intro !!}</div>
 
         {{-- Security callout - the strongest value line --}}
         @if ($totalSec > 0)
@@ -177,7 +180,7 @@
         @if (! empty($plan['expiry']) || ! empty($plan['show_reminder']))
             <div style="border-top:1px solid #e2e8f0; margin-top:20px; padding-top:16px;">
                 @if (! empty($plan['expiry']))
-                    <div style="font-size:13px; color:#475569; line-height:1.5;">Your plan runs until {{ $plan['expiry'] }} - you don't need to take any action now.</div>
+                    <div style="font-size:13px; color:#475569; line-height:1.5;">Your plan runs until {{ $plan['expiry'] }}.</div>
                 @endif
                 @if (! empty($plan['show_reminder']))
                     <div style="font-size:13px; color:#475569; line-height:1.5; margin-top:4px;">You'll receive a reminder email {{ (int) ($plan['reminder_days'] ?? 30) }} days before your plan ends.</div>
