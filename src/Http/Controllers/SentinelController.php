@@ -94,11 +94,9 @@ class SentinelController extends Controller
         abort_unless(auth()->user()?->isSuper(), 403);
 
         $validator = Validator::make($request->all(), [
-            'plan_name'     => ['nullable', 'string', 'max:100'],
-            'start_date'    => ['nullable', 'date'],
-            'expiry_date'   => ['nullable', 'date'],
-            'show_reminder' => ['nullable', 'boolean'],
-            'reminder_days' => ['nullable', 'integer', 'min:1', 'max:365'],
+            'plan_name'   => ['nullable', 'string', 'max:100'],
+            'start_date'  => ['nullable', 'date'],
+            'expiry_date' => ['nullable', 'date'],
         ]);
 
         if ($validator->fails()) {
@@ -115,11 +113,9 @@ class SentinelController extends Controller
         }
 
         $saved = app(MaintenancePlanService::class)->save([
-            'plan_name'     => ($input['plan_name'] ?? '') !== '' ? $input['plan_name'] : null,
-            'start_date'    => $start,
-            'expiry_date'   => $expiry,
-            'show_reminder' => isset($input['show_reminder']) ? filter_var($input['show_reminder'], FILTER_VALIDATE_BOOLEAN) : false,
-            'reminder_days' => (int) ($input['reminder_days'] ?? 30),
+            'plan_name'   => ($input['plan_name'] ?? '') !== '' ? $input['plan_name'] : null,
+            'start_date'  => $start,
+            'expiry_date' => $expiry,
         ]);
 
         if (! $saved) {

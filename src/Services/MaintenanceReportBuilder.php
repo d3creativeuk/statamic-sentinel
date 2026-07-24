@@ -30,11 +30,9 @@ class MaintenanceReportBuilder
     public static function build(array $history, array $plan): array
     {
         $planOut = [
-            'name'          => ($plan['plan_name'] ?? '') !== '' ? $plan['plan_name'] : null,
-            'start'         => self::formatDate($plan['start_date'] ?? null),
-            'expiry'        => self::formatDate($plan['expiry_date'] ?? null),
-            'show_reminder' => (bool) ($plan['show_reminder'] ?? true),
-            'reminder_days' => (int) ($plan['reminder_days'] ?? 30),
+            'name'   => ($plan['plan_name'] ?? '') !== '' ? $plan['plan_name'] : null,
+            'start'  => self::formatDate($plan['start_date'] ?? null),
+            'expiry' => self::formatDate($plan['expiry_date'] ?? null),
         ];
 
         if (empty($history)) {

@@ -858,17 +858,7 @@
                                    style="width:100%; box-sizing:border-box; font-size:13px; padding:7px 12px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#1e293b; outline:none;">
                         </label>
                     </div>
-                    <div style="display:flex; flex-wrap:wrap; align-items:center; gap:14px; margin-top:12px;">
-                        <label style="display:inline-flex; align-items:center; gap:8px; font-size:13px; color:#0f172a; cursor:pointer;">
-                            <input type="checkbox" name="show_reminder" value="1" {{ ($plan['show_reminder'] ?? true) ? 'checked' : '' }}
-                                   style="width:15px; height:15px; cursor:pointer;">
-                            Include renewal reminder line
-                        </label>
-                        <label style="display:inline-flex; align-items:center; gap:8px; font-size:13px; color:#475569;">
-                            <input type="number" name="reminder_days" value="{{ $plan['reminder_days'] ?? 30 }}" min="1" max="365"
-                                   style="width:64px; font-size:13px; padding:6px 8px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#1e293b; outline:none; font-variant-numeric:tabular-nums;">
-                            days before expiry
-                        </label>
+                    <div style="display:flex; align-items:center; margin-top:12px;">
                         <button type="submit"
                                 x-bind:disabled="saving"
                                 x-bind:style="{ background: state === 'success' ? '#047857' : (state === 'error' ? '#ef4444' : '#0f172a') }"
@@ -879,7 +869,6 @@
                             <span x-show="!saving && state === 'idle'">Save Plan Details</span>
                         </button>
                     </div>
-                    <div style="font-size:11px; color:#64748b; margin-top:10px; line-height:1.5;">The reminder line is text only - Sentinel does not send a reminder email. Leave it unchecked if you handle renewals another way.</div>
                     <div x-show="message" x-cloak
                          x-bind:style="{ color: state === 'success' ? '#047857' : '#ef4444' }"
                          style="font-size:13px; margin-top:8px;"

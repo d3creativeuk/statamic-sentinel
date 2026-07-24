@@ -182,15 +182,10 @@
             </table>
         @endforeach
 
-        {{-- Plan lifecycle: reassurance + reminder, kept out of the busy top --}}
-        @if (! empty($plan['expiry']) || ! empty($plan['show_reminder']))
+        {{-- Plan expiry, kept out of the busy top --}}
+        @if (! empty($plan['expiry']))
             <div style="border-top:1px solid #e2e8f0; margin-top:20px; padding-top:16px;">
-                @if (! empty($plan['expiry']))
-                    <div style="font-size:13px; color:#475569; line-height:1.5;">Your plan runs until {{ $plan['expiry'] }}.</div>
-                @endif
-                @if (! empty($plan['show_reminder']))
-                    <div style="font-size:13px; color:#475569; line-height:1.5; margin-top:4px;">You'll receive a reminder email {{ (int) ($plan['reminder_days'] ?? 30) }} days before your plan ends.</div>
-                @endif
+                <div style="font-size:13px; color:#475569; line-height:1.5;">Your plan runs until {{ $plan['expiry'] }}.</div>
             </div>
         @endif
 

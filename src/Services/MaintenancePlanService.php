@@ -18,11 +18,9 @@ class MaintenancePlanService
     public function defaults(): array
     {
         return [
-            'plan_name'     => null,   // free-text label, e.g. "Gold Care Plan"
-            'start_date'    => null,   // Y-m-d or null
-            'expiry_date'   => null,   // Y-m-d or null
-            'show_reminder' => true,   // include the "you'll get a reminder" line in the email
-            'reminder_days' => 30,     // number quoted in that line
+            'plan_name'   => null,   // free-text label, e.g. "Gold Care Plan"
+            'start_date'  => null,   // Y-m-d or null
+            'expiry_date' => null,   // Y-m-d or null
         ];
     }
 
