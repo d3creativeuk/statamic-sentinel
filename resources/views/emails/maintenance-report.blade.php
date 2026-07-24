@@ -42,8 +42,7 @@
     // Intro line - woven from the plan dates when set.
     if (! empty($plan['start'])) {
         $intro = 'Since your ' . $planLabel . ' started on ' . $plan['start'] . ', your site has received '
-               . $totalUpdates . ' ' . \Illuminate\Support\Str::plural('update', $totalUpdates)
-               . ', keeping it secure and up to date.';
+               . $totalUpdates . ' ' . \Illuminate\Support\Str::plural('update', $totalUpdates) . '.';
     } else {
         $intro = 'Your site has received ' . $totalUpdates . ' '
                . \Illuminate\Support\Str::plural('update', $totalUpdates) . ' over this period.';
@@ -52,19 +51,16 @@
     // Formatted human date range for the header.
     $rangeText = trim(($report['since'] ?? '') . ($report['to'] ? ' to ' . $report['to'] : ''));
 
-    // Platform row helper: journey + update count.
+    // Platform row helper: this report is purely about how many times each was
+    // updated, so it carries only a count - no version numbers.
     $platformRow = function (string $label, array $p) {
         $count = (int) ($p['count'] ?? 0);
-        $from  = $p['from'] ?? null;
-        $to    = $p['to'] ?? null;
-        $moved = $from && $to && $from !== $to;
 
         return [
             'label'  => $label,
-            'detail' => $moved ? ($from . ' → ' . $to) : ($to ?? $from ?? '-'),
             'count'  => $count,
             'pill'   => $count > 0 ? $count . ' ' . \Illuminate\Support\Str::plural('update', $count) : 'No change',
-            'colour' => $count > 0 ? '#10b981' : '#94a3b8',
+            'colour' => $count > 0 ? '#475569' : '#94a3b8',
         ];
     };
 
@@ -118,16 +114,8 @@
 
     @else
 
-        {{-- Intro banner --}}
-        <div style="background:#10b9811a; border-left:3px solid #10b981; padding:14px 16px; border-radius:6px; margin-bottom:16px;">
-            <div style="font-size:15px; font-weight:600; color:#0f172a; line-height:1.45;">{{ $intro }}</div>
-            @if (! empty($plan['expiry']))
-                <div style="font-size:13px; font-weight:400; color:#475569; line-height:1.45; margin-top:6px;">Your plan runs until {{ $plan['expiry'] }} - you don't need to take any action now.</div>
-            @endif
-            @if (! empty($plan['show_reminder']))
-                <div style="font-size:13px; font-weight:400; color:#475569; line-height:1.45; margin-top:4px;">You'll receive a reminder email {{ (int) ($plan['reminder_days'] ?? 30) }} days before your plan ends.</div>
-            @endif
-        </div>
+        {{-- Intro --}}
+        <div style="font-size:15px; font-weight:600; color:#0f172a; line-height:1.5; margin-bottom:20px;">{{ $intro }}</div>
 
         {{-- Security callout - the strongest value line --}}
         @if ($totalSec > 0)
@@ -152,8 +140,7 @@
                         <div style="font-size:12px; color:#475569; margin-top:3px;">{{ $row['description'] }}</div>
                     </td>
                     <td align="right" class="sentinel-row-cell sentinel-row-meta" style="padding:12px 16px; font-size:12px; color:#475569; vertical-align:middle; white-space:nowrap; font-variant-numeric:tabular-nums;">
-                        <span style="color:#475569;">{{ $r['detail'] }}</span>
-                        <span class="sentinel-pill" style="display:inline-block; margin-left:10px; font-size:11px; font-weight:600; padding:2px 8px; border-radius:4px; color:{{ $r['colour'] }}; border:1px solid {{ $r['colour'] }}; background:#fff;">{{ $r['pill'] }}</span>
+                        <span class="sentinel-pill" style="display:inline-block; font-size:11px; font-weight:600; padding:2px 8px; border-radius:4px; color:{{ $r['colour'] }}; border:1px solid {{ $r['colour'] }}; background:#fff;">{{ $r['pill'] }}</span>
                     </td>
                 </tr>
             </table>
@@ -180,11 +167,23 @@
                         @endif
                     </td>
                     <td align="right" class="sentinel-row-cell sentinel-row-meta" style="padding:12px 16px; font-size:12px; color:#475569; vertical-align:middle; white-space:nowrap; font-variant-numeric:tabular-nums;">
-                        <span class="sentinel-pill" style="display:inline-block; font-size:11px; font-weight:600; padding:2px 8px; border-radius:4px; color:{{ $updates > 0 ? '#10b981' : '#94a3b8' }}; border:1px solid {{ $updates > 0 ? '#10b981' : '#94a3b8' }}; background:#fff;">{{ $updates }} package {{ \Illuminate\Support\Str::plural('update', $updates) }}</span>
+                        <span class="sentinel-pill" style="display:inline-block; font-size:11px; font-weight:600; padding:2px 8px; border-radius:4px; color:{{ $updates > 0 ? '#475569' : '#94a3b8' }}; border:1px solid {{ $updates > 0 ? '#475569' : '#94a3b8' }}; background:#fff;">{{ $updates }} package {{ \Illuminate\Support\Str::plural('update', $updates) }}</span>
                     </td>
                 </tr>
             </table>
         @endforeach
+
+        {{-- Plan lifecycle: reassurance + reminder, kept out of the busy top --}}
+        @if (! empty($plan['expiry']) || ! empty($plan['show_reminder']))
+            <div style="border-top:1px solid #e2e8f0; margin-top:20px; padding-top:16px;">
+                @if (! empty($plan['expiry']))
+                    <div style="font-size:13px; color:#475569; line-height:1.5;">Your plan runs until {{ $plan['expiry'] }} - you don't need to take any action now.</div>
+                @endif
+                @if (! empty($plan['show_reminder']))
+                    <div style="font-size:13px; color:#475569; line-height:1.5; margin-top:4px;">You'll receive a reminder email {{ (int) ($plan['reminder_days'] ?? 30) }} days before your plan ends.</div>
+                @endif
+            </div>
+        @endif
 
         <div style="font-size:11px; color:#94a3b8; line-height:1.5; margin-top:14px;">Figures reflect changes recorded by Sentinel scans over the period shown.</div>
 
