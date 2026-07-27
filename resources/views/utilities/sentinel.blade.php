@@ -1045,8 +1045,6 @@
                     </div>
                 </div>
 
-                <p style="font-size:12px; color:#64748b; margin:10px 2px 0 2px;">&ldquo;Online&rdquo; means active in the control panel within the last {{ $onlineWindow }} {{ $onlineWindow === 1 ? 'minute' : 'minutes' }} - an open but idle tab drops to &ldquo;last seen&rdquo;.</p>
-
             @endif
 
         </div>
