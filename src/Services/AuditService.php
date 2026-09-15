@@ -1530,7 +1530,14 @@ class AuditService
 
             $current = ltrim($installed[$name], 'v^~');
             if (version_compare($current, $latest, '<')) {
-                $outdated[] = ['name' => $name, 'current' => $current, 'latest' => $latest];
+                $outdated[] = [
+                    'name'         => $name,
+                    'current'      => $current,
+                    'latest'       => $latest,
+                    // Fast path for annotateReleaseAge(), which would otherwise
+                    // need the full registry document (tens of MB for vite).
+                    'published_at' => $this->npmPublishedAtFromManifest($response->json('_npmOperationalInternal.tmp')),
+                ];
             }
         }
 
@@ -1585,23 +1592,55 @@ class AuditService
     }
 
     /**
+     * Read the publish time from a `/latest` manifest's
+     * `_npmOperationalInternal.tmp`, e.g. "tmp/vite_8.3.0_1789039826195_0.158...",
+     * whose second-to-last segment is the publish time in Unix milliseconds.
+     * Scoped packages use the unscoped basename there, so the parse anchors on
+     * the tail rather than the package name.
+     *
+     * The field is undocumented and internal to npm, so this is a fast path
+     * only: anything that isn't a plausible timestamp (after 2010 and not in
+     * the future, allowing an hour of clock skew) returns null and
+     * annotateReleaseAge() falls back to the full registry document.
+     */
+    protected function npmPublishedAtFromManifest($tmp): ?string
+    {
+        if (! is_string($tmp) || ! preg_match('/_(\d{13})_[\d.]+$/', $tmp, $m)) {
+            return null;
+        }
+
+        $published = \Carbon\CarbonImmutable::createFromTimestampUTC(intdiv((int) $m[1], 1000));
+
+        if ($published->year < 2010 || $published->greaterThan(\Carbon\CarbonImmutable::now('UTC')->addHour())) {
+            return null;
+        }
+
+        return $published->toIso8601String();
+    }
+
+    /**
      * Flag outdated npm packages whose latest release is younger than the
      * project's `min-release-age` guard. npm refuses to install these until they
      * age past the window, so `npm update` no-ops and Sentinel would otherwise
-     * look wrong. We read each latest version's publish time from the full
-     * registry document (the `/latest` manifest omits it) and mark the package
-     * blocked, with the date it becomes installable.
+     * look wrong. The publish time normally comes from the `/latest` manifest
+     * (see npmPublishedAtFromManifest()); only packages without one fall back to
+     * the full registry document's `time` map. That document is tens of MB for
+     * large packages like vite and can outrun the timeout, which is why it is
+     * the fallback and not the default.
      *
      * Fails open: a disabled guard or any registry error leaves every package
-     * unblocked, so a genuine update is never hidden.
+     * unblocked, so a genuine update is never hidden. When the guard is on but
+     * no publish time could be found, the row is marked `release_age_unknown`
+     * so the view can say the check didn't run instead of implying "installable".
      */
     protected function annotateReleaseAge(array $packages): array
     {
         // Default everything to "not blocked" first.
         foreach ($packages as &$pkg) {
-            $pkg['blocked']           = false;
-            $pkg['blocked_until']     = null;
-            $pkg['available_in_days'] = null;
+            $pkg['blocked']             = false;
+            $pkg['blocked_until']       = null;
+            $pkg['available_in_days']   = null;
+            $pkg['release_age_unknown'] = false;
         }
         unset($pkg);
 
@@ -1611,37 +1650,53 @@ class AuditService
             return $packages;
         }
 
-        $names = array_column($packages, 'name');
+        $needDoc = array_column(
+            array_filter($packages, fn ($pkg) => empty($pkg['published_at'])),
+            'name'
+        );
 
-        try {
-            $docs = Http::pool(fn ($pool) => array_map(
-                fn ($name) => $pool->as($name)->timeout(5)->get("https://registry.npmjs.org/{$name}"),
-                $names
-            ));
-        } catch (\Throwable $e) {
-            return $packages;
+        $docs = [];
+
+        if (! empty($needDoc)) {
+            try {
+                $docs = Http::pool(fn ($pool) => array_map(
+                    fn ($name) => $pool->as($name)->timeout(5)->get("https://registry.npmjs.org/{$name}"),
+                    $needDoc
+                ));
+            } catch (\Throwable $e) {
+                $docs = [];
+            }
         }
 
         $now    = \Carbon\CarbonImmutable::now('UTC');
         $cutoff = $now->subDays($days);
 
         foreach ($packages as &$pkg) {
-            $doc = $docs[$pkg['name']] ?? null;
-
-            if (! $this->isOkResponse($doc)) {
-                continue;
-            }
-
-            // Version keys contain dots, so index the array directly rather than
-            // using dot-notation data_get, which would treat "4.3.3" as a path.
-            $time        = $doc->json('time') ?? [];
-            $publishedAt = $time[$pkg['latest']] ?? null;
+            $publishedAt = $pkg['published_at'] ?? null;
 
             if (! $publishedAt) {
+                $doc = $docs[$pkg['name']] ?? null;
+
+                if ($this->isOkResponse($doc)) {
+                    // Version keys contain dots, so index the array directly rather than
+                    // using dot-notation data_get, which would treat "4.3.3" as a path.
+                    $time        = $doc->json('time');
+                    $publishedAt = is_array($time) ? ($time[$pkg['latest']] ?? null) : null;
+                }
+            }
+
+            try {
+                $published = $publishedAt ? \Carbon\CarbonImmutable::parse($publishedAt)->utc() : null;
+            } catch (\Throwable $e) {
+                $published = null;
+            }
+
+            if (! $published) {
+                $pkg['release_age_unknown'] = true;
                 continue;
             }
 
-            $published = \Carbon\CarbonImmutable::parse($publishedAt)->utc();
+            $pkg['published_at'] = $published->toIso8601String();
 
             if ($published->greaterThan($cutoff)) {
                 $available   = $published->addDays($days);

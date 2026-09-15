@@ -49,17 +49,48 @@ showing until the versions aged out.
 ## Data flow
 
 1. `npmMinReleaseAgeDays()` reads the guard window (days) from the nearest `.npmrc`.
-2. `npmOutdated()` finds outdated packages as it does today.
-3. `annotateReleaseAge()` fetches each outdated package's full registry document, reads
-   the publish time of its `latest` version, and sets `blocked`, `blocked_until`, and
-   `available_in_days`.
+2. `npmOutdated()` finds outdated packages as it does today, and parses each latest
+   version's publish time out of the `/latest` manifest it already fetched (see below) into
+   `published_at`.
+3. `annotateReleaseAge()` uses `published_at` where it has one. Only packages without it
+   fall back to the full registry document's `time` map. It then sets `blocked`,
+   `blocked_until`, `available_in_days` and `release_age_unknown`.
 4. The blade view renders a **Blocked** pill and an "available in N days" line for any
-   package where `blocked === true`.
+   package where `blocked === true`, and a neutral **Unchecked** hint where
+   `release_age_unknown === true`.
 
-Note: the `/{name}/latest` endpoint Sentinel already calls returns the version manifest
-**without** publish times. The `time` map lives only on the full document at
-`registry.npmjs.org/{name}`, so the annotate step does a second, smaller pool over just
-the outdated subset (usually a handful of packages, not the whole tree).
+### Where the publish time comes from
+
+The documented place for publish times is the `time` map on the full document at
+`registry.npmjs.org/{name}`. That document is far too big for large packages: vite's is
+about 39 MB and tailwindcss's about 11 MB, and neither arrives inside the 5s timeout. In
+production (lbf-com, Sep 2026) that timeout left vite 8.3.0 unflagged five days into a
+7 day window, so Sentinel showed an update npm was refusing to install.
+
+The `/{name}/latest` manifest has no `time` map, but it does carry
+`_npmOperationalInternal.tmp`, which ends in the publish time as Unix milliseconds:
+
+```
+vite 8.3.0                "tmp/vite_8.3.0_1789039826195_0.15890598475191897"      -> 2026-09-10T11:30:26Z
+@alpinejs/collapse 3.17.3 "tmp/collapse_3.17.3_1789410036019_0.655826726596169"  -> 2026-09-14T18:20:36Z
+```
+
+These match the full document's `time` map to the second. Scoped packages use the unscoped
+basename, so `npmPublishedAtFromManifest()` anchors the parse on the tail
+(`/_(\d{13})_[\d.]+$/`), not the package name.
+
+The field is **undocumented and internal to npm**, so it is a fast path only. A value that
+doesn't parse, or isn't a plausible timestamp (before 2010, or more than an hour in the
+future), is treated as missing and that package falls back to the full document.
+
+Alternatives that were ruled out:
+
+- **gzip on the full document** gets vite down to about 4.6 MB, but PHP still has to
+  `json_decode` 39 MB during a scan.
+- **Abbreviated metadata** (`Accept: application/vnd.npm.install-v1+json`) is small but
+  only carries `modified`, not per-version times.
+- **Search API** (`/-/v1/search`) has a date for latest, but matches on text rather than
+  exact name, and its index can lag behind publishes.
 
 ## Implementation
 
@@ -124,25 +155,54 @@ $outdated = $this->annotateReleaseAge($outdated);
 return ['total' => count($outdated), 'packages' => $outdated];
 ```
 
+`npmOutdated()` also records each outdated package's publish time from the `/latest`
+manifest it already fetched:
+
+```php
+$outdated[] = [
+    'name'         => $name,
+    'current'      => $current,
+    'latest'       => $latest,
+    'published_at' => $this->npmPublishedAtFromManifest($response->json('_npmOperationalInternal.tmp')),
+];
+```
+
+```php
+protected function npmPublishedAtFromManifest($tmp): ?string
+{
+    if (! is_string($tmp) || ! preg_match('/_(\d{13})_[\d.]+$/', $tmp, $m)) {
+        return null;
+    }
+
+    $published = CarbonImmutable::createFromTimestampUTC(intdiv((int) $m[1], 1000));
+
+    if ($published->year < 2010 || $published->greaterThan(CarbonImmutable::now('UTC')->addHour())) {
+        return null;
+    }
+
+    return $published->toIso8601String();
+}
+```
+
 ```php
 /**
  * Flag outdated npm packages whose latest release is younger than the
- * project's `min-release-age` guard. npm refuses to install these until they
- * age past the window, so `npm update` no-ops and Sentinel would otherwise
- * look wrong. We read each latest version's publish time from the full
- * registry document (the `/latest` manifest omits it) and mark the package
- * blocked, with the date it becomes installable.
+ * project's `min-release-age` guard. The publish time normally comes from the
+ * `/latest` manifest; only packages without one fall back to the full
+ * registry document's `time` map.
  *
  * Fails open: a disabled guard or any registry error leaves every package
- * unblocked, so a genuine update is never hidden.
+ * unblocked, so a genuine update is never hidden. When the guard is on but
+ * no publish time could be found, the row is marked `release_age_unknown`.
  */
 protected function annotateReleaseAge(array $packages): array
 {
     // Default everything to "not blocked" first.
     foreach ($packages as &$pkg) {
-        $pkg['blocked']           = false;
-        $pkg['blocked_until']     = null;
-        $pkg['available_in_days'] = null;
+        $pkg['blocked']             = false;
+        $pkg['blocked_until']       = null;
+        $pkg['available_in_days']   = null;
+        $pkg['release_age_unknown'] = false;
     }
     unset($pkg);
 
@@ -152,37 +212,53 @@ protected function annotateReleaseAge(array $packages): array
         return $packages;
     }
 
-    $names = array_column($packages, 'name');
+    $needDoc = array_column(
+        array_filter($packages, fn ($pkg) => empty($pkg['published_at'])),
+        'name'
+    );
 
-    try {
-        $docs = Http::pool(fn ($pool) => array_map(
-            fn ($name) => $pool->as($name)->timeout(5)->get("https://registry.npmjs.org/{$name}"),
-            $names
-        ));
-    } catch (\Throwable $e) {
-        return $packages;
+    $docs = [];
+
+    if (! empty($needDoc)) {
+        try {
+            $docs = Http::pool(fn ($pool) => array_map(
+                fn ($name) => $pool->as($name)->timeout(5)->get("https://registry.npmjs.org/{$name}"),
+                $needDoc
+            ));
+        } catch (\Throwable $e) {
+            $docs = [];
+        }
     }
 
     $now    = CarbonImmutable::now('UTC');
     $cutoff = $now->subDays($days);
 
     foreach ($packages as &$pkg) {
-        $doc = $docs[$pkg['name']] ?? null;
-
-        if (! $this->isOkResponse($doc)) {
-            continue;
-        }
-
-        // Version keys contain dots, so index the array directly rather than
-        // using dot-notation data_get, which would treat "4.3.3" as a path.
-        $time        = $doc->json('time') ?? [];
-        $publishedAt = $time[$pkg['latest']] ?? null;
+        $publishedAt = $pkg['published_at'] ?? null;
 
         if (! $publishedAt) {
+            $doc = $docs[$pkg['name']] ?? null;
+
+            if ($this->isOkResponse($doc)) {
+                // Version keys contain dots, so index the array directly rather than
+                // using dot-notation data_get, which would treat "4.3.3" as a path.
+                $time        = $doc->json('time');
+                $publishedAt = is_array($time) ? ($time[$pkg['latest']] ?? null) : null;
+            }
+        }
+
+        try {
+            $published = $publishedAt ? CarbonImmutable::parse($publishedAt)->utc() : null;
+        } catch (\Throwable $e) {
+            $published = null;
+        }
+
+        if (! $published) {
+            $pkg['release_age_unknown'] = true;
             continue;
         }
 
-        $published = CarbonImmutable::parse($publishedAt)->utc();
+        $pkg['published_at'] = $published->toIso8601String();
 
         if ($published->greaterThan($cutoff)) {
             $available   = $published->addDays($days);
@@ -199,13 +275,18 @@ protected function annotateReleaseAge(array $packages): array
 }
 ```
 
-Each package in `outdated.packages` now carries three extra keys:
+Each package in `outdated.packages` now carries these extra keys:
 
 | Key | Type | Meaning |
 | --- | --- | --- |
+| `published_at` | string\|null | ISO 8601 publish time of `latest`, from the manifest or the fallback |
 | `blocked` | bool | npm will not install this yet because of `min-release-age` |
 | `blocked_until` | string\|null | date the version becomes installable, `YYYY-MM-DD` |
 | `available_in_days` | int\|null | whole days until it unblocks, minimum 1 |
+| `release_age_unknown` | bool | the guard is on but no publish time could be found, so the check didn't run |
+
+The audit is cached with `Cache::forever()`, so audits from before a key was added won't
+have it until the next scan. Views read these keys with `!empty(...)`.
 
 ### 3. Render the pill (`resources/views/utilities/sentinel.blade.php`)
 
@@ -241,6 +322,11 @@ Replace the version span on the right with a stacked version plus countdown:
 </span>
 ```
 
+When the check couldn't run (`release_age_unknown`), a neutral **Unchecked** hint sits
+beside the version instead, in the same slate as the Blocked pill but with a dashed border,
+and a tooltip reading "Release age unchecked: registry lookup failed, ...". The row is
+still shown as an available update (fail open), and it is not counted in "(N blocked)".
+
 ### 4. Optional: count the blocked ones in the toggle label
 
 At the "N updates available" button (around line 472):
@@ -255,8 +341,13 @@ At the "N updates available" button (around line 472):
 - **No `.npmrc` or no `min-release-age`:** `npmMinReleaseAgeDays()` returns 0, the annotate
   step short-circuits, nothing is ever blocked.
 - **`min-release-age=0`:** treated as disabled, no blocking.
-- **Registry document missing the `time` entry or the request failing:** that package is
-  left unblocked. We never hide a real update because of a lookup failure.
+- **No usable `tmp` in the manifest:** that package falls back to the full registry
+  document's `time` map.
+- **Fallback document missing the `time` entry or the request failing** (for example a
+  timeout on a very large package): that package is left unblocked, so we never hide a real
+  update because of a lookup failure, but it is marked `release_age_unknown` and the view
+  shows it as **Unchecked**.
+- **Guard disabled:** `release_age_unknown` is never set, because there is nothing to check.
 - **Precedence:** project `.npmrc` is checked before the user's `~/.npmrc`, matching npm.
   A project file that lacks the key falls through to the user file.
 - **Timezone:** publish times are compared in UTC to match the registry.
@@ -331,6 +422,19 @@ public function test_outdated_npm_package_is_not_flagged_once_it_ages_out(): voi
 Because `annotateReleaseAge()` uses the real clock, either freeze time in the test
 (`CarbonImmutable::setTestNow(...)`) or assert with a tolerance on `available_in_days`.
 Freezing is cleaner and lets you assert the exact `blocked_until` date too.
+
+These two fake `/latest` with only `version`, so they exercise the full-document fallback.
+The fast path and the failure marking have their own tests in the same file:
+
+- `/latest` with a `tmp` inside the window: blocked with the exact `blocked_until`, and
+  `Http::assertNotSent` confirms the full document was never requested.
+- A scoped package (`@alpinejs/collapse`) whose `tmp` uses the basename only.
+- `tmp` outside the window: not blocked, still no full-document request.
+- Missing or malformed `tmp` (no timestamp, not a string, before 2010, in the future):
+  falls back to the full document's `time` map.
+- The fallback fails (`ConnectionException` or a 500): `blocked = false`,
+  `release_age_unknown = true`.
+- Guard disabled: no row gets `release_age_unknown`.
 
 ## Rollout notes
 

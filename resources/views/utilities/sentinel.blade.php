@@ -520,6 +520,9 @@
                             <span style="display:inline-flex; align-items:center; gap:8px; flex-shrink:0;">
                                 @if(!empty($pkg['blocked']))
                                     <span style="font-size:11px; color:#64748b; font-variant-numeric:tabular-nums;">available in {{ $pkg['available_in_days'] }} {{ $pkg['available_in_days'] === 1 ? 'day' : 'days' }}</span>
+                                @elseif(!empty($pkg['release_age_unknown']))
+                                    <span title="Release age unchecked: registry lookup failed, so npm's min-release-age guard may still be holding this update back"
+                                          style="display:inline-flex; align-items:center; flex-shrink:0; font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:0.04em; padding:1px 7px; border-radius:4px; color:#64748b; background:#fff; border:1px dashed #cbd5e1; cursor:help;">Unchecked</span>
                                 @endif
                                 <span style="font-size:11px; font-weight:500; color:#0f172a; font-variant-numeric:tabular-nums;">{{ $pkg['current'] }} → {{ $pkg['latest'] }}</span>
                             </span>

@@ -10,6 +10,7 @@ use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use Mockery;
+use PHPUnit\Framework\Attributes\DataProvider;
 use ReflectionMethod;
 
 /**
@@ -178,5 +179,211 @@ class AuditServiceOutdatedTest extends TestCase
 
         $this->assertSame(1, $result['total']);
         $this->assertFalse($result['packages'][0]['blocked']);
+    }
+
+    /**
+     * Fast path: the publish time comes from the `/latest` manifest's
+     * `_npmOperationalInternal.tmp`, so the full registry document (39 MB for
+     * vite, which timed out in production) is never requested.
+     *
+     * @see AuditService::npmPublishedAtFromManifest()
+     */
+    public function test_release_age_uses_the_latest_manifest_publish_time(): void
+    {
+        CarbonImmutable::setTestNow('2026-09-15 12:00:00');
+
+        $service = $this->npmService(['vite' => '8.2.2'], 7);
+
+        Http::fake([
+            'registry.npmjs.org/vite/latest' => Http::response([
+                'version' => '8.3.0',
+                // 1789039826195 ms = 2026-09-10T11:30:26Z
+                '_npmOperationalInternal' => ['tmp' => 'tmp/vite_8.3.0_1789039826195_0.15890598475191897'],
+            ]),
+        ]);
+
+        $pkg = $this->invokeNpmOutdated($service)['packages'][0];
+
+        $this->assertTrue($pkg['blocked']);
+        $this->assertSame('2026-09-17', $pkg['blocked_until']);
+        $this->assertSame(2, $pkg['available_in_days']);
+        $this->assertFalse($pkg['release_age_unknown']);
+        $this->assertFullDocumentNotRequested('vite');
+    }
+
+    /**
+     * Scoped packages carry only the unscoped basename in `tmp`, so the parse
+     * must anchor on the timestamp tail, not the package name.
+     */
+    public function test_release_age_fast_path_handles_scoped_packages(): void
+    {
+        CarbonImmutable::setTestNow('2026-09-15 12:00:00');
+
+        $service = $this->npmService(['@alpinejs/collapse' => '3.17.2'], 7);
+
+        Http::fake([
+            'registry.npmjs.org/@alpinejs/collapse/latest' => Http::response([
+                'version' => '3.17.3',
+                // 1789410036019 ms = 2026-09-14T18:20:36Z
+                '_npmOperationalInternal' => ['tmp' => 'tmp/collapse_3.17.3_1789410036019_0.655826726596169'],
+            ]),
+        ]);
+
+        $pkg = $this->invokeNpmOutdated($service)['packages'][0];
+
+        $this->assertTrue($pkg['blocked']);
+        $this->assertSame('2026-09-21', $pkg['blocked_until']);
+        $this->assertSame(7, $pkg['available_in_days']);
+        $this->assertFullDocumentNotRequested('@alpinejs/collapse');
+    }
+
+    /**
+     * Fast path outside the window: installable, and still no full-document
+     * request.
+     */
+    public function test_release_age_fast_path_outside_the_window_is_not_blocked(): void
+    {
+        CarbonImmutable::setTestNow('2026-09-15 12:00:00');
+
+        $service = $this->npmService(['@tailwindcss/forms' => '0.5.10'], 7);
+
+        Http::fake([
+            'registry.npmjs.org/@tailwindcss/forms/latest' => Http::response([
+                'version' => '0.5.11',
+                // 1765999359707 ms = 2025-12-17T19:22:39Z
+                '_npmOperationalInternal' => ['tmp' => 'tmp/forms_0.5.11_1765999359707_0.946032610272489'],
+            ]),
+        ]);
+
+        $pkg = $this->invokeNpmOutdated($service)['packages'][0];
+
+        $this->assertFalse($pkg['blocked']);
+        $this->assertNull($pkg['available_in_days']);
+        $this->assertFalse($pkg['release_age_unknown']);
+        $this->assertFullDocumentNotRequested('@tailwindcss/forms');
+    }
+
+    /**
+     * The `tmp` field is undocumented, so anything that doesn't parse to a
+     * plausible timestamp must fall back to the full document's `time` map.
+     */
+    #[DataProvider('malformedTmpProvider')]
+    public function test_release_age_falls_back_to_the_full_document_when_tmp_is_unusable($tmp): void
+    {
+        CarbonImmutable::setTestNow('2026-09-15 12:00:00');
+
+        $service = $this->npmService(['vite' => '8.2.2'], 7);
+
+        $latest = ['version' => '8.3.0'];
+        if ($tmp !== null) {
+            $latest['_npmOperationalInternal'] = ['tmp' => $tmp];
+        }
+
+        Http::fake([
+            'registry.npmjs.org/vite/latest' => Http::response($latest),
+            'registry.npmjs.org/vite' => Http::response([
+                'time' => ['8.3.0' => '2026-09-14T12:00:00.000Z'],
+            ]),
+        ]);
+
+        $pkg = $this->invokeNpmOutdated($service)['packages'][0];
+
+        $this->assertTrue($pkg['blocked']);
+        $this->assertSame('2026-09-21', $pkg['blocked_until']);
+        $this->assertFalse($pkg['release_age_unknown']);
+        Http::assertSent(fn ($request) => $request->url() === 'https://registry.npmjs.org/vite');
+    }
+
+    public static function malformedTmpProvider(): array
+    {
+        return [
+            'missing'         => [null],
+            'no timestamp'    => ['tmp/vite_8.3.0_notatimestamp'],
+            'not a string'    => [['tmp/vite_8.3.0_1789039826195_0.15']],
+            'before 2010'     => ['tmp/vite_8.3.0_1199145600000_0.15'],
+            'in the future'   => ['tmp/vite_8.3.0_4102444800000_0.15'],
+        ];
+    }
+
+    /**
+     * No fast path and the fallback fails (the production vite timeout): fail
+     * open, but mark the row so the view can say the check didn't run.
+     */
+    #[DataProvider('failedDocumentProvider')]
+    public function test_release_age_is_marked_unknown_when_the_fallback_fails(string $failure): void
+    {
+        CarbonImmutable::setTestNow('2026-09-15 12:00:00');
+
+        $service = $this->npmService(['vite' => '8.2.2'], 7);
+
+        Http::fake([
+            'registry.npmjs.org/vite/latest' => Http::response(['version' => '8.3.0']),
+            'registry.npmjs.org/vite' => $failure === 'timeout'
+                ? fn () => throw new ConnectionException('cURL error 28: Operation timed out')
+                : Http::response('', 500),
+        ]);
+
+        $result = $this->invokeNpmOutdated($service);
+        $pkg    = $result['packages'][0];
+
+        $this->assertSame(1, $result['total']);
+        $this->assertFalse($pkg['blocked']);
+        $this->assertNull($pkg['blocked_until']);
+        $this->assertTrue($pkg['release_age_unknown']);
+    }
+
+    public static function failedDocumentProvider(): array
+    {
+        return [
+            'connection timeout' => ['timeout'],
+            'server error'       => ['500'],
+        ];
+    }
+
+    /**
+     * With the guard disabled there is nothing to check, so no row may claim
+     * the check failed - even one with no publish time at all.
+     */
+    public function test_release_age_guard_disabled_never_marks_unknown(): void
+    {
+        $service = $this->npmService(['vite' => '8.2.2', 'tailwindcss' => '4.3.2'], 0);
+
+        Http::fake([
+            'registry.npmjs.org/vite/latest' => Http::response(['version' => '8.3.0']),
+            'registry.npmjs.org/tailwindcss/latest' => Http::response(['version' => '4.3.3']),
+        ]);
+
+        $result = $this->invokeNpmOutdated($service);
+
+        $this->assertSame(2, $result['total']);
+        foreach ($result['packages'] as $pkg) {
+            $this->assertFalse($pkg['release_age_unknown']);
+            $this->assertFalse($pkg['blocked']);
+        }
+        Http::assertSentCount(2);
+    }
+
+    protected function npmService(array $installed, int $minReleaseAgeDays)
+    {
+        $service = Mockery::mock(AuditService::class)->makePartial()
+            ->shouldAllowMockingProtectedMethods();
+
+        $service->shouldReceive('npmInstalledDirect')->andReturn($installed);
+        $service->shouldReceive('npmMinReleaseAgeDays')->andReturn($minReleaseAgeDays);
+
+        return $service;
+    }
+
+    protected function invokeNpmOutdated($service): array
+    {
+        $method = new ReflectionMethod($service, 'npmOutdated');
+        $method->setAccessible(true);
+
+        return $method->invoke($service);
+    }
+
+    protected function assertFullDocumentNotRequested(string $name): void
+    {
+        Http::assertNotSent(fn ($request) => $request->url() === "https://registry.npmjs.org/{$name}");
     }
 }

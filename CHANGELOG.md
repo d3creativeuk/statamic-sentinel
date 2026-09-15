@@ -6,6 +6,18 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). Releases are git-tag driven
 (`composer.json` carries no `version` field).
 
+## [Unreleased]
+
+### Fixed
+
+- **Blocked npm updates missed on large packages.** The publish-time lookup fetched each
+  package's full registry document, which for vite (about 39 MB) and tailwindcss (about 11 MB)
+  timed out, so fresh releases showed as installable while npm's `min-release-age` guard was
+  still refusing them. Sentinel now reads the publish time from the `/latest` manifest it
+  already fetches, and only falls back to the full document when that's missing. If neither
+  lookup works, the update is still listed but marked **Unchecked**, rather than looking
+  installable.
+
 ## [2.1.1] - 2026-07-27
 
 ### Added
