@@ -75,61 +75,66 @@ class ServiceProvider extends AddonServiceProvider
         // is resolvable inside the middleware.
         $this->app['router']->pushMiddlewareToGroup('statamic.cp', RecordLastActive::class);
 
+        // Each route's throttle has its own prefix. Without one, Laravel keys
+        // the counter on the user id alone, so every throttled route (and any
+        // in the host app) shares one counter per user, checked against each
+        // route's own limit: a few previews and a save were enough to 429 the
+        // next Send.
         $this->registerCpRoutes(function () {
             \Illuminate\Support\Facades\Route::post(
                 'd3-sentinel/send-report',
                 [SentinelController::class, 'sendReport']
-            )->middleware('throttle:6,1')->name('d3-sentinel.send-report');
+            )->middleware('throttle:6,1,sentinel.send-report')->name('d3-sentinel.send-report');
 
             \Illuminate\Support\Facades\Route::post(
                 'd3-sentinel/send-update-report',
                 [SentinelController::class, 'sendUpdateReport']
-            )->middleware('throttle:6,1')->name('d3-sentinel.send-update-report');
+            )->middleware('throttle:6,1,sentinel.send-update-report')->name('d3-sentinel.send-update-report');
 
             \Illuminate\Support\Facades\Route::get(
                 'd3-sentinel/preview-report',
                 [SentinelController::class, 'previewReport']
-            )->middleware('throttle:30,1')->name('d3-sentinel.preview-report');
+            )->middleware('throttle:30,1,sentinel.preview-report')->name('d3-sentinel.preview-report');
 
             \Illuminate\Support\Facades\Route::get(
                 'd3-sentinel/preview-update-report',
                 [SentinelController::class, 'previewUpdateReport']
-            )->middleware('throttle:30,1')->name('d3-sentinel.preview-update-report');
+            )->middleware('throttle:30,1,sentinel.preview-update-report')->name('d3-sentinel.preview-update-report');
 
             \Illuminate\Support\Facades\Route::get(
                 'd3-sentinel/preview-sent-report/{id}',
                 [SentinelController::class, 'previewSentReport']
-            )->middleware('throttle:60,1')->where('id', '[A-Za-z0-9]+')->name('d3-sentinel.preview-sent-report');
+            )->middleware('throttle:60,1,sentinel.preview-sent-report')->where('id', '[A-Za-z0-9]+')->name('d3-sentinel.preview-sent-report');
 
             \Illuminate\Support\Facades\Route::get(
                 'd3-sentinel/preview-freeze-notification',
                 [SentinelController::class, 'previewFreezeNotification']
-            )->middleware('throttle:30,1')->name('d3-sentinel.preview-freeze-notification');
+            )->middleware('throttle:30,1,sentinel.preview-freeze-notification')->name('d3-sentinel.preview-freeze-notification');
 
             \Illuminate\Support\Facades\Route::get(
                 'd3-sentinel/preview-freeze-completion',
                 [SentinelController::class, 'previewFreezeCompletion']
-            )->middleware('throttle:30,1')->name('d3-sentinel.preview-freeze-completion');
+            )->middleware('throttle:30,1,sentinel.preview-freeze-completion')->name('d3-sentinel.preview-freeze-completion');
 
             \Illuminate\Support\Facades\Route::post(
                 'd3-sentinel/save-schedule',
                 [SentinelController::class, 'saveSchedule']
-            )->middleware('throttle:30,1')->name('d3-sentinel.save-schedule');
+            )->middleware('throttle:30,1,sentinel.save-schedule')->name('d3-sentinel.save-schedule');
 
             \Illuminate\Support\Facades\Route::post(
                 'd3-sentinel/send-maintenance-report',
                 [SentinelController::class, 'sendMaintenanceReport']
-            )->middleware('throttle:6,1')->name('d3-sentinel.send-maintenance-report');
+            )->middleware('throttle:6,1,sentinel.send-maintenance-report')->name('d3-sentinel.send-maintenance-report');
 
             \Illuminate\Support\Facades\Route::get(
                 'd3-sentinel/preview-maintenance-report',
                 [SentinelController::class, 'previewMaintenanceReport']
-            )->middleware('throttle:30,1')->name('d3-sentinel.preview-maintenance-report');
+            )->middleware('throttle:30,1,sentinel.preview-maintenance-report')->name('d3-sentinel.preview-maintenance-report');
 
             \Illuminate\Support\Facades\Route::post(
                 'd3-sentinel/save-maintenance-plan',
                 [SentinelController::class, 'saveMaintenancePlan']
-            )->middleware('throttle:30,1')->name('d3-sentinel.save-maintenance-plan');
+            )->middleware('throttle:30,1,sentinel.save-maintenance-plan')->name('d3-sentinel.save-maintenance-plan');
 
             // Per-resource Action endpoints. Statamic-native contract:
             // POST /actions       runs an action against {action, selections, context}
@@ -139,47 +144,47 @@ class ServiceProvider extends AddonServiceProvider
             \Illuminate\Support\Facades\Route::post(
                 'd3-sentinel/history/actions',
                 [HistoryActionController::class, 'run']
-            )->middleware('throttle:30,1')->name('d3-sentinel.history.actions.run');
+            )->middleware('throttle:30,1,sentinel.history.actions.run')->name('d3-sentinel.history.actions.run');
 
             \Illuminate\Support\Facades\Route::post(
                 'd3-sentinel/history/actions/list',
                 [HistoryActionController::class, 'bulkActions']
-            )->middleware('throttle:30,1')->name('d3-sentinel.history.actions.bulk');
+            )->middleware('throttle:30,1,sentinel.history.actions.bulk')->name('d3-sentinel.history.actions.bulk');
 
             \Illuminate\Support\Facades\Route::post(
                 'd3-sentinel/sent/actions',
                 [SentMailActionController::class, 'run']
-            )->middleware('throttle:30,1')->name('d3-sentinel.sent.actions.run');
+            )->middleware('throttle:30,1,sentinel.sent.actions.run')->name('d3-sentinel.sent.actions.run');
 
             \Illuminate\Support\Facades\Route::post(
                 'd3-sentinel/sent/actions/list',
                 [SentMailActionController::class, 'bulkActions']
-            )->middleware('throttle:30,1')->name('d3-sentinel.sent.actions.bulk');
+            )->middleware('throttle:30,1,sentinel.sent.actions.bulk')->name('d3-sentinel.sent.actions.bulk');
 
             \Illuminate\Support\Facades\Route::post(
                 'd3-sentinel/freezes/actions',
                 [FreezeHistoryActionController::class, 'run']
-            )->middleware('throttle:30,1')->name('d3-sentinel.freezes.actions.run');
+            )->middleware('throttle:30,1,sentinel.freezes.actions.run')->name('d3-sentinel.freezes.actions.run');
 
             \Illuminate\Support\Facades\Route::post(
                 'd3-sentinel/freezes/actions/list',
                 [FreezeHistoryActionController::class, 'bulkActions']
-            )->middleware('throttle:30,1')->name('d3-sentinel.freezes.actions.bulk');
+            )->middleware('throttle:30,1,sentinel.freezes.actions.bulk')->name('d3-sentinel.freezes.actions.bulk');
 
             \Illuminate\Support\Facades\Route::post(
                 'd3-sentinel/freeze/schedule',
                 [FreezeController::class, 'schedule']
-            )->middleware('throttle:6,1')->name('d3-sentinel.freeze.schedule');
+            )->middleware('throttle:6,1,sentinel.freeze.schedule')->name('d3-sentinel.freeze.schedule');
 
             \Illuminate\Support\Facades\Route::post(
                 'd3-sentinel/freeze/complete',
                 [FreezeController::class, 'complete']
-            )->middleware('throttle:6,1')->name('d3-sentinel.freeze.complete');
+            )->middleware('throttle:6,1,sentinel.freeze.complete')->name('d3-sentinel.freeze.complete');
 
             \Illuminate\Support\Facades\Route::post(
                 'd3-sentinel/freeze/cancel',
                 [FreezeController::class, 'cancel']
-            )->middleware('throttle:6,1')->name('d3-sentinel.freeze.cancel');
+            )->middleware('throttle:6,1,sentinel.freeze.cancel')->name('d3-sentinel.freeze.cancel');
         });
 
         // Auto-register the status-report scheduler entry when the user has

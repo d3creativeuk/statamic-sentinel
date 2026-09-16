@@ -95,6 +95,9 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
   date after the latest scan no longer prints a date range that runs backwards. When a plan
   started before Sentinel's oldest kept record (history is kept for a year), the email now says
   where the records start instead of silently undercounting.
+- **"Too Many Attempts" after a few clicks.** All of Sentinel's rate-limited actions shared one
+  counter per user, each checked against its own limit, so opening a few previews and saving the
+  schedule could block the next Send. Each action now has its own counter.
 
 ## [2.1.1] - 2026-07-27
 
