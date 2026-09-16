@@ -266,6 +266,8 @@ class AuditServiceOutdatedTest extends TestCase
     /**
      * The `tmp` field is undocumented, so anything that doesn't parse to a
      * plausible timestamp must fall back to the full document's `time` map.
+     *
+     * @dataProvider malformedTmpProvider
      */
     #[DataProvider('malformedTmpProvider')]
     public function test_release_age_falls_back_to_the_full_document_when_tmp_is_unusable($tmp): void
@@ -308,6 +310,8 @@ class AuditServiceOutdatedTest extends TestCase
     /**
      * No fast path and the fallback fails (the production vite timeout): fail
      * open, but mark the row so the view can say the check didn't run.
+     *
+     * @dataProvider failedDocumentProvider
      */
     #[DataProvider('failedDocumentProvider')]
     public function test_release_age_is_marked_unknown_when_the_fallback_fails(string $failure): void
