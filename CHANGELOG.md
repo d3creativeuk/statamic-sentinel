@@ -86,6 +86,10 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
   end of life, and PHP always has a newer release, so an EOL PHP only ever showed as outdated. The
   widget also printed just the newest version, in red, so it looked like the site was already on
   it. Both now show the installed version, the latest version and "(EOL)" together.
+- **The widget and full report disagreed on security issues.** The widget counted vendor-flagged
+  security releases, but the report only listed them when the vulnerability database found
+  nothing. With both present, the widget might say 3, the report 2, and the vendor release wasn't
+  listed anywhere. The report now includes them in its count and lists them under the advisories.
 
 ## [2.1.1] - 2026-07-27
 

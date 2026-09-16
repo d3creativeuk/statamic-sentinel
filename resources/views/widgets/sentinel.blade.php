@@ -146,11 +146,10 @@
     @php
         $d            = $row['data'];
         $totalVulns   = array_sum($d['counts'] ?? []);
-        // Vendor-flagged security updates (no matching OSV advisory yet) - count
-        // them toward the security-issues badge so the widget matches the
-        // utility view and Statamic's own updater notification.
-        $vendorOnly   = (int) ($d['outdated']['vendor_security_updates_total'] ?? 0);
-        $totalSec     = $totalVulns + $vendorOnly;
+        // Vendor-flagged security updates (no matching OSV advisory yet) count
+        // toward the badge, the same total the utility shows.
+        $vendorOnly   = \D3Creative\Sentinel\Support\SecuritySummary::vendorOnlyCount($d);
+        $totalSec     = \D3Creative\Sentinel\Support\SecuritySummary::total($d);
         $updatesTotal = $d['outdated']['total'] ?? 0;
         $hasData      = in_array($d['status'], ['ok', 'vulnerable']);
     @endphp

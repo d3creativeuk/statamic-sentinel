@@ -346,7 +346,9 @@
             // a vendor `security` flag through any feed we read). When the OSV
             // status is "ok" but the marketplace has flagged a release, treat
             // that as a security advisory the user should see.
-            $vendorOnly = (int) ($d['outdated']['vendor_security_updates_total'] ?? 0);
+            $vendorOnly     = \D3Creative\Sentinel\Support\SecuritySummary::vendorOnlyCount($d);
+            $vendorPackages = \D3Creative\Sentinel\Support\SecuritySummary::vendorOnlyPackages($d);
+            $issueCount     = \D3Creative\Sentinel\Support\SecuritySummary::total($d);
         @endphp
         @if($d['status'] === 'ok' || $d['status'] === 'vulnerable')
             <div style="margin-bottom:14px;">
@@ -358,12 +360,6 @@
                 @elseif($d['status'] === 'ok' && $vendorOnly > 0)
                     {{-- No OSV advisories, but the vendor has flagged at least one release as security.
                          Surface this so the Sentinel card matches the built-in updater's red badge. --}}
-                    @php
-                        $vendorPackages = array_values(array_filter(
-                            $d['outdated']['packages'] ?? [],
-                            fn($p) => ($p['security_source'] ?? null) === 'vendor'
-                        ));
-                    @endphp
                     <div x-data="{ open: false }">
                         <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
                             <div style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; color:#64748b;">Security Issues</div>
@@ -441,7 +437,8 @@
                         <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
                             <div style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; color:#64748b;">Security Issues</div>
                             <button type="button" x-on:click="open = !open" aria-label="Toggle security issues list" style="display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:500; padding:3px 10px; border-radius:5px; color:#dc2626; background:#fff; border:1px solid #dc2626; cursor:pointer; font-family:inherit;">
-                                <span>{{ $d['total_vulns'] }} security {{ $d['total_vulns'] === 1 ? 'issue' : 'issues' }}</span>
+                                {{-- Includes vendor-flagged releases, listed after the advisories, so this matches the widget. --}}
+                                <span>{{ $issueCount }} security {{ $issueCount === 1 ? 'issue' : 'issues' }}</span>
                                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" x-bind:style="{ transform: open ? 'rotate(180deg)' : null }" style="display:block; flex-shrink:0; transition:transform 0.15s ease;"><path d="m4 6 4 4 4-4"></path></svg>
                             </button>
                         </div>
@@ -456,7 +453,7 @@
                                     // Every advisory lists inline on the package row; pre-CVE snapshots
                                     // lack `vulns` and fall through to the plain count+pill row.
                                     $hasVulns = ! $isHeader && ! empty($vulns);
-                                    $border   = $i < count($rows) - 1 ? 'border-bottom:1px solid #e2e8f0;' : '';
+                                    $border   = $i < count($rows) + count($vendorPackages) - 1 ? 'border-bottom:1px solid #e2e8f0;' : '';
                                     $pad      = $isChild ? 'padding:6px 12px 6px 32px;' : 'padding:6px 12px;';
                                     $cveLabel = fn($v) => $v['cve'] ?? $v['id'] ?? 'Advisory';
                                     // High/Critical advisories are highlighted red; the rest stay grey.
@@ -487,6 +484,15 @@
                                         @endunless
                                     </div>
                                 @endif
+                            @endforeach
+                            @foreach($vendorPackages as $vi => $pkg)
+                                <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; padding:6px 12px; {{ $vi < count($vendorPackages) - 1 ? 'border-bottom:1px solid #e2e8f0;' : '' }}">
+                                    <span style="display:inline-flex; align-items:baseline; gap:8px; min-width:0;">
+                                        <span style="font-size:13px; font-weight:600; color:#0f172a; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ $pkg['name'] }}</span>
+                                        <span style="font-size:11px; font-weight:500; color:#dc2626; white-space:nowrap;">Vendor security release</span>
+                                    </span>
+                                    <span style="font-size:11px; font-weight:500; color:#0f172a; flex-shrink:0; font-variant-numeric:tabular-nums;">{{ $pkg['current'] ?? '' }} → {{ $pkg['latest'] ?? '' }}</span>
+                                </div>
                             @endforeach
                         </div>
                     </div>
