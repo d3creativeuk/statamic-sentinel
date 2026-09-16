@@ -39,8 +39,12 @@ class HistoryService
     public function recordIfChanged(array $audit): void
     {
         try {
-            $snapshot = $this->buildSnapshot($audit);
             $entries  = $this->all();
+            $snapshot = $this->carryForwardFailedChecks($this->buildSnapshot($audit), $audit, $entries[0] ?? null);
+
+            if ($snapshot === null) {
+                return;
+            }
 
             if (! empty($entries) && $this->matches($snapshot, $entries[0])) {
                 return;
@@ -173,6 +177,50 @@ class HistoryService
             'composer_vuln_severities'  => self::vulnSeverityMap($audit['composer']['by_package'] ?? []),
             'npm_vuln_severities'       => self::vulnSeverityMap($audit['npm']['by_package']      ?? []),
         ];
+    }
+
+    /**
+     * A failed OSV lookup or registry pool reports zero vulnerabilities / zero
+     * updates. Recording that would read as "all resolved" in the update and
+     * plan reports, then "all introduced" after the next good scan. So for an
+     * ecosystem whose check failed, keep the previous snapshot's figures. With
+     * no previous snapshot to carry from, return null and record nothing.
+     */
+    protected function carryForwardFailedChecks(array $snapshot, array $audit, ?array $previous): ?array
+    {
+        foreach (['composer', 'npm'] as $eco) {
+            $vulnsFailed    = ($audit[$eco]['status'] ?? null) === 'error';
+            $outdatedFailed = ! empty($audit[$eco]['outdated']['error']);
+
+            if (! $vulnsFailed && ! $outdatedFailed) {
+                continue;
+            }
+
+            if ($previous === null) {
+                return null;
+            }
+
+            // Security-update counts depend on both lookups.
+            $fields = ["{$eco}_security_updates"];
+
+            if ($vulnsFailed) {
+                array_push($fields, "{$eco}_vulns", "{$eco}_vuln_packages", "{$eco}_vuln_severities");
+            }
+
+            if ($outdatedFailed) {
+                $fields[] = "{$eco}_outdated";
+            }
+
+            foreach ($fields as $field) {
+                if (array_key_exists($field, $previous)) {
+                    $snapshot[$field] = $previous[$field];
+                } else {
+                    unset($snapshot[$field]);
+                }
+            }
+        }
+
+        return $snapshot;
     }
 
     protected static function vulnPackageMap(array $byPackage): array

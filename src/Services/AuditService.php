@@ -1240,7 +1240,11 @@ class AuditService
             try {
                 $response = Http::withHeaders(self::ACCEPT_GZIP)->timeout(10)->post(self::OSV_BATCH_API, ['queries' => $chunk]);
 
-                if (! $response->ok()) continue;
+                // A 429 / 5xx must read as a failed check, not as a chunk with
+                // no advisories - otherwise an outage caches "0 vulnerabilities".
+                if (! $response->ok()) {
+                    throw new \RuntimeException('OSV querybatch returned HTTP ' . $response->status());
+                }
 
                 foreach ($response->json('results', []) as $index => $result) {
                     if (empty($result['vulns'])) continue;

@@ -52,6 +52,11 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
   also skipped the lock the CP-request tick used, so both could send the heads-up email, and two
   admins completing at once each sent an all-clear. Every freeze state change now runs under one
   lock; Complete and Cancel wait briefly for an in-flight send and then re-check the freeze.
+- **A vulnerability database outage looked like a clean site.** If OSV rate-limited or errored
+  (429 / 5xx), the scan reported no vulnerabilities and cached that result. It now reports the
+  check as failed. A failed check also no longer writes zeros into history, which made the update
+  and Plan Summary reports claim every issue was resolved and then re-introduced on the next good
+  scan; history keeps the previous figures for that ecosystem instead.
 
 ## [2.1.1] - 2026-07-27
 
