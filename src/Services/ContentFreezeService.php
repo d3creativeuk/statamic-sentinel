@@ -5,6 +5,7 @@ namespace D3Creative\Sentinel\Services;
 use D3Creative\Sentinel\Support\AtomicFile;
 use Carbon\Carbon;
 use Carbon\CarbonInterval;
+use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -26,6 +27,13 @@ class ContentFreezeService
     const CURRENT_PATH      = 'statamic-sentinel/content-freeze.json';
     const HISTORY_PATH      = 'statamic-sentinel/content-freeze-history.json';
     const LAST_CANCEL_PATH      = 'statamic-sentinel/content-freeze-last-cancel.json';
+
+    // One lock serialises every state change (see withFreezeLock()). The TTL
+    // outlives a slow SMTP send on the sync queue; user actions wait up to
+    // LOCK_WAIT_SECONDS for an in-flight tick to finish.
+    const LOCK_NAME         = 'sentinel_freeze_tick';
+    const LOCK_SECONDS      = 60;
+    const LOCK_WAIT_SECONDS = 10;
 
     const HISTORY_LIMIT     = 50;
     const SCHEDULE_LEAD_MIN = 5;
@@ -243,7 +251,7 @@ class ContentFreezeService
      * invoke from request flow because each underlying tick is cheap when
      * nothing's due and the mail send is wrapped in try/catch.
      *
-     * Called from InjectFreezeBanner so any CP page load catches up the
+     * Called from AdvanceFreezeState so any CP page load catches up the
      * state machine in environments where `schedule:run` cron isn't wired
      * up (dev / Herd). In production, cron normally beats this to the
      * transition - which is fine, both call paths are idempotent.
@@ -251,17 +259,10 @@ class ContentFreezeService
     public function tickIfDue(): void
     {
         try {
-            // Cache lock so the every-minute cron and the per-request middleware
-            // can't both pass the status guard and double-dispatch the heads-up
-            // email when they happen to fire in the same second. `get()` with a
-            // closure auto-releases after the callback (or on exception).
-            // Drivers that don't support locks (array) silently no-op the lock
-            // - acceptable for dev/test, real production should run a driver
-            // that does (file is fine for single-host; redis for multi-host).
-            Cache::lock('sentinel_freeze_tick', 30)->get(function () {
-                $this->tickNotifications();
-                $this->tickActivations();
-            });
+            $this->withFreezeLock(function () {
+                $this->advanceNotification();
+                $this->advanceActivation();
+            }, null);
         } catch (\Throwable $e) {
             // Silent fail - never break CP rendering on a tick failure.
         }
@@ -270,9 +271,15 @@ class ContentFreezeService
     /**
      * Find scheduled freezes whose notify_at has passed and dispatch the
      * heads-up email. Idempotent: refuses to advance a freeze that's no
-     * longer in `scheduled` status.
+     * longer in `scheduled` status. Skipped (returns 0) while another process
+     * holds the freeze lock; the next tick retries.
      */
     public function tickNotifications(): int
+    {
+        return $this->withFreezeLock(fn () => $this->advanceNotification(), 0);
+    }
+
+    protected function advanceNotification(): int
     {
         $freeze = $this->current();
 
@@ -298,9 +305,15 @@ class ContentFreezeService
     /**
      * Find notified freezes whose freeze_at has passed and switch on the
      * banner. Idempotent: refuses to advance a freeze that's not in
-     * `notified` status.
+     * `notified` status. Skipped (returns 0) while another process holds the
+     * freeze lock.
      */
     public function tickActivations(): int
+    {
+        return $this->withFreezeLock(fn () => $this->advanceActivation(), 0);
+    }
+
+    protected function advanceActivation(): int
     {
         $freeze = $this->current();
 
@@ -329,9 +342,9 @@ class ContentFreezeService
      * driver, queue config wrong, malformed template) leaves the freeze at
      * `scheduled` and the next tick retries. With no valid recipients we
      * advance anyway so the state machine doesn't stall on a permanently-bad
-     * record.
+     * record. Must run under the freeze lock (via a tick).
      */
-    public function markNotified(array $freeze): void
+    protected function markNotified(array $freeze): void
     {
         $current = $this->current();
 
@@ -352,6 +365,13 @@ class ContentFreezeService
             Log::warning('Sentinel freeze ' . ($current['id'] ?? '?') . ': no valid recipients to notify; advancing anyway.');
         }
 
+        // Sending can take seconds. If the freeze was completed or cancelled
+        // meanwhile (possible on a cache store without locks), don't write the
+        // stale copy back and revive it.
+        if (! $this->isStillCurrent($current['id'] ?? null, self::STATUS_SCHEDULED)) {
+            return;
+        }
+
         $current['status']      = self::STATUS_NOTIFIED;
         $current['notified_at'] = Carbon::now()->utc()->toIso8601String();
 
@@ -359,9 +379,10 @@ class ContentFreezeService
     }
 
     /**
-     * Switch the banner on. No email sent at this transition.
+     * Switch the banner on. No email sent at this transition. Must run under
+     * the freeze lock (via a tick).
      */
-    public function activate(array $freeze): void
+    protected function activate(array $freeze): void
     {
         $current = $this->current();
 
@@ -389,6 +410,15 @@ class ContentFreezeService
      *   ['ok' => false, 'message' => string]
      */
     public function complete(?string $completedBy = null): array
+    {
+        return $this->withFreezeLock(
+            fn () => $this->completeLocked($completedBy),
+            $this->failure('Another update action is in progress. Try again in a moment.'),
+            static::LOCK_WAIT_SECONDS
+        );
+    }
+
+    protected function completeLocked(?string $completedBy): array
     {
         $current = $this->current();
 
@@ -439,6 +469,15 @@ class ContentFreezeService
      *   ['ok' => false, 'message' => string]
      */
     public function cancel(?string $cancelledBy = null): array
+    {
+        return $this->withFreezeLock(
+            fn () => $this->cancelLocked($cancelledBy),
+            $this->failure('Another update action is in progress. Try again in a moment.'),
+            static::LOCK_WAIT_SECONDS
+        );
+    }
+
+    protected function cancelLocked(?string $cancelledBy): array
     {
         $current = $this->current();
 
@@ -673,6 +712,53 @@ class ContentFreezeService
         }
 
         return $tz;
+    }
+
+    /**
+     * Run a freeze state change while holding the freeze lock, so the cron
+     * ticks, the per-request middleware tick and Complete / Cancel can't
+     * interleave. Without it, Complete could delete the record while a tick
+     * was mid-send and the tick's write would bring the freeze back, and the
+     * cron and middleware ticks could both send the heads-up email.
+     *
+     * With $waitSeconds 0 it returns $busy straight away when the lock is
+     * held, which suits ticks (they retry next minute). User actions wait. A
+     * cache store without lock support runs the callback unguarded, as
+     * before; the re-read in markNotified()/activate() still covers the
+     * worst case there.
+     */
+    protected function withFreezeLock(callable $callback, $busy, int $waitSeconds = 0)
+    {
+        try {
+            $lock     = Cache::lock(self::LOCK_NAME, self::LOCK_SECONDS);
+            $acquired = $waitSeconds > 0 ? $lock->block($waitSeconds) : $lock->get();
+        } catch (LockTimeoutException $e) {
+            return $busy;
+        } catch (\Throwable $e) {
+            return $callback();
+        }
+
+        if (! $acquired) {
+            return $busy;
+        }
+
+        try {
+            return $callback();
+        } finally {
+            $lock->release();
+        }
+    }
+
+    /**
+     * True when the stored freeze still has this id and status.
+     */
+    protected function isStillCurrent(?string $id, string $status): bool
+    {
+        $fresh = $this->current();
+
+        return $fresh
+            && ($fresh['id'] ?? null) === $id
+            && ($fresh['status'] ?? null) === $status;
     }
 
     protected function writeCurrent(array $freeze): bool

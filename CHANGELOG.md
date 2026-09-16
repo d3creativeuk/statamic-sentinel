@@ -46,6 +46,12 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
   worst effect: a scheduled freeze never advanced past its heads-up, so the heads-up email was sent
   again every minute. Files are now replaced with a native atomic rename, and each write uses its
   own temp file so two overlapping saves can no longer wipe the sent log.
+- **Content Freeze races that duplicated emails or revived a finished freeze.** Clicking Mark
+  complete or Cancel while the heads-up email was sending could bring the freeze back, so its
+  banner came on later and a second completion sent a second all-clear. The every-minute commands
+  also skipped the lock the CP-request tick used, so both could send the heads-up email, and two
+  admins completing at once each sent an all-clear. Every freeze state change now runs under one
+  lock; Complete and Cancel wait briefly for an in-flight send and then re-check the freeze.
 
 ## [2.1.1] - 2026-07-27
 
