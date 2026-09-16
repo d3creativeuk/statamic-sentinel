@@ -48,7 +48,7 @@
         <a x-data
            x-init="if (! document.getElementById('sentinel-keyframes')) { var s = document.createElement('style'); s.id = 'sentinel-keyframes'; s.textContent = '@keyframes sentinel-spin { to { transform: rotate(360deg); } }'; document.head.appendChild(s); }"
            x-on:click.prevent="$el.querySelector('[data-sentinel-label]').textContent = 'Scanning…'; $el.querySelector('[data-sentinel-icon]').style.animation = 'sentinel-spin 1s linear infinite'; requestAnimationFrame(() => requestAnimationFrame(() => location.href = $el.href + location.hash))"
-           href="?d3_refresh=1"
+           href="?d3_refresh={{ \D3Creative\Sentinel\Support\ManualScan::token() }}"
            style="display:inline-flex; align-items:center; justify-content:center; gap:8px; white-space:nowrap; font-weight:600; cursor:pointer; text-decoration:none; color:#fff; background:#0f172a; padding:0 18px; height:38px; font-size:13px; line-height:1.25; border-radius:8px;">
             <span data-sentinel-label>Scan Now</span>
             <span data-sentinel-icon aria-hidden="true" style="display:inline-block; font-size:14px; line-height:1; flex-shrink:0; transform-origin:center;">↻</span>
@@ -109,7 +109,7 @@
     // 403 for non-supers). A non-super granted `access sentinel utility` can
     // open this page, so hide every tab but Current for them - the Current
     // tab carries the same audit data the Status Report would email, and the
-    // Refresh link (an unguarded ?d3_refresh GET) stays available to all.
+    // Refresh link (see ManualScan) stays available to all.
     $isSuper = auth()->user()?->isSuper() === true;
 
     // Pre-fill each one-off send field with the recipients last entered for
@@ -145,7 +145,7 @@
             <a x-data
                x-init="if (! document.getElementById('sentinel-keyframes')) { var s = document.createElement('style'); s.id = 'sentinel-keyframes'; s.textContent = '@keyframes sentinel-spin { to { transform: rotate(360deg); } }'; document.head.appendChild(s); }"
                x-on:click.prevent="$el.querySelector('[data-sentinel-label]').textContent = 'Scanning…'; $el.querySelector('[data-sentinel-icon]').style.animation = 'sentinel-spin 1s linear infinite'; requestAnimationFrame(() => requestAnimationFrame(() => location.href = $el.href + location.hash))"
-               href="?d3_refresh=1"
+               href="?d3_refresh={{ \D3Creative\Sentinel\Support\ManualScan::token() }}"
                title="Refresh audit results"
                style="display:inline-flex; align-items:center; gap:4px; font-size:12px; color:rgb(63 63 71); text-decoration:none;">
                 <span data-sentinel-icon aria-hidden="true" style="display:inline-block; font-size:14px; line-height:1; flex-shrink:0; transform-origin:center;">↻</span>

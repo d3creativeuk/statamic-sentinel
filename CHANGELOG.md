@@ -25,6 +25,13 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Security
 
+- **Scans could be triggered by anyone who could see the dashboard, from any link.** Scan Now and
+  Refresh ran a full scan (up to a few hundred outbound requests, inside the page load) for any
+  request with `?d3_refresh`, including one started from another site while you were logged in,
+  as often as it was loaded. A manual scan now needs Sentinel access and a link tied to your
+  session, and runs at most once a minute with no two at the same time.
+- **The dashboard widget now requires Sentinel access.** It shows the site's vulnerable packages,
+  so users without the `access sentinel utility` permission (or super admin) no longer see it.
 - **Script injection through a CP user's name on Statamic 3.3-5.** Those versions compile the
   server-rendered Control Panel page as a Vue template, and Blade's escaping doesn't touch Vue's
   `{{ }}` syntax. A CP user could set their own name to a Vue expression and have it run in the

@@ -5,6 +5,7 @@ namespace D3Creative\Sentinel\Widgets;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Statamic\Widgets\Widget;
 use D3Creative\Sentinel\Services\AuditService;
+use D3Creative\Sentinel\Support\ManualScan;
 
 class SentinelWidget extends Widget
 {
@@ -12,18 +13,18 @@ class SentinelWidget extends Widget
 
     public function html(): string
     {
+        // The widget shows the vulnerability report, so it follows the same
+        // permission as the utility rather than every dashboard user.
+        if (! ManualScan::userCanView()) {
+            return '';
+        }
+
         $audit = new AuditService();
 
-        // Run the refresh then redirect to the same URL with `d3_refresh`
-        // stripped, so a manual F5 doesn't re-trigger the audit. The exception
-        // bubbles out of the dashboard render pipeline; Laravel turns it back
-        // into the redirect response.
-        if (request()->has('d3_refresh')) {
-            $audit->refresh();
-            throw new HttpResponseException(
-                redirect()->to(request()->fullUrlWithoutQuery('d3_refresh'))
-            );
-        }
+        // Scan Now / Refresh: maybe scan, then redirect without the parameter
+        // so a manual F5 doesn't re-trigger it. The exception bubbles out of
+        // the dashboard render pipeline as the redirect response.
+        (new ManualScan)->handle(request(), $audit);
 
         return (string) view('statamic-sentinel::widgets.sentinel', [
             'audit' => $audit->cached(),

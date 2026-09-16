@@ -221,12 +221,7 @@ class ServiceProvider extends AddonServiceProvider
                         // re-trigger the audit. The exception bubbles out of
                         // the utility render pipeline; Laravel turns it back
                         // into the redirect response.
-                        if (request()->has('d3_refresh')) {
-                            $service->refresh();
-                            throw new \Illuminate\Http\Exceptions\HttpResponseException(
-                                redirect()->to(request()->fullUrlWithoutQuery('d3_refresh'))
-                            );
-                        }
+                        (new \D3Creative\Sentinel\Support\ManualScan)->handle(request(), $service);
 
                         $data     = $service->cached();
                         $sentMail = app(SentMailService::class);
