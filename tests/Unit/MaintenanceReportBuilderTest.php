@@ -136,6 +136,46 @@ class MaintenanceReportBuilderTest extends TestCase
         $this->assertSame('10 May 2026', $report['to']); // newest snapshot
     }
 
+    public function test_a_bump_that_fixes_no_advisory_is_not_a_security_update(): void
+    {
+        [$s2, $s1, $s0] = $this->history();
+
+        // a/a bumps S0->S1 but still carries both advisories afterwards.
+        $s1['composer_vuln_packages'] = ['a/a' => 2];
+
+        $report = MaintenanceReportBuilder::build([$s2, $s1, $s0], ['start_date' => '2026-04-14']);
+
+        $this->assertSame(3, $report['composer']['updates']);
+        $this->assertSame(0, $report['composer']['security_updates']);
+        $this->assertSame(0, $report['composer']['security_by_severity']['HIGH']);
+
+        // Fixing one of two still counts.
+        $s1['composer_vuln_packages'] = ['a/a' => 1];
+        $report = MaintenanceReportBuilder::build([$s2, $s1, $s0], ['start_date' => '2026-04-14']);
+        $this->assertSame(1, $report['composer']['security_updates']);
+    }
+
+    public function test_a_plan_starting_after_the_newest_scan_has_no_data(): void
+    {
+        $report = MaintenanceReportBuilder::build($this->history(), ['start_date' => '2026-10-01']);
+
+        $this->assertFalse($report['has_data']);
+        $this->assertNull($report['since']);
+        $this->assertNull($report['to']);
+    }
+
+    public function test_notes_where_records_start_when_the_plan_predates_them(): void
+    {
+        $early = MaintenanceReportBuilder::build($this->history(), ['start_date' => '2026-01-14']);
+        $this->assertSame('1 Apr 2026', $early['records_from']);
+
+        $covered = MaintenanceReportBuilder::build($this->history(), ['start_date' => '2026-04-14']);
+        $this->assertNull($covered['records_from']);
+
+        $sameDay = MaintenanceReportBuilder::build($this->history(), ['start_date' => '2026-04-01']);
+        $this->assertNull($sameDay['records_from']);
+    }
+
     public function test_empty_history_has_no_data(): void
     {
         $report = MaintenanceReportBuilder::build([], ['start_date' => '2026-04-14']);

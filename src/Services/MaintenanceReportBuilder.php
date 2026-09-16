@@ -13,7 +13,8 @@ use Carbon\CarbonImmutable;
  * a platform version bump counts as one update; each package whose version
  * changed counts as one package update. A package update is "security-related"
  * when that package carried a known OSV advisory in the snapshot *before* the
- * bump (read from the `*_vuln_packages` map that already lives in history).
+ * bump and fewer after it (read from the `*_vuln_packages` maps that already
+ * live in history), so a routine bump that fixes nothing isn't counted.
  *
  * Counts are net-change between scans (two bumps landing between the same pair
  * of scans read as one) - an undercount, never an overcount. This is a pure
@@ -46,6 +47,14 @@ class MaintenanceReportBuilder
             ?? self::parse($ordered[0]['recorded_at'] ?? null);
 
         if ($windowStart === null) {
+            return self::emptyResult($planOut);
+        }
+
+        // A plan starting after the newest scan has no activity to report yet;
+        // carrying on would print a "since" later than the "to".
+        $newestAt = self::parse($ordered[count($ordered) - 1]['recorded_at'] ?? null);
+
+        if ($newestAt !== null && $newestAt->lessThan($windowStart)) {
             return self::emptyResult($planOut);
         }
 
@@ -104,9 +113,19 @@ class MaintenanceReportBuilder
         $totalUpdates = $platform['statamic']['count'] + $platform['laravel']['count'] + $platform['php']['count']
             + $composer['updates'] + $npm['updates'];
 
+        // History only goes back to the oldest kept snapshot (it's pruned after
+        // HistoryService::RETENTION_DAYS, and nothing exists before Sentinel
+        // was installed). When the plan started earlier, the counts can't cover
+        // the start of it, so say where the records begin.
+        $oldestAt    = self::parse($ordered[0]['recorded_at'] ?? null);
+        $recordsFrom = $oldestAt !== null && $oldestAt->startOfDay()->greaterThan($windowStart->startOfDay())
+            ? self::display($oldestAt)
+            : null;
+
         return [
             'has_data'               => true,
             'since'                  => self::display($since),
+            'records_from'           => $recordsFrom,
             'to'                     => self::display(self::parse($newest['recorded_at'] ?? null) ?? $since),
             'plan'                   => $planOut,
             'platform'               => $platform,
@@ -130,6 +149,7 @@ class MaintenanceReportBuilder
         )['updated'];
 
         $prevVulns      = $prev[$type . '_vuln_packages']    ?? [];   // [name => count]
+        $curVulns       = $cur[$type . '_vuln_packages']     ?? [];
         $prevSeverities = $prev[$type . '_vuln_severities']  ?? null; // [name => severity] or absent (old snapshot)
 
         foreach ($updated as $pkg) {
@@ -138,6 +158,11 @@ class MaintenanceReportBuilder
             $name = $pkg['name'] ?? null;
             if ($name === null || (int) ($prevVulns[$name] ?? 0) < 1) {
                 continue; // not vulnerable before the bump -> not security-related
+            }
+
+            // Still carrying as many advisories after the bump: it fixed none.
+            if ((int) ($curVulns[$name] ?? 0) >= (int) $prevVulns[$name]) {
+                continue;
             }
 
             $eco['security_updates']++;
@@ -168,6 +193,7 @@ class MaintenanceReportBuilder
         return [
             'has_data'               => false,
             'since'                  => null,
+            'records_from'           => null,
             'to'                     => null,
             'plan'                   => $planOut,
             'platform'               => [

@@ -90,6 +90,11 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
   security releases, but the report only listed them when the vulnerability database found
   nothing. With both present, the widget might say 3, the report 2, and the vendor release wasn't
   listed anywhere. The report now includes them in its count and lists them under the advisories.
+- **Plan Summary figures.** A routine update to a package with an unfixed advisory counted as a
+  security update; it now only counts when the update resolved at least one advisory. A plan start
+  date after the latest scan no longer prints a date range that runs backwards. When a plan
+  started before Sentinel's oldest kept record (history is kept for a year), the email now says
+  where the records start instead of silently undercounting.
 
 ## [2.1.1] - 2026-07-27
 

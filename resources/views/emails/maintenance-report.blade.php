@@ -135,6 +135,11 @@
         {{-- Intro (headline update + security counts live here) --}}
         <div style="font-size:15px; font-weight:400; color:#0f172a; line-height:1.5; margin-bottom:24px;">{!! $intro !!}</div>
 
+        @if (! empty($report['records_from']))
+            {{-- The plan predates the oldest kept record, so the counts can't cover its start. --}}
+            <div style="font-size:13px; color:#475569; line-height:1.55; margin:-12px 0 24px 0;">Sentinel's records for this site start on {{ $report['records_from'] }}, so updates made before then aren't included.</div>
+        @endif
+
         {{-- Platform rows --}}
         @foreach ([
             ['key' => 'statamic', 'label' => 'Statamic', 'description' => 'The CMS that powers your website'],
