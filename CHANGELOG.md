@@ -23,6 +23,14 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
   It sits alongside "Security update" / "End of life" instead of being hidden by them, so a
   security flag no longer implies the fix needs the major upgrade.
 
+### Security
+
+- **Script injection through a CP user's name on Statamic 3.3-5.** Those versions compile the
+  server-rendered Control Panel page as a Vue template, and Blade's escaping doesn't touch Vue's
+  `{{ }}` syntax. A CP user could set their own name to a Vue expression and have it run in the
+  browser of any super admin who opened Sentinel (the Users tab lists every user's name). The
+  utility and widget now opt out of Vue compilation with `v-pre`. Statamic 6 was not affected.
+
 ### Fixed
 
 - **Blocked npm updates missed on large packages.** The publish-time lookup fetched each

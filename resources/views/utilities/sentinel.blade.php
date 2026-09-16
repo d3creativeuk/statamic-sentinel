@@ -21,8 +21,15 @@
 
 {{-- Statamic 6 extracts this view's content out of the CP layout, which drops a
      static <style> tag, so inject the CVE hover rule into <head> (same pattern as
-     the spinner keyframes). --}}
-<div x-data x-init="if (! document.getElementById('d3-sentinel-cve-style')) { var s = document.createElement('style'); s.id = 'd3-sentinel-cve-style'; s.textContent = '.d3-sentinel-cve{text-decoration:none} .d3-sentinel-cve:hover{text-decoration:underline}'; document.head.appendChild(s); } $nextTick(() => window.scrollTo({ top: 0, behavior: 'instant' }))" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; color: #1e293b;">
+     the spinner keyframes).
+
+     v-pre: Statamic 3.3-5 mount Vue on the server-rendered #statamic markup, so
+     Vue would evaluate any `{{ }}` inside printed text. Blade's escaping doesn't
+     touch braces, and user names, package names and recipients are printed
+     here, so a CP user could name themselves `{{ ...js... }}` and run it in a
+     super's session. v-pre stops Vue compiling this subtree; Alpine is
+     unaffected. --}}
+<div v-pre x-data x-init="if (! document.getElementById('d3-sentinel-cve-style')) { var s = document.createElement('style'); s.id = 'd3-sentinel-cve-style'; s.textContent = '.d3-sentinel-cve{text-decoration:none} .d3-sentinel-cve:hover{text-decoration:underline}'; document.head.appendChild(s); } $nextTick(() => window.scrollTo({ top: 0, behavior: 'instant' }))" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; color: #1e293b;">
 
 @if (! $audit)
 
