@@ -3,6 +3,7 @@
 namespace D3Creative\Sentinel\Services;
 
 use D3Creative\Sentinel\Support\AtomicFile;
+use D3Creative\Sentinel\Support\CvssScore;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
@@ -21,7 +22,7 @@ class AuditService
     // Bump when summariseVuln() or extractSeverity() change what a summary
     // holds. A hit is otherwise trusted until OSV bumps that advisory's
     // `modified`, which may be never, so logic fixes would stay invisible.
-    const OSV_SUMMARY_SCHEMA = 1;
+    const OSV_SUMMARY_SCHEMA = 2;
 
     // Disk mirror of the cache so the last scan survives `cache:clear`
     // (which Statamic / Laravel sites routinely run after `composer update`).
@@ -1583,17 +1584,33 @@ class AuditService
             return $map[$dbSeverity];
         }
 
-        // Try CVSS numeric score from severity array
-        foreach ($vuln['severity'] ?? [] as $s) {
-            $score = $s['score'] ?? '';
-            // Plain numeric score
+        // OSV `severity[].score` is a CVSS vector with no score in it, so
+        // compute the base score. Prefer a v3 vector; CVSS 2.0 has no
+        // Critical band, so a v2 score tops out at HIGH. v4 isn't scored.
+        $v2 = null;
+
+        foreach ((array) ($vuln['severity'] ?? []) as $s) {
+            $score = is_array($s) ? (string) ($s['score'] ?? '') : '';
+
             if (is_numeric($score)) {
                 return $this->cvssScoreToSeverity((float) $score);
             }
-            // CVSS vector string - extract base score via regex
-            if (preg_match('/\/(\d+\.\d+)$/', $score, $m)) {
-                return $this->cvssScoreToSeverity((float) $m[1]);
+
+            $base = CvssScore::baseScore($score);
+
+            if ($base === null) {
+                continue;
             }
+
+            if (str_starts_with($score, 'CVSS:3')) {
+                return $this->cvssScoreToSeverity($base);
+            }
+
+            $v2 = $v2 ?? $base;
+        }
+
+        if ($v2 !== null) {
+            return $v2 >= 7.0 ? 'HIGH' : $this->cvssScoreToSeverity($v2);
         }
 
         return 'UNKNOWN';

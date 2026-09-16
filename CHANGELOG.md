@@ -66,6 +66,10 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 - **Back button showed the wrong page after switching Sentinel tabs on Statamic 6.** Switching tabs
   cleared the browser history state that Statamic 6 uses to restore pages, so going to another CP
   page and pressing Back changed the URL but left that other page on screen.
+- **Advisories without a GitHub severity were always "Unknown".** The fallback looked for a
+  numeric score that OSV's CVSS vectors never contain. Sentinel now computes the CVSS 3.x (or 2.0)
+  base score from the vector to place those advisories in Critical / High / Medium / Low. CVSS 4.0
+  vectors are still reported as Unknown.
 
 ## [2.1.1] - 2026-07-27
 
