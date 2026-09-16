@@ -15,6 +15,10 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
   once per scan instead of twice. Statamic marketplace security lookups now only run for
   `statamic/cms` and Statamic addons, instead of one request per outdated Composer package that
   was never going to be on the marketplace.
+- **Major version gaps get their own pill in the report email.** Statamic, Laravel and PHP rows
+  a major version behind now show a solid red "Major version behind" pill (replacing "Outdated").
+  It sits alongside "Security update" / "End of life" instead of being hidden by them, so a
+  security flag no longer implies the fix needs the major upgrade.
 
 ### Fixed
 

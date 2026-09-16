@@ -17,7 +17,7 @@
                 padding-top:2px !important;
                 white-space:normal !important;
             }
-            .sentinel-row-meta .sentinel-pill { margin-left:0 !important; }
+            .sentinel-row-meta .sentinel-pill { margin-left:0 !important; margin-right:6px !important; margin-top:4px !important; }
         }
     </style>
 </head>
@@ -62,33 +62,44 @@
         return ($c[0] ?? null) !== ($l[0] ?? null);
     };
 
+    // Platform rows can carry two pills: the primary status (security / EOL)
+    // plus a solid "Major version behind" pill, so a security flag never hides
+    // a major gap - and never implies the security fix needs the major jump.
     $platformBadge = function (array $p, ?string $platform = null) use ($isPatchOnly, $isMajorBehind) {
-        $status   = $p['status'] ?? 'unknown';
-        $security = ! empty($p['security_update_available']);
-        $current  = $p['current'] ?? $p['version'] ?? null;
-        $latest   = $p['latest']  ?? null;
-        $outdated = $latest && $current && version_compare($current, $latest, '<');
+        $status      = $p['status'] ?? 'unknown';
+        $security    = ! empty($p['security_update_available']);
+        $current     = $p['current'] ?? $p['version'] ?? null;
+        $latest      = $p['latest']  ?? null;
+        $outdated    = $latest && $current && version_compare($current, $latest, '<');
+        $majorBehind = $outdated && $isMajorBehind($current, $latest, $platform);
+        $arrow       = $current . ' → ' . $latest;
 
-        if ($security)               return ['text' => 'Security update', 'colour' => '#dc2626', 'detail' => $current . ' → ' . $latest];
-        if ($status === 'eol')       return ['text' => 'End of life',     'colour' => '#dc2626', 'detail' => $current];
-        if ($status === 'security')  return ['text' => 'Security only',   'colour' => '#b45309', 'detail' => $current];
+        $pills = [];
+        if ($security)                  $pills[] = ['text' => 'Security update', 'colour' => '#dc2626'];
+        elseif ($status === 'eol')      $pills[] = ['text' => 'End of life',     'colour' => '#dc2626'];
+        elseif ($status === 'security') $pills[] = ['text' => 'Security only',   'colour' => '#b45309'];
+
+        if ($majorBehind) {
+            $pills[] = ['text' => 'Major version behind', 'colour' => '#dc2626', 'solid' => true];
+        }
+
+        if ($pills) {
+            return ['pills' => $pills, 'detail' => ($security || $majorBehind) ? $arrow : $current];
+        }
+
         if ($outdated) {
             // Patch-only bumps (e.g. 8.4.18 → 8.4.20) get no pill - the
             // version arrow conveys the change without sounding the alarm.
             if ($isPatchOnly($current, $latest)) {
-                return ['text' => null, 'colour' => null, 'detail' => $current . ' → ' . $latest];
+                return ['pills' => [], 'detail' => $arrow];
             }
-            // Only a different major earns "Outdated"; minor bumps are
-            // routine updates and read as "Update available" in blue,
-            // matching the ecosystem badges.
-            if ($isMajorBehind($current, $latest, $platform)) {
-                return ['text' => 'Outdated', 'colour' => '#b45309', 'detail' => $current . ' → ' . $latest];
-            }
-            return ['text' => 'Update available', 'colour' => '#3b82f6', 'detail' => $current . ' → ' . $latest];
+            // Minor bumps are routine updates and read as "Update available"
+            // in blue, matching the ecosystem badges.
+            return ['pills' => [['text' => 'Update available', 'colour' => '#3b82f6']], 'detail' => $arrow];
         }
-        if (in_array($status, ['ok', 'active'])) return ['text' => 'Up to date', 'colour' => '#10b981', 'detail' => $current];
+        if (in_array($status, ['ok', 'active'])) return ['pills' => [['text' => 'Up to date', 'colour' => '#10b981']], 'detail' => $current];
 
-        return ['text' => 'Unknown', 'colour' => '#94a3b8', 'detail' => $current ?? '-'];
+        return ['pills' => [['text' => 'Unknown', 'colour' => '#94a3b8']], 'detail' => $current ?? '-'];
     };
 
     $ecosystemBadge = function (array $eco) {
@@ -163,7 +174,7 @@
 
     $needsAttention = $totalVulns > 0 || $platformEol || $securityUpdate || $licenseInvalid;
 
-    // Mirror the row-level "Outdated" amber pill at the banner: any platform
+    // Mirror the row-level "Major version behind" pill at the banner: any platform
     // a full major behind earns its own tier between needs-attention (red)
     // and routine updates (blue).
     $platformMajorBehind = false;
@@ -223,6 +234,7 @@
         @foreach ($rows as $row)
             @php
                 $b = $row['kind'] === 'platform' ? $platformBadge($row['data'], $row['label']) : $ecosystemBadge($row['data']);
+                $pills = $b['pills'] ?? (! empty($b['text']) ? [$b] : []);
             @endphp
             <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden; margin-bottom:10px;">
                 <tr>
@@ -234,9 +246,9 @@
                         @if (! empty($b['detail']))
                             <span style="color:#475569;">{{ $b['detail'] }}</span>
                         @endif
-                        @if (! empty($b['text']))
-                            <span class="sentinel-pill" style="display:inline-block; margin-left:10px; font-size:11px; font-weight:600; padding:2px 8px; border-radius:4px; color:{{ $b['colour'] }}; border:1px solid {{ $b['colour'] }}; background:#fff;">{{ $b['text'] }}</span>
-                        @endif
+                        @foreach ($pills as $pill)
+                            <span class="sentinel-pill" style="display:inline-block; margin-left:10px; font-size:11px; font-weight:600; padding:2px 8px; border-radius:4px; border:1px solid {{ $pill['colour'] }}; @if (! empty($pill['solid'])) color:#ffffff; background:{{ $pill['colour'] }}; @else color:{{ $pill['colour'] }}; background:#fff; @endif">{{ $pill['text'] }}</span>
+                        @endforeach
                     </td>
                 </tr>
             </table>
