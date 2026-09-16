@@ -65,7 +65,9 @@ class MarketplaceService
     {
         $current = ltrim($currentVersion, 'v');
 
-        if ($current === '') {
+        // A branch install (dev-main, 6.x-dev) isn't comparable with releases;
+        // version_compare() would treat every release as newer.
+        if ($current === '' || str_starts_with($current, 'dev-') || str_ends_with($current, '-dev') || ! preg_match('/^\d/', $current)) {
             return [];
         }
 

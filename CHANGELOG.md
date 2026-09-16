@@ -76,6 +76,12 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
   newest version), or upgrading PHP or Laravel to a supported branch, kept the old warning until
   the next scan. Scans now store the version each fix arrived in, the newer releases and PHP's
   branch dates, so those details update as soon as the lockfile or runtime changes.
+- **Branch installs were always outdated, with false security warnings.** A Composer package
+  installed from a branch (`dev-main`, `2.x-dev`) always showed as outdated and picked up a vendor
+  "security update" from every marketplace release. The vulnerability database also matched it
+  against every old advisory (`laravel/framework` at `dev-master` returns 12). Branch installs are
+  now left out of the update, vendor and vulnerability checks, since none of them can be compared
+  with a release.
 
 ## [2.1.1] - 2026-07-27
 

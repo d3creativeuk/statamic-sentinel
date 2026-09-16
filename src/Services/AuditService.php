@@ -617,6 +617,20 @@ class AuditService
      * `->ok()` on that object is a fatal `Call to undefined method`. Guarding on
      * `instanceof Response` skips both null and exception slots cleanly.
      */
+    /**
+     * True for a tagged release (1.2.3, v1.2.3, 1.2.3-beta1). False for Composer
+     * branch installs (dev-main, 2.x-dev) and anything else that isn't a
+     * version number, which can't be compared with releases.
+     */
+    protected function isReleaseVersion(string $version): bool
+    {
+        $version = ltrim($version, 'v');
+
+        return ! str_starts_with($version, 'dev-')
+            && ! str_ends_with($version, '-dev')
+            && (bool) preg_match('/^\d+(\.\d+)*/', $version);
+    }
+
     protected function isOkResponse($response): bool
     {
         return $response instanceof \Illuminate\Http\Client\Response && $response->ok();
@@ -960,7 +974,7 @@ class AuditService
         $isLatest = $latest && version_compare($current, $latest, '>=');
 
         $osvFlag    = $this->hasSecurityUpdateFor('statamic/cms', $composerAudit);
-        $vendorFlag = ! $isLatest && $this->marketplace()
+        $vendorFlag = ! $isLatest && $this->isReleaseVersion($current) && $this->marketplace()
             ->hasSecurityReleaseAfter('statamic/cms', $current);
 
         return [
@@ -1377,6 +1391,13 @@ class AuditService
         if (empty($packages)) {
             return ['status' => 'ok', 'message' => 'No packages found.', 'severities' => [], 'counts' => [], 'total_packages' => 0, 'total_vulns' => 0];
         }
+
+        // OSV can't place a branch install in a version range and reports
+        // every historic advisory for it (laravel/framework at dev-master
+        // matches 12), so only tagged releases are checked.
+        $packages = array_values(array_filter($packages, fn ($p) =>
+            ! empty($p['name']) && $this->isReleaseVersion((string) ($p['version'] ?? ''))
+        ));
 
         $queries = array_map(fn($p) => [
             'package' => ['name' => $p['name'], 'ecosystem' => 'Packagist'],
@@ -1930,6 +1951,13 @@ class AuditService
             if (! $latest) continue;
 
             $current = $installed[$name];
+
+            // A branch install (dev-main, 2.x-dev) can't be compared with a
+            // tagged release; version_compare() calls it older than anything.
+            if (! $this->isReleaseVersion($current)) {
+                continue;
+            }
+
             if (version_compare($current, $latest, '<')) {
                 $outdated[] = ['name' => $name, 'current' => $current, 'latest' => $latest];
             }
@@ -2013,6 +2041,11 @@ class AuditService
             if (! $latest) continue;
 
             $current = ltrim($installed[$name], 'v^~');
+
+            if (! $this->isReleaseVersion($current)) {
+                continue;
+            }
+
             if (version_compare($current, $latest, '<')) {
                 $outdated[] = [
                     'name'         => $name,
