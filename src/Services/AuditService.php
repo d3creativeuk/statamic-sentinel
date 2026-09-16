@@ -18,6 +18,11 @@ class AuditService
     // Losing it to cache:clear only costs one slower scan, so no disk mirror.
     const OSV_SUMMARY_CACHE_KEY = 'd3creative_sentinel_osv_summaries';
 
+    // Bump when summariseVuln() or extractSeverity() change what a summary
+    // holds. A hit is otherwise trusted until OSV bumps that advisory's
+    // `modified`, which may be never, so logic fixes would stay invisible.
+    const OSV_SUMMARY_SCHEMA = 1;
+
     // Disk mirror of the cache so the last scan survives `cache:clear`
     // (which Statamic / Laravel sites routinely run after `composer update`).
     const DISK_PATH     = 'statamic-sentinel/audit.json';
@@ -1434,7 +1439,11 @@ class AuditService
                 $cached = null;
             }
 
-            $this->vulnSummaryCache = is_array($cached) ? $cached : [];
+            $this->vulnSummaryCache = is_array($cached)
+                && ($cached['schema'] ?? null) === self::OSV_SUMMARY_SCHEMA
+                && is_array($cached['summaries'] ?? null)
+                    ? $cached['summaries']
+                    : [];
         }
 
         $summaries = [];
@@ -1443,7 +1452,7 @@ class AuditService
         foreach ($modifiedById as $id => $modified) {
             $hit = $this->vulnSummaryCache[$id] ?? null;
 
-            if ($modified !== null && is_array($hit) && ($hit['modified'] ?? null) === $modified) {
+            if ($modified !== null && $this->isValidVulnSummary($hit) && $hit['modified'] === $modified) {
                 $summaries[$id] = $hit;
             } else {
                 $toFetch[] = $id;
@@ -1472,15 +1481,31 @@ class AuditService
         }
 
         try {
-            Cache::forever(
-                self::OSV_SUMMARY_CACHE_KEY,
-                $prune
+            Cache::forever(self::OSV_SUMMARY_CACHE_KEY, [
+                'schema'    => self::OSV_SUMMARY_SCHEMA,
+                'summaries' => $prune
                     ? array_intersect_key($this->vulnSummaryCache, array_flip($this->vulnIdsSeen))
-                    : $this->vulnSummaryCache
-            );
+                    : $this->vulnSummaryCache,
+            ]);
         } catch (\Throwable $e) {
             // Silent fail
         }
+    }
+
+    /**
+     * A cached summary is only reused when it has every field queryOsv()
+     * reads, with a severity that maps to a known bucket. Anything else (a
+     * hand-edited cache, a partial write) is refetched rather than throwing
+     * mid-scan or creating a stray severity key.
+     */
+    protected function isValidVulnSummary($hit): bool
+    {
+        return is_array($hit)
+            && array_key_exists('modified', $hit)
+            && in_array($hit['severity'] ?? null, ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'UNKNOWN'], true)
+            && is_string($hit['summary'] ?? null)
+            && array_key_exists('cve', $hit) && ($hit['cve'] === null || is_string($hit['cve']))
+            && is_bool($hit['fix_available'] ?? null);
     }
 
     /**

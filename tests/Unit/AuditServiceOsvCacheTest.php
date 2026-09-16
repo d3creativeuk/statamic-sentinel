@@ -102,10 +102,36 @@ class AuditServiceOsvCacheTest extends TestCase
 
         $this->reported = ['GHSA-bbbb' => '2026-09-01T00:00:00Z'];
         $this->scan(false);
-        $this->assertArrayHasKey('GHSA-aaaa', Cache::get(AuditService::OSV_SUMMARY_CACHE_KEY));
+        $this->assertArrayHasKey('GHSA-aaaa', Cache::get(AuditService::OSV_SUMMARY_CACHE_KEY)['summaries']);
 
         $this->scan(true);
-        $this->assertSame(['GHSA-bbbb'], array_keys(Cache::get(AuditService::OSV_SUMMARY_CACHE_KEY)));
+        $this->assertSame(['GHSA-bbbb'], array_keys(Cache::get(AuditService::OSV_SUMMARY_CACHE_KEY)['summaries']));
+    }
+
+    public function test_summaries_from_another_schema_or_malformed_hits_are_refetched(): void
+    {
+        $this->reported = ['GHSA-aaaa' => '2026-09-01T00:00:00Z', 'GHSA-bbbb' => '2026-09-01T00:00:00Z'];
+
+        // Pre-versioning shape (bare map), then a current-schema cache whose
+        // entry for bbbb lacks fields.
+        Cache::forever(AuditService::OSV_SUMMARY_CACHE_KEY, [
+            'GHSA-aaaa' => ['modified' => '2026-09-01T00:00:00Z', 'severity' => 'LOW', 'summary' => 'stale', 'cve' => null, 'fix_available' => false],
+        ]);
+        $this->scan();
+        $this->assertSame(2, $this->detailRequests());
+
+        Cache::forever(AuditService::OSV_SUMMARY_CACHE_KEY, [
+            'schema'    => AuditService::OSV_SUMMARY_SCHEMA,
+            'summaries' => [
+                'GHSA-aaaa' => ['modified' => '2026-09-01T00:00:00Z', 'severity' => 'HIGH', 'summary' => 'ok', 'cve' => null, 'fix_available' => true],
+                'GHSA-bbbb' => ['modified' => '2026-09-01T00:00:00Z', 'severity' => 'SEVERE'],
+            ],
+        ]);
+        $result = $this->scan();
+
+        $this->assertSame(3, $this->detailRequests());
+        $this->assertSame(2, $result['counts']['HIGH']);
+        $this->assertArrayNotHasKey('SEVERE', $result['severities']);
     }
 
     /**
