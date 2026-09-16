@@ -13,6 +13,10 @@ class AuditService
     const PACKAGIST_LARAVEL_API  = 'https://repo.packagist.org/p2/laravel/framework.json';
     const CACHE_KEY = 'd3creative_sentinel_audit';
 
+    // Slim OSV advisory summaries reused across scans (see vulnSummaries()).
+    // Losing it to cache:clear only costs one slower scan, so no disk mirror.
+    const OSV_SUMMARY_CACHE_KEY = 'd3creative_sentinel_osv_summaries';
+
     // Disk mirror of the cache so the last scan survives `cache:clear`
     // (which Statamic / Laravel sites routinely run after `composer update`).
     const DISK_PATH     = 'statamic-sentinel/audit.json';
@@ -49,6 +53,13 @@ class AuditService
      * each app() call starting cold.
      */
     protected ?MarketplaceService $marketplace = null;
+
+    /**
+     * OSV advisory summaries keyed by ID, loaded from the cache on first use
+     * (null = not loaded yet), plus the IDs this scan actually reported.
+     */
+    protected ?array $vulnSummaryCache = null;
+    protected array $vulnIdsSeen = [];
 
     /**
      * Read + decode a JSON file once per service instance. Returns null if
@@ -427,6 +438,8 @@ class AuditService
         // Per-scan state: a reused instance must not serve last scan's data.
         $this->packagistResponses = [];
         $this->marketplace        = null;
+        $this->vulnSummaryCache   = null;
+        $this->vulnIdsSeen        = [];
 
         $platform = $this->fetchPlatformLatestVersions();
 
@@ -450,6 +463,12 @@ class AuditService
         // that pulls it in, so the utility can nest it under that parent.
         $composer = $this->annotateDependencyParents($composer, base_path('composer.lock'), 'composer');
         $npm      = $this->annotateDependencyParents($npm, base_path('package-lock.json'), 'npm');
+
+        // Only prune advisories that dropped out when both OSV lookups
+        // succeeded; after an outage, "not seen" doesn't mean "gone".
+        $this->persistVulnSummaries(
+            ($composer['status'] ?? null) !== 'error' && ($npm['status'] ?? null) !== 'error'
+        );
 
         $result = [
             'statamic'   => $this->statamicInfo($composer, $platform['statamic'], $platform['statamic_behind'] ?? null),
@@ -1236,7 +1255,7 @@ class AuditService
 
                     foreach ($result['vulns'] as $vuln) {
                         if (! empty($vuln['id'])) {
-                            $pairs[] = ['package' => $pkg, 'id' => $vuln['id']];
+                            $pairs[] = ['package' => $pkg, 'id' => $vuln['id'], 'modified' => $vuln['modified'] ?? null];
                         }
                     }
                 }
@@ -1262,34 +1281,11 @@ class AuditService
             ];
         }
 
-        $uniqueIds = array_values(array_unique(array_column($pairs, 'id')));
-        $details   = $this->fetchVulnDetails($uniqueIds);
+        $summaries = $this->vulnSummaries(array_column($pairs, 'modified', 'id'));
 
         foreach ($pairs as $pair) {
-            $vuln     = $details[$pair['id']] ?? ['id' => $pair['id']];
-            $severity = $this->extractSeverity($vuln);
-
-            $fixAvailable = false;
-            foreach ($vuln['affected'] ?? [] as $affected) {
-                foreach ($affected['ranges'] ?? [] as $range) {
-                    foreach ($range['events'] ?? [] as $event) {
-                        if (isset($event['fixed'])) {
-                            $fixAvailable = true;
-                            break 3;
-                        }
-                    }
-                }
-            }
-
-            // OSV `id` is usually a GHSA; the CVE (when one exists) lives in
-            // `aliases`. Surface it so the utility can label each issue by CVE.
-            $cve = null;
-            foreach ($vuln['aliases'] ?? [] as $alias) {
-                if (is_string($alias) && str_starts_with($alias, 'CVE-')) {
-                    $cve = $alias;
-                    break;
-                }
-            }
+            $summary  = $summaries[$pair['id']] ?? $this->summariseVuln(['id' => $pair['id']]);
+            $severity = $summary['severity'];
 
             $severities[$severity]['count']++;
 
@@ -1299,11 +1295,11 @@ class AuditService
 
             $severities[$severity]['vulns'][] = [
                 'id'            => $pair['id'],
-                'cve'           => $cve,
+                'cve'           => $summary['cve'],
                 'severity'      => $severity,
                 'package'       => $pair['package'],
-                'summary'       => $vuln['summary'] ?? 'No description available.',
-                'fix_available' => $fixAvailable,
+                'summary'       => $summary['summary'],
+                'fix_available' => $summary['fix_available'],
                 'url'           => 'https://osv.dev/vulnerability/' . $pair['id'],
             ];
         }
@@ -1360,6 +1356,109 @@ class AuditService
         });
 
         return array_values($byPackage);
+    }
+
+    /**
+     * Slim summary for each advisory, keyed by ID. querybatch returns only IDs
+     * plus a `modified` timestamp, and the per-advisory detail fetch is most of
+     * a scan's requests (230+ on a stale site). So summaries are cached across
+     * scans and an advisory is only refetched when it is new or its `modified`
+     * has moved. Failed lookups are left out, so they fall back to UNKNOWN for
+     * this scan and are retried on the next.
+     *
+     * @param  array<string, ?string>  $modifiedById
+     */
+    protected function vulnSummaries(array $modifiedById): array
+    {
+        if ($this->vulnSummaryCache === null) {
+            try {
+                $cached = Cache::get(self::OSV_SUMMARY_CACHE_KEY);
+            } catch (\Throwable $e) {
+                $cached = null;
+            }
+
+            $this->vulnSummaryCache = is_array($cached) ? $cached : [];
+        }
+
+        $summaries = [];
+        $toFetch   = [];
+
+        foreach ($modifiedById as $id => $modified) {
+            $hit = $this->vulnSummaryCache[$id] ?? null;
+
+            if ($modified !== null && is_array($hit) && ($hit['modified'] ?? null) === $modified) {
+                $summaries[$id] = $hit;
+            } else {
+                $toFetch[] = $id;
+            }
+        }
+
+        foreach ($this->fetchVulnDetails($toFetch) as $id => $vuln) {
+            $summaries[$id] = $this->summariseVuln($vuln) + ['modified' => $modifiedById[$id] ?? null];
+        }
+
+        $this->vulnSummaryCache = $summaries + $this->vulnSummaryCache;
+        $this->vulnIdsSeen      = array_merge($this->vulnIdsSeen, array_keys($summaries));
+
+        return $summaries;
+    }
+
+    /**
+     * Persist the advisory summaries. With $prune, only the ones this scan
+     * reported are kept, so the cache can't grow without bound. Silent on
+     * failure: the worst case is a slower next scan.
+     */
+    protected function persistVulnSummaries(bool $prune): void
+    {
+        if ($this->vulnSummaryCache === null) {
+            return;
+        }
+
+        try {
+            Cache::forever(
+                self::OSV_SUMMARY_CACHE_KEY,
+                $prune
+                    ? array_intersect_key($this->vulnSummaryCache, array_flip($this->vulnIdsSeen))
+                    : $this->vulnSummaryCache
+            );
+        } catch (\Throwable $e) {
+            // Silent fail
+        }
+    }
+
+    /**
+     * Reduce a full OSV advisory to the fields the audit renders.
+     */
+    protected function summariseVuln(array $vuln): array
+    {
+        $fixAvailable = false;
+        foreach ($vuln['affected'] ?? [] as $affected) {
+            foreach ($affected['ranges'] ?? [] as $range) {
+                foreach ($range['events'] ?? [] as $event) {
+                    if (isset($event['fixed'])) {
+                        $fixAvailable = true;
+                        break 3;
+                    }
+                }
+            }
+        }
+
+        // OSV `id` is usually a GHSA; the CVE (when one exists) lives in
+        // `aliases`. Surface it so the utility can label each issue by CVE.
+        $cve = null;
+        foreach ($vuln['aliases'] ?? [] as $alias) {
+            if (is_string($alias) && str_starts_with($alias, 'CVE-')) {
+                $cve = $alias;
+                break;
+            }
+        }
+
+        return [
+            'severity'      => $this->extractSeverity($vuln),
+            'summary'       => $vuln['summary'] ?? 'No description available.',
+            'cve'           => $cve,
+            'fix_available' => $fixAvailable,
+        ];
     }
 
     /**
