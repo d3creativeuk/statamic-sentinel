@@ -259,12 +259,41 @@ class ContentFreezeService
     public function tickIfDue(): void
     {
         try {
+            // Runs after every CP request: a cheap read first, so the lock is
+            // only taken when a transition is actually due.
+            if (! $this->hasDueTransition()) {
+                return;
+            }
+
             $this->withFreezeLock(function () {
                 $this->advanceNotification();
                 $this->advanceActivation();
             }, null);
         } catch (\Throwable $e) {
             // Silent fail - never break CP rendering on a tick failure.
+        }
+    }
+
+    /**
+     * True when the current freeze has reached its next transition time:
+     * notify_at for a scheduled freeze, freeze_at for a notified one.
+     */
+    public function hasDueTransition(): bool
+    {
+        $freeze = $this->current();
+        $field  = [
+            self::STATUS_SCHEDULED => 'notify_at',
+            self::STATUS_NOTIFIED  => 'freeze_at',
+        ][$freeze['status'] ?? ''] ?? null;
+
+        if ($field === null || empty($freeze[$field])) {
+            return false;
+        }
+
+        try {
+            return ! Carbon::now()->lessThan(Carbon::parse($freeze[$field]));
+        } catch (\Throwable $e) {
+            return false;
         }
     }
 

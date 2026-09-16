@@ -105,6 +105,10 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 - **"Too Many Attempts" after a few clicks.** All of Sentinel's rate-limited actions shared one
   counter per user, each checked against its own limit, so opening a few previews and saving the
   schedule could block the next Send. Each action now has its own counter.
+- **Page loads could hang on a Content Freeze email.** The freeze check ran inside every Control
+  Panel request, including the login page, so on a site sending mail synchronously the request that
+  reached the notification time waited for the email to send. It now runs after the page has been
+  delivered, only for signed-in users, and skips the check entirely when no freeze is due.
 
 ## [2.1.1] - 2026-07-27
 
