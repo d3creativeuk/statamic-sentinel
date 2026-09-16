@@ -63,6 +63,9 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
   test site, a nested `qs` with its own advisory). npm aliases are now checked under the real
   package name, workspace folders are no longer sent as packages, v1 lockfiles are walked in full,
   and an advisory affecting two installed versions of a package is counted once.
+- **Back button showed the wrong page after switching Sentinel tabs on Statamic 6.** Switching tabs
+  cleared the browser history state that Statamic 6 uses to restore pages, so going to another CP
+  page and pressing Back changed the URL but left that other page on screen.
 
 ## [2.1.1] - 2026-07-27
 

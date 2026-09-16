@@ -164,7 +164,9 @@
             var hash = (window.location.hash || '').replace('#', '');
             if (valid.indexOf(hash) !== -1) this.tab = hash;
             this.$watch('tab', function (v) {
-                window.history.replaceState(null, '', '#' + v);
+                // Keep the existing state: Statamic 6's Inertia stores the page
+                // in it, and a null state makes Back leave the next page on screen.
+                window.history.replaceState(window.history.state, '', '#' + v);
             });
             window.addEventListener('hashchange', () => {
                 var h = (window.location.hash || '').replace('#', '');

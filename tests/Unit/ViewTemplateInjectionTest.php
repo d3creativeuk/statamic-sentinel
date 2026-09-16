@@ -31,6 +31,22 @@ class ViewTemplateInjectionTest extends TestCase
         $this->assertWrappedInVPreRoot($source);
     }
 
+    /**
+     * Statamic 6's Inertia keeps the current page in history.state. Replacing
+     * it with null (as tab switches did) makes a later Back navigation update
+     * only the URL hash and leave the previous page on screen.
+     */
+    public function test_views_never_clear_the_history_state(): void
+    {
+        foreach (glob(__DIR__ . '/../../resources/views/**/*.blade.php') as $file) {
+            $this->assertDoesNotMatchRegularExpression(
+                '/history\.(replaceState|pushState)\(\s*null\b/',
+                file_get_contents($file),
+                basename($file) . ' passes a null history state.'
+            );
+        }
+    }
+
     protected function viewSource(string $path): string
     {
         $source = file_get_contents(__DIR__ . '/../../resources/views/' . $path);
