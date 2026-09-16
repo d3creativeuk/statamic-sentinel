@@ -82,6 +82,10 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
   against every old advisory (`laravel/framework` at `dev-master` returns 12). Branch installs are
   now left out of the update, vendor and vulnerability checks, since none of them can be compared
   with a release.
+- **End-of-life versions didn't say so.** The version rows checked for an available update before
+  end of life, and PHP always has a newer release, so an EOL PHP only ever showed as outdated. The
+  widget also printed just the newest version, in red, so it looked like the site was already on
+  it. Both now show the installed version, the latest version and "(EOL)" together.
 
 ## [2.1.1] - 2026-07-27
 

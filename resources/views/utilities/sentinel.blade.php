@@ -282,15 +282,7 @@
                     @endif
                 </span>
                 <span style="display:inline-flex; align-items:center; font-size:11px; font-weight:500; color:{{ $pillColour }}; flex-shrink:0; font-variant-numeric:tabular-nums; {{ $pillChrome }}">
-                    @if($card['security'] && $outdated)
-                        Security: {{ $card['version'] }} → {{ $card['latest'] }}
-                    @elseif($outdated)
-                        {{ $card['version'] }} → {{ $card['latest'] }}
-                    @elseif($isEol)
-                        {{ $card['version'] }} (EOL)
-                    @else
-                        {{ $card['version'] }}
-                    @endif
+                    {{ \D3Creative\Sentinel\Support\VersionLabel::text((string) $card['version'], $card['latest'], $card['status'] ?? null, (bool) $card['security']) }}
                 </span>
             </div>
         @endforeach

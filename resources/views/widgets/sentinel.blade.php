@@ -120,13 +120,7 @@
             <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; padding:6px 12px; {{ ! $loop->last ? 'border-bottom:1px solid #e2e8f0;' : '' }}">
                 <span style="font-size:11px; font-weight:600; color:#0f172a;">{{ $card['label'] }}</span>
                 <span style="display:inline-flex; align-items:center; font-size:10px; font-weight:500; padding:1px 7px; border-radius:4px; color:{{ $pillColour }}; background:#fff; border:1px solid {{ $pillColour }}; flex-shrink:0; font-variant-numeric:tabular-nums;">
-                    @if($outdated)
-                        {{ $card['latest'] }}
-                    @elseif($isEol)
-                        {{ $card['version'] }} (EOL)
-                    @else
-                        {{ $card['version'] }}
-                    @endif
+                    {{ \D3Creative\Sentinel\Support\VersionLabel::text((string) $card['version'], $card['latest'], $card['status'] ?? null) }}
                 </span>
             </div>
         @endforeach
