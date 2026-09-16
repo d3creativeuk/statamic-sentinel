@@ -2,6 +2,7 @@
 
 namespace D3Creative\Sentinel\Services;
 
+use D3Creative\Sentinel\Support\AtomicFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
@@ -9,7 +10,6 @@ use Carbon\Carbon;
 class HistoryService
 {
     const RELATIVE_PATH       = 'statamic-sentinel/history.json';
-    const TMP_PATH            = 'statamic-sentinel/history.json.tmp';
     const LAST_REPORT_PATH    = 'statamic-sentinel/last-update-report.json';
     const RETENTION_DAYS      = 365;
 
@@ -227,20 +227,12 @@ class HistoryService
     }
 
     /**
-     * Atomically replace the history file. On POSIX, rename overwrites in one
-     * step (no readers see a missing file). On Windows, rename can't replace,
-     * so we fall back to delete-then-move only if the first move fails.
+     * Atomically replace the history file. See AtomicFile.
      */
     protected function write(array $entries): void
     {
-        $disk = Storage::disk('local');
         $json = json_encode($entries, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
 
-        $disk->put(self::TMP_PATH, $json);
-
-        if (! $disk->move(self::TMP_PATH, self::RELATIVE_PATH)) {
-            $disk->delete(self::RELATIVE_PATH);
-            $disk->move(self::TMP_PATH, self::RELATIVE_PATH);
-        }
+        AtomicFile::put(self::RELATIVE_PATH, $json);
     }
 }

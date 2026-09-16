@@ -2,6 +2,7 @@
 
 namespace D3Creative\Sentinel\Services;
 
+use D3Creative\Sentinel\Support\AtomicFile;
 use Illuminate\Support\Facades\Storage;
 
 /**
@@ -13,7 +14,6 @@ use Illuminate\Support\Facades\Storage;
 class MaintenancePlanService
 {
     const RELATIVE_PATH = 'statamic-sentinel/maintenance-plan.json';
-    const TMP_PATH      = 'statamic-sentinel/maintenance-plan.json.tmp';
 
     public function defaults(): array
     {
@@ -54,16 +54,10 @@ class MaintenancePlanService
     public function save(array $config): bool
     {
         try {
-            $disk   = Storage::disk('local');
             $config = array_merge($this->defaults(), $config);
             $json   = json_encode($config, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
 
-            $disk->put(self::TMP_PATH, $json);
-
-            if (! $disk->move(self::TMP_PATH, self::RELATIVE_PATH)) {
-                $disk->delete(self::RELATIVE_PATH);
-                $disk->move(self::TMP_PATH, self::RELATIVE_PATH);
-            }
+            AtomicFile::put(self::RELATIVE_PATH, $json);
 
             return true;
         } catch (\Throwable $e) {

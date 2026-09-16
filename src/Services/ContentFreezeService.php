@@ -2,6 +2,7 @@
 
 namespace D3Creative\Sentinel\Services;
 
+use D3Creative\Sentinel\Support\AtomicFile;
 use Carbon\Carbon;
 use Carbon\CarbonInterval;
 use Illuminate\Support\Facades\Cache;
@@ -23,11 +24,8 @@ use D3Creative\Sentinel\Mail\FreezeNotificationMail;
 class ContentFreezeService
 {
     const CURRENT_PATH      = 'statamic-sentinel/content-freeze.json';
-    const CURRENT_TMP_PATH  = 'statamic-sentinel/content-freeze.json.tmp';
     const HISTORY_PATH      = 'statamic-sentinel/content-freeze-history.json';
-    const HISTORY_TMP_PATH  = 'statamic-sentinel/content-freeze-history.json.tmp';
     const LAST_CANCEL_PATH      = 'statamic-sentinel/content-freeze-last-cancel.json';
-    const LAST_CANCEL_TMP_PATH  = 'statamic-sentinel/content-freeze-last-cancel.json.tmp';
 
     const HISTORY_LIMIT     = 50;
     const SCHEDULE_LEAD_MIN = 5;
@@ -470,19 +468,13 @@ class ContentFreezeService
         // would make lastCancelAt() return null and resurface the banner.
         // Silent on failure - the banner suppression is best-effort.
         try {
-            $disk = Storage::disk('local');
             $json = json_encode([
                 'cancelled_at' => Carbon::now()->utc()->toIso8601String(),
                 'cancelled_by' => $cancelledBy,
                 'freeze_id'    => $current['id'] ?? null,
             ], JSON_UNESCAPED_SLASHES);
 
-            $disk->put(self::LAST_CANCEL_TMP_PATH, $json);
-
-            if (! $disk->move(self::LAST_CANCEL_TMP_PATH, self::LAST_CANCEL_PATH)) {
-                $disk->delete(self::LAST_CANCEL_PATH);
-                $disk->move(self::LAST_CANCEL_TMP_PATH, self::LAST_CANCEL_PATH);
-            }
+            AtomicFile::put(self::LAST_CANCEL_PATH, $json);
         } catch (\Throwable $e) {
             // Silent fail.
         }
@@ -686,15 +678,9 @@ class ContentFreezeService
     protected function writeCurrent(array $freeze): bool
     {
         try {
-            $disk = Storage::disk('local');
             $json = json_encode($freeze, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
 
-            $disk->put(self::CURRENT_TMP_PATH, $json);
-
-            if (! $disk->move(self::CURRENT_TMP_PATH, self::CURRENT_PATH)) {
-                $disk->delete(self::CURRENT_PATH);
-                $disk->move(self::CURRENT_TMP_PATH, self::CURRENT_PATH);
-            }
+            AtomicFile::put(self::CURRENT_PATH, $json);
 
             return true;
         } catch (\Throwable $e) {
@@ -722,15 +708,9 @@ class ContentFreezeService
                 return false;
             }
 
-            $disk = Storage::disk('local');
             $json = json_encode($entries, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
 
-            $disk->put(self::HISTORY_TMP_PATH, $json);
-
-            if (! $disk->move(self::HISTORY_TMP_PATH, self::HISTORY_PATH)) {
-                $disk->delete(self::HISTORY_PATH);
-                $disk->move(self::HISTORY_TMP_PATH, self::HISTORY_PATH);
-            }
+            AtomicFile::put(self::HISTORY_PATH, $json);
 
             return true;
         } catch (\Throwable $e) {
@@ -749,15 +729,9 @@ class ContentFreezeService
                 $entries = array_slice($entries, 0, self::HISTORY_LIMIT);
             }
 
-            $disk = Storage::disk('local');
             $json = json_encode($entries, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
 
-            $disk->put(self::HISTORY_TMP_PATH, $json);
-
-            if (! $disk->move(self::HISTORY_TMP_PATH, self::HISTORY_PATH)) {
-                $disk->delete(self::HISTORY_PATH);
-                $disk->move(self::HISTORY_TMP_PATH, self::HISTORY_PATH);
-            }
+            AtomicFile::put(self::HISTORY_PATH, $json);
         } catch (\Throwable $e) {
             // Silent fail - history is bookkeeping, not part of the contract.
         }

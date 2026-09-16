@@ -2,6 +2,7 @@
 
 namespace D3Creative\Sentinel\Services;
 
+use D3Creative\Sentinel\Support\AtomicFile;
 use Illuminate\Support\Facades\Storage;
 use Carbon\Carbon;
 
@@ -16,7 +17,6 @@ use Carbon\Carbon;
 class LastActiveService
 {
     const RELATIVE_PATH  = 'statamic-sentinel/last-active.json';
-    const TMP_PATH       = 'statamic-sentinel/last-active.json.tmp';
 
     // Entries older than this are dropped, so the file can't grow unbounded and
     // long-departed users age out. Recent activity is all the Users tab needs;
@@ -93,14 +93,8 @@ class LastActiveService
      */
     protected function write(array $entries): void
     {
-        $disk = Storage::disk('local');
         $json = json_encode($entries, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
 
-        $disk->put(self::TMP_PATH, $json);
-
-        if (! $disk->move(self::TMP_PATH, self::RELATIVE_PATH)) {
-            $disk->delete(self::RELATIVE_PATH);
-            $disk->move(self::TMP_PATH, self::RELATIVE_PATH);
-        }
+        AtomicFile::put(self::RELATIVE_PATH, $json);
     }
 }

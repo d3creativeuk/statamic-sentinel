@@ -2,12 +2,12 @@
 
 namespace D3Creative\Sentinel\Services;
 
+use D3Creative\Sentinel\Support\AtomicFile;
 use Illuminate\Support\Facades\Storage;
 
 class ScheduleService
 {
     const RELATIVE_PATH = 'statamic-sentinel/schedule.json';
-    const TMP_PATH      = 'statamic-sentinel/schedule.json.tmp';
 
     // Only status_report has a scheduled send. The update report is a
     // post-update verification artifact - it only makes sense after a
@@ -66,15 +66,9 @@ class ScheduleService
     public function save(array $config): bool
     {
         try {
-            $disk = Storage::disk('local');
             $json = json_encode($config, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
 
-            $disk->put(self::TMP_PATH, $json);
-
-            if (! $disk->move(self::TMP_PATH, self::RELATIVE_PATH)) {
-                $disk->delete(self::RELATIVE_PATH);
-                $disk->move(self::TMP_PATH, self::RELATIVE_PATH);
-            }
+            AtomicFile::put(self::RELATIVE_PATH, $json);
 
             return true;
         } catch (\Throwable $e) {

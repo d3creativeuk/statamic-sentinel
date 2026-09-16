@@ -2,6 +2,7 @@
 
 namespace D3Creative\Sentinel\Services;
 
+use D3Creative\Sentinel\Support\AtomicFile;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
@@ -20,7 +21,6 @@ class AuditService
     // Disk mirror of the cache so the last scan survives `cache:clear`
     // (which Statamic / Laravel sites routinely run after `composer update`).
     const DISK_PATH     = 'statamic-sentinel/audit.json';
-    const DISK_TMP_PATH = 'statamic-sentinel/audit.json.tmp';
 
     const EOL_DATE_PHP_API = 'https://endoflife.date/api/php.json';
 
@@ -134,15 +134,9 @@ class AuditService
     protected function writeToDisk(array $result): void
     {
         try {
-            $disk = Storage::disk('local');
             $json = json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
 
-            $disk->put(self::DISK_TMP_PATH, $json);
-
-            if (! $disk->move(self::DISK_TMP_PATH, self::DISK_PATH)) {
-                $disk->delete(self::DISK_PATH);
-                $disk->move(self::DISK_TMP_PATH, self::DISK_PATH);
-            }
+            AtomicFile::put(self::DISK_PATH, $json);
         } catch (\Throwable $e) {
             // Silent fail
         }

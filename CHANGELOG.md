@@ -32,6 +32,12 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
   already fetches, and only falls back to the full document when that's missing. If neither
   lookup works, the update is still listed but marked **Unchecked**, rather than looking
   installable.
+- **Saved data stopped updating on Laravel 8 (Statamic 3.3).** Laravel 8's filesystem refuses to
+  move a file over an existing one, so after each file's first write, the scan history, sent log,
+  schedule, plan settings, user activity and Content Freeze state all silently stopped saving. The
+  worst effect: a scheduled freeze never advanced past its heads-up, so the heads-up email was sent
+  again every minute. Files are now replaced with a native atomic rename, and each write uses its
+  own temp file so two overlapping saves can no longer wipe the sent log.
 
 ## [2.1.1] - 2026-07-27
 

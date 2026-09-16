@@ -2,6 +2,7 @@
 
 namespace D3Creative\Sentinel\Services;
 
+use D3Creative\Sentinel\Support\AtomicFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
@@ -35,7 +36,6 @@ class SentMailService
 
     const DIR        = 'statamic-sentinel/sent';
     const INDEX_PATH = 'statamic-sentinel/sent/index.json';
-    const TMP_PATH   = 'statamic-sentinel/sent/index.json.tmp';
 
     /**
      * Rolling cap per kind. Older records (and their HTML files) are pruned
@@ -332,21 +332,13 @@ class SentMailService
     }
 
     /**
-     * Atomically replace the index file. On POSIX, rename overwrites in one
-     * step (no readers see a missing file). On Windows, rename can't replace,
-     * so we fall back to delete-then-move only if the first move fails.
+     * Atomically replace the index file. See AtomicFile.
      */
     protected function writeIndex(array $entries): void
     {
-        $disk = Storage::disk('local');
         $json = json_encode($entries, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
 
-        $disk->put(self::TMP_PATH, $json);
-
-        if (! $disk->move(self::TMP_PATH, self::INDEX_PATH)) {
-            $disk->delete(self::INDEX_PATH);
-            $disk->move(self::TMP_PATH, self::INDEX_PATH);
-        }
+        AtomicFile::put(self::INDEX_PATH, $json);
 
         $this->cachedAll = $entries;
     }
