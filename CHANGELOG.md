@@ -8,6 +8,14 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ## [Unreleased]
 
+### Changed
+
+- **Lighter scans.** Every registry request now asks for gzip (Packagist's laravel/framework
+  feed drops from about 1 MB to 100 KB). The Statamic and Laravel Packagist feeds are downloaded
+  once per scan instead of twice. Statamic marketplace security lookups now only run for
+  `statamic/cms` and Statamic addons, instead of one request per outdated Composer package that
+  was never going to be on the marketplace.
+
 ### Fixed
 
 - **Blocked npm updates missed on large packages.** The publish-time lookup fetched each

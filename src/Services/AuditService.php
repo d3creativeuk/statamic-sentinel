@@ -21,12 +21,34 @@ class AuditService
     const EOL_DATE_PHP_API = 'https://endoflife.date/api/php.json';
 
     /**
+     * Sent on every outbound request. Guzzle doesn't ask for compression by
+     * default, so registries answer uncompressed: Packagist's laravel/framework
+     * feed is ~1 MB raw vs ~100 KB gzipped. Guzzle decodes it transparently.
+     */
+    const ACCEPT_GZIP = ['Accept-Encoding' => 'gzip'];
+
+    /**
      * Per-instance lockfile cache. Each scan reads composer.lock /
      * package-lock.json from several methods (audit + installed-direct +
      * outdated); decoding once and reusing keeps a multi-MB JSON parse from
      * running 3x per refresh.
      */
     protected array $lockfileCache = [];
+
+    /**
+     * Packagist p2 responses already fetched this scan, keyed by package
+     * name. fetchPlatformLatestVersions() needs statamic/cms and
+     * laravel/framework, and composerOutdated() needs them again because
+     * nearly every site requires both directly.
+     */
+    protected array $packagistResponses = [];
+
+    /**
+     * One marketplace client per scan, so its per-instance release cache is
+     * shared between annotateOutdatedSecurity() and statamicInfo() instead of
+     * each app() call starting cold.
+     */
+    protected ?MarketplaceService $marketplace = null;
 
     /**
      * Read + decode a JSON file once per service instance. Returns null if
@@ -402,6 +424,10 @@ class AuditService
      */
     public function refresh(): array
     {
+        // Per-scan state: a reused instance must not serve last scan's data.
+        $this->packagistResponses = [];
+        $this->marketplace        = null;
+
         $platform = $this->fetchPlatformLatestVersions();
 
         $composer = $this->annotateOutdatedSecurity(
@@ -454,12 +480,19 @@ class AuditService
     {
         try {
             $responses = Http::pool(fn ($pool) => [
-                $pool->as('statamic')->timeout(5)->get(self::PACKAGIST_STATAMIC_API),
-                $pool->as('laravel')->timeout(5)->get(self::PACKAGIST_LARAVEL_API),
-                $pool->as('php')->timeout(5)->get(self::EOL_DATE_PHP_API),
+                $pool->as('statamic')->withHeaders(self::ACCEPT_GZIP)->timeout(5)->get(self::PACKAGIST_STATAMIC_API),
+                $pool->as('laravel')->withHeaders(self::ACCEPT_GZIP)->timeout(5)->get(self::PACKAGIST_LARAVEL_API),
+                $pool->as('php')->withHeaders(self::ACCEPT_GZIP)->timeout(5)->get(self::EOL_DATE_PHP_API),
             ]);
         } catch (\Throwable $e) {
             return ['statamic' => null, 'laravel' => null, 'php' => null];
+        }
+
+        // Hand the two Packagist feeds on to composerOutdated().
+        foreach (['statamic' => 'statamic/cms', 'laravel' => 'laravel/framework'] as $key => $package) {
+            if ($this->isOkResponse($responses[$key] ?? null)) {
+                $this->packagistResponses[$package] = $responses[$key];
+            }
         }
 
         return [
@@ -559,14 +592,14 @@ class AuditService
         $packages    = $ecosystem['outdated']['packages'] ?? [];
         $count       = 0;
         $vendorOnly  = 0;
-        $marketplace = $ecosystemType === 'composer' ? app(MarketplaceService::class) : null;
+        $marketplace = $ecosystemType === 'composer' ? $this->marketplace() : null;
 
         foreach ($packages as $i => $pkg) {
             $name    = $pkg['name'] ?? '';
             $current = $pkg['current'] ?? '';
 
             $osvFlag    = $this->hasSecurityUpdateFor($name, $ecosystem);
-            $vendorFlag = $marketplace && $name !== '' && $current !== ''
+            $vendorFlag = $marketplace && $name !== '' && $current !== '' && $this->isMarketplacePackage($name)
                 ? $marketplace->hasSecurityReleaseAfter($name, $current)
                 : false;
 
@@ -586,6 +619,35 @@ class AuditService
         $ecosystem['outdated']['vendor_security_updates_total']   = $vendorOnly;
 
         return $ecosystem;
+    }
+
+    protected function marketplace(): MarketplaceService
+    {
+        return $this->marketplace ??= app(MarketplaceService::class);
+    }
+
+    /**
+     * Only Statamic itself and Statamic addons can be on the marketplace, so
+     * only they are worth a lookup. Everything else (laravel/framework,
+     * spatie/*, ...) 404s, one sequential request per outdated package.
+     * Addons are identified the way Statamic's own addon manifest does it: an
+     * `extra.statamic` block on the package in composer.lock.
+     */
+    protected function isMarketplacePackage(string $name): bool
+    {
+        if ($name === 'statamic/cms') {
+            return true;
+        }
+
+        $lock = $this->readJsonFile(base_path('composer.lock'));
+
+        foreach (array_merge($lock['packages'] ?? [], $lock['packages-dev'] ?? []) as $pkg) {
+            if (($pkg['name'] ?? null) === $name) {
+                return isset($pkg['extra']['statamic']);
+            }
+        }
+
+        return false;
     }
 
     // -------------------------------------------------------------------------
@@ -782,7 +844,7 @@ class AuditService
         $isLatest = $latest && version_compare($current, $latest, '>=');
 
         $osvFlag    = $this->hasSecurityUpdateFor('statamic/cms', $composerAudit);
-        $vendorFlag = ! $isLatest && app(MarketplaceService::class)
+        $vendorFlag = ! $isLatest && $this->marketplace()
             ->hasSecurityReleaseAfter('statamic/cms', $current);
 
         return [
@@ -1163,7 +1225,7 @@ class AuditService
 
         foreach (array_chunk($queries, 500) as $chunk) {
             try {
-                $response = Http::timeout(10)->post(self::OSV_BATCH_API, ['queries' => $chunk]);
+                $response = Http::withHeaders(self::ACCEPT_GZIP)->timeout(10)->post(self::OSV_BATCH_API, ['queries' => $chunk]);
 
                 if (! $response->ok()) continue;
 
@@ -1312,7 +1374,7 @@ class AuditService
             try {
                 $responses = Http::pool(function ($pool) use ($chunk) {
                     return array_map(
-                        fn($id) => $pool->as($id)->timeout(10)->get('https://api.osv.dev/v1/vulns/' . $id),
+                        fn($id) => $pool->as($id)->withHeaders(self::ACCEPT_GZIP)->timeout(10)->get('https://api.osv.dev/v1/vulns/' . $id),
                         $chunk
                     );
                 });
@@ -1415,18 +1477,22 @@ class AuditService
         if (empty($installed)) return ['total' => 0, 'packages' => []];
 
         $toCheck = array_keys($installed);
+        $toFetch = array_values(array_diff($toCheck, array_keys($this->packagistResponses)));
 
-        // Fetch latest versions from Packagist concurrently
+        // Fetch latest versions from Packagist concurrently, skipping any feed
+        // fetchPlatformLatestVersions() already downloaded this scan.
         try {
-            $responses = Http::pool(function ($pool) use ($toCheck) {
+            $responses = empty($toFetch) ? [] : Http::pool(function ($pool) use ($toFetch) {
                 return array_map(
-                    fn($name) => $pool->as($name)->timeout(5)->get("https://repo.packagist.org/p2/{$name}.json"),
-                    $toCheck
+                    fn($name) => $pool->as($name)->withHeaders(self::ACCEPT_GZIP)->timeout(5)->get("https://repo.packagist.org/p2/{$name}.json"),
+                    $toFetch
                 );
             });
         } catch (\Throwable $e) {
             return ['total' => 0, 'packages' => [], 'error' => true];
         }
+
+        $responses = $this->packagistResponses + $responses;
 
         $outdated = [];
 
@@ -1511,7 +1577,7 @@ class AuditService
         try {
             $responses = Http::pool(function ($pool) use ($toCheck) {
                 return array_map(
-                    fn($name) => $pool->as($name)->timeout(5)->get("https://registry.npmjs.org/{$name}/latest"),
+                    fn($name) => $pool->as($name)->withHeaders(self::ACCEPT_GZIP)->timeout(5)->get("https://registry.npmjs.org/{$name}/latest"),
                     $toCheck
                 );
             });
@@ -1660,7 +1726,7 @@ class AuditService
         if (! empty($needDoc)) {
             try {
                 $docs = Http::pool(fn ($pool) => array_map(
-                    fn ($name) => $pool->as($name)->timeout(5)->get("https://registry.npmjs.org/{$name}"),
+                    fn ($name) => $pool->as($name)->withHeaders(self::ACCEPT_GZIP)->timeout(5)->get("https://registry.npmjs.org/{$name}"),
                     $needDoc
                 ));
             } catch (\Throwable $e) {

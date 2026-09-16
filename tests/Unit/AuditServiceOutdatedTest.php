@@ -363,6 +363,110 @@ class AuditServiceOutdatedTest extends TestCase
         Http::assertSentCount(2);
     }
 
+    /**
+     * The platform check and composerOutdated() both need Packagist's
+     * statamic/cms and laravel/framework feeds; the second must reuse the
+     * first rather than download ~1.4 MB again.
+     */
+    public function test_composer_outdated_reuses_platform_packagist_responses(): void
+    {
+        $service = Mockery::mock(AuditService::class)->makePartial()
+            ->shouldAllowMockingProtectedMethods();
+
+        $service->shouldReceive('composerInstalledDirect')->andReturn([
+            'laravel/framework' => '13.0.0',
+            'foo/bar'           => '1.0.0',
+        ]);
+
+        Http::fake([
+            'repo.packagist.org/p2/statamic/cms.json' => Http::response([
+                'packages' => ['statamic/cms' => [['version' => 'v6.0.0']]],
+            ]),
+            'repo.packagist.org/p2/laravel/framework.json' => Http::response([
+                'packages' => ['laravel/framework' => [['version' => 'v13.32.0']]],
+            ]),
+            'repo.packagist.org/p2/foo/bar.json' => Http::response([
+                'packages' => ['foo/bar' => [['version' => '2.0.0']]],
+            ]),
+            'endoflife.date/*' => Http::response([]),
+        ]);
+
+        // Statamic reads its own version from the host's composer.lock, which
+        // the test app doesn't have.
+        \Facades\Statamic\Version::shouldReceive('get')->andReturn('6.0.0');
+
+        $platform = new ReflectionMethod($service, 'fetchPlatformLatestVersions');
+        $platform->setAccessible(true);
+        $platform->invoke($service);
+
+        $outdated = new ReflectionMethod($service, 'composerOutdated');
+        $outdated->setAccessible(true);
+        $result = $outdated->invoke($service);
+
+        $this->assertSame(['laravel/framework', 'foo/bar'], array_column($result['packages'], 'name'));
+        $this->assertSame('13.32.0', $result['packages'][0]['latest']);
+        $this->assertCount(1, Http::recorded(
+            fn ($request) => $request->url() === 'https://repo.packagist.org/p2/laravel/framework.json'
+        ));
+    }
+
+    /**
+     * Registries answer uncompressed unless asked; every request must ask.
+     */
+    public function test_registry_requests_ask_for_gzip(): void
+    {
+        $service = $this->npmService(['vite' => '8.2.2'], 7);
+
+        Http::fake([
+            'registry.npmjs.org/vite/latest' => Http::response(['version' => '8.3.0']),
+            'registry.npmjs.org/vite' => Http::response(['time' => []]),
+        ]);
+
+        $this->invokeNpmOutdated($service);
+
+        Http::assertSentCount(2);
+        Http::assertNotSent(fn ($request) => ! $request->hasHeader('Accept-Encoding', 'gzip'));
+    }
+
+    /**
+     * Only statamic/cms and Statamic addons (extra.statamic in composer.lock)
+     * can be on the marketplace, so nothing else gets a lookup.
+     */
+    public function test_marketplace_is_only_queried_for_statamic_and_addons(): void
+    {
+        $service = new AuditService;
+
+        $cache = new \ReflectionProperty($service, 'lockfileCache');
+        $cache->setAccessible(true);
+        $cache->setValue($service, [
+            base_path('composer.lock') => [
+                'packages' => [
+                    ['name' => 'statamic/cms', 'version' => 'v6.0.0'],
+                    ['name' => 'laravel/framework', 'version' => 'v13.0.0'],
+                    ['name' => 'acme/seo', 'version' => '1.0.0', 'extra' => ['statamic' => ['name' => 'SEO']]],
+                ],
+            ],
+        ]);
+
+        $marketplace = Mockery::mock(\D3Creative\Sentinel\Services\MarketplaceService::class);
+        $marketplace->shouldReceive('hasSecurityReleaseAfter')->once()->with('statamic/cms', '6.0.0')->andReturn(false);
+        $marketplace->shouldReceive('hasSecurityReleaseAfter')->once()->with('acme/seo', '1.0.0')->andReturn(true);
+        $marketplace->shouldNotReceive('hasSecurityReleaseAfter')->with('laravel/framework', Mockery::any());
+        $this->app->instance(\D3Creative\Sentinel\Services\MarketplaceService::class, $marketplace);
+
+        $method = new ReflectionMethod($service, 'annotateOutdatedSecurity');
+        $method->setAccessible(true);
+
+        $result = $method->invoke($service, ['outdated' => ['packages' => [
+            ['name' => 'statamic/cms', 'current' => '6.0.0', 'latest' => '6.1.0'],
+            ['name' => 'laravel/framework', 'current' => '13.0.0', 'latest' => '13.32.0'],
+            ['name' => 'acme/seo', 'current' => '1.0.0', 'latest' => '1.1.0'],
+        ]]], 'composer');
+
+        $this->assertSame([false, false, true], array_column($result['outdated']['packages'], 'security_update'));
+        $this->assertSame(1, $result['outdated']['vendor_security_updates_total']);
+    }
+
     protected function npmService(array $installed, int $minReleaseAgeDays)
     {
         $service = Mockery::mock(AuditService::class)->makePartial()

@@ -103,6 +103,7 @@ class MarketplaceService
             // upgrade ranges (Statamic 6.x has shipped ~30 releases in a
             // year), without paying for full history we'll never read.
             $response = Http::timeout(5)
+                ->withHeaders(AuditService::ACCEPT_GZIP)
                 ->acceptJson()
                 ->get($url, ['perPage' => 50, 'page' => 1]);
         } catch (\Throwable $e) {
