@@ -70,6 +70,12 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
   numeric score that OSV's CVSS vectors never contain. Sentinel now computes the CVSS 3.x (or 2.0)
   base score from the vector to place those advisories in Critical / High / Medium / Low. CVSS 4.0
   vectors are still reported as Unknown.
+- **Stale security flags after a partial update.** Between scans Sentinel checks the installed
+  versions, but a security flag, "N behind" count and support status only cleared when you
+  updated all the way to the latest release. Updating past the security fix (but not to the
+  newest version), or upgrading PHP or Laravel to a supported branch, kept the old warning until
+  the next scan. Scans now store the version each fix arrived in, the newer releases and PHP's
+  branch dates, so those details update as soon as the lockfile or runtime changes.
 
 ## [2.1.1] - 2026-07-27
 

@@ -456,6 +456,7 @@ class AuditServiceOutdatedTest extends TestCase
         $marketplace->shouldReceive('hasSecurityReleaseAfter')->once()->with('statamic/cms', '6.0.0')->andReturn(false);
         $marketplace->shouldReceive('hasSecurityReleaseAfter')->once()->with('acme/seo', '1.0.0')->andReturn(true);
         $marketplace->shouldNotReceive('hasSecurityReleaseAfter')->with('laravel/framework', Mockery::any());
+        $marketplace->shouldReceive('releasesAfter')->with('acme/seo', '1.0.0')->andReturn([['version' => '1.1.0', 'security' => true]]);
         $this->app->instance(\D3Creative\Sentinel\Services\MarketplaceService::class, $marketplace);
 
         $method = new ReflectionMethod($service, 'annotateOutdatedSecurity');
@@ -469,6 +470,7 @@ class AuditServiceOutdatedTest extends TestCase
 
         $this->assertSame([false, false, true], array_column($result['outdated']['packages'], 'security_update'));
         $this->assertSame(1, $result['outdated']['vendor_security_updates_total']);
+        $this->assertSame(['osv' => null, 'vendor' => '1.1.0'], $result['outdated']['packages'][2]['security_fixed_in']);
     }
 
     protected function npmService(array $installed, int $minReleaseAgeDays)

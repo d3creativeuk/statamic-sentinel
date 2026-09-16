@@ -22,7 +22,7 @@ class AuditService
     // Bump when summariseVuln() or extractSeverity() change what a summary
     // holds. A hit is otherwise trusted until OSV bumps that advisory's
     // `modified`, which may be never, so logic fixes would stay invisible.
-    const OSV_SUMMARY_SCHEMA = 2;
+    const OSV_SUMMARY_SCHEMA = 3;
 
     // Disk mirror of the cache so the last scan survives `cache:clear`
     // (which Statamic / Laravel sites routinely run after `composer update`).
@@ -230,6 +230,28 @@ class AuditService
             $info['security_update_available'] = false;
             $info['security_source']           = null;
             $info['releases_behind']           = 0;
+
+            return $info;
+        }
+
+        // Partial update: recompute from what the scan stored. Audits cached
+        // before these keys existed keep their flags until the next scan.
+        if (array_key_exists('security_fixed_in', $info)) {
+            $source = $info['security_source'] ?? null;
+
+            [$osv, $vendor] = $this->reconcileSecurityFlags(
+                in_array($source, ['osv', 'both'], true),
+                in_array($source, ['vendor', 'both'], true),
+                $info['security_fixed_in'],
+                $live
+            );
+
+            $info['security_update_available'] = $osv || $vendor;
+            $info['security_source']           = $this->resolveSecuritySource($osv, $vendor);
+        }
+
+        if (is_array($info['newer_versions'] ?? null)) {
+            $info['releases_behind'] = $this->releasesBehindLive($info['newer_versions'], $live);
         }
 
         return $info;
@@ -247,9 +269,30 @@ class AuditService
         $info['version']   = $live;
         $info['is_latest'] = $isLatest;
 
+        // Support status follows the major, so a Laravel upgrade must not keep
+        // the old version's "End of Life" label.
+        $info = array_merge($info, $this->laravelLifecycle($live));
+
         if ($isLatest) {
             $info['security_update_available'] = false;
             $info['releases_behind']           = 0;
+
+            return $info;
+        }
+
+        if (array_key_exists('security_fixed_in', $info)) {
+            [$osv] = $this->reconcileSecurityFlags(
+                ! empty($info['security_update_available']),
+                false,
+                $info['security_fixed_in'],
+                $live
+            );
+
+            $info['security_update_available'] = $osv;
+        }
+
+        if (is_array($info['newer_versions'] ?? null)) {
+            $info['releases_behind'] = $this->releasesBehindLive($info['newer_versions'], $live);
         }
 
         return $info;
@@ -260,6 +303,17 @@ class AuditService
     // (current + is_latest) needs reconciling here.
     protected function reconcilePhpAgainstLive(array $info, string $live): array
     {
+        // With the branch lifecycle stored, recompute everything for the live
+        // version: status, label and "N behind" after a PHP upgrade, and the
+        // status as support end dates pass.
+        if (! empty($info['branches']) && is_array($info['branches'])) {
+            try {
+                return $this->phpInfo($info['branches'], $live);
+            } catch (\Throwable $e) {
+                // Fall back to the version-only reconcile below.
+            }
+        }
+
         if (($info['version'] ?? null) === $live) {
             return $info;
         }
@@ -349,7 +403,21 @@ class AuditService
                 continue;
             }
 
-            if ($live) {
+            if ($live && $live !== ($pkg['current'] ?? null)) {
+                if (! empty($pkg['security_update']) && array_key_exists('security_fixed_in', $pkg)) {
+                    $source = $pkg['security_source'] ?? null;
+
+                    [$osv, $vendor] = $this->reconcileSecurityFlags(
+                        in_array($source, ['osv', 'both'], true),
+                        in_array($source, ['vendor', 'both'], true),
+                        $pkg['security_fixed_in'],
+                        $live
+                    );
+
+                    $pkg['security_update'] = $osv || $vendor;
+                    $pkg['security_source'] = $this->resolveSecuritySource($osv, $vendor);
+                }
+
                 $pkg['current'] = $live;
             }
 
@@ -375,10 +443,33 @@ class AuditService
     // Laravel
     // -------------------------------------------------------------------------
 
-    protected function laravelInfo(array $composerAudit, ?string $latest, ?int $behind = null): array
+    protected function laravelInfo(array $composerAudit, ?string $latest, ?int $behind = null, array $newer = []): array
     {
-        $current = app()->version();
-        $major   = (int) explode('.', $current)[0];
+        $current  = app()->version();
+        $isLatest = $latest && version_compare($current, $latest, '>=');
+        $osvFlag  = ! $isLatest && $this->hasSecurityUpdateFor('laravel/framework', $composerAudit);
+
+        return [
+            'version'                   => $current,
+            'latest'                    => $latest,
+            'is_latest'                 => $isLatest,
+            'releases_behind'           => $isLatest ? 0 : $behind,
+            'security_update_available' => $osvFlag,
+            'security_fixed_in'         => [
+                'osv'    => $osvFlag ? $this->osvFixedIn('laravel/framework', $current, $composerAudit) : null,
+                'vendor' => null,
+            ],
+            'newer_versions'            => $newer,
+        ] + $this->laravelLifecycle($current);
+    }
+
+    /**
+     * Support status for a Laravel version. No HTTP, so reconcile can rerun it
+     * against the live version.
+     */
+    protected function laravelLifecycle(string $version): array
+    {
+        $major = (int) explode('.', ltrim($version, 'v'))[0];
 
         // Laravel releases one major version per year in approximately February,
         // starting with Laravel 9 in February 2022.
@@ -394,7 +485,7 @@ class AuditService
             $status  = now()->lt($eolDate) ? 'security' : 'eol';
         } else {
             // Approximate release date: 1 February of the corresponding year.
-            // Laravel 9 → 2022, Laravel 10 → 2023, Laravel 11 → 2024, etc.
+            // Laravel 9 -> 2022, Laravel 10 -> 2023, Laravel 11 -> 2024, etc.
             $releaseYear  = 2022 + ($major - 9);
             $releaseDate  = \Carbon\Carbon::create($releaseYear, 2, 1);
             $activeEnds   = $releaseDate->copy()->addMonths(18);
@@ -415,17 +506,7 @@ class AuditService
             'eol'      => 'End of Life',
         ];
 
-        $isLatest = $latest && version_compare($current, $latest, '>=');
-
-        return [
-            'version'                   => $current,
-            'latest'                    => $latest,
-            'is_latest'                 => $isLatest,
-            'releases_behind'           => $isLatest ? 0 : $behind,
-            'status'                    => $status,
-            'label'                     => $labels[$status],
-            'security_update_available' => ! $isLatest && $this->hasSecurityUpdateFor('laravel/framework', $composerAudit),
-        ];
+        return ['status' => $status, 'label' => $labels[$status]];
     }
 
     /**
@@ -471,8 +552,8 @@ class AuditService
         );
 
         $result = [
-            'statamic'   => $this->statamicInfo($composer, $platform['statamic'], $platform['statamic_behind'] ?? null),
-            'laravel'    => $this->laravelInfo($composer, $platform['laravel'], $platform['laravel_behind'] ?? null),
+            'statamic'   => $this->statamicInfo($composer, $platform['statamic'], $platform['statamic_behind'] ?? null, $platform['statamic_newer'] ?? []),
+            'laravel'    => $this->laravelInfo($composer, $platform['laravel'], $platform['laravel_behind'] ?? null, $platform['laravel_newer'] ?? []),
             'php'        => $this->phpInfo($platform['php']),
             'license'    => $this->licenseInfo(),
             'composer'   => $composer,
@@ -521,6 +602,9 @@ class AuditService
             // How many stable releases the installed version is behind the newest.
             'statamic_behind' => $this->countStableReleasesNewerThan($responses['statamic'] ?? null, 'statamic/cms', \Statamic\Statamic::version()),
             'laravel_behind'  => $this->countStableReleasesNewerThan($responses['laravel']  ?? null, 'laravel/framework', app()->version()),
+            // Kept so reconcile can recount "N behind" after a partial update.
+            'statamic_newer'  => $this->stableReleasesNewerThan($responses['statamic'] ?? null, 'statamic/cms', \Statamic\Statamic::version()),
+            'laravel_newer'   => $this->stableReleasesNewerThan($responses['laravel']  ?? null, 'laravel/framework', app()->version()),
         ];
     }
 
@@ -567,21 +651,30 @@ class AuditService
      */
     protected function countStableReleasesNewerThan($response, string $packageKey, ?string $current): int
     {
+        return count($this->stableReleasesNewerThan($response, $packageKey, $current));
+    }
+
+    /**
+     * The stable (X.Y.Z) versions in a Packagist p2 response newer than the
+     * installed one, newest first.
+     */
+    protected function stableReleasesNewerThan($response, string $packageKey, ?string $current): array
+    {
         if (! $this->isOkResponse($response) || ! $current) {
-            return 0;
+            return [];
         }
 
         $current = ltrim($current, 'v');
-        $count   = 0;
+        $newer   = [];
 
         foreach ($response->json("packages.$packageKey", []) as $version) {
             $v = ltrim($version['version'] ?? '', 'v');
             if (preg_match('/^[0-9]+\.[0-9]+\.[0-9]+$/', $v) && version_compare($v, $current, '>')) {
-                $count++;
+                $newer[] = $v;
             }
         }
 
-        return $count;
+        return array_values(array_unique($newer));
     }
 
     /**
@@ -624,6 +717,10 @@ class AuditService
 
             $packages[$i]['security_update']        = $osvFlag || $vendorFlag;
             $packages[$i]['security_source']        = $this->resolveSecuritySource($osvFlag, $vendorFlag);
+            $packages[$i]['security_fixed_in']      = [
+                'osv'    => $osvFlag ? $this->osvFixedIn($name, $current, $ecosystem) : null,
+                'vendor' => $vendorFlag ? $this->vendorFixedIn($name, $current) : null,
+            ];
 
             if ($osvFlag || $vendorFlag) {
                 $count++;
@@ -857,7 +954,7 @@ class AuditService
     // Statamic
     // -------------------------------------------------------------------------
 
-    protected function statamicInfo(array $composerAudit, ?string $latest, ?int $behind = null): array
+    protected function statamicInfo(array $composerAudit, ?string $latest, ?int $behind = null, array $newer = []): array
     {
         $current  = \Statamic\Statamic::version();
         $isLatest = $latest && version_compare($current, $latest, '>=');
@@ -874,6 +971,11 @@ class AuditService
             'status'                    => $isLatest ? 'ok' : ($latest ? 'outdated' : 'unknown'),
             'security_update_available' => ! $isLatest && ($osvFlag || $vendorFlag),
             'security_source'           => $this->resolveSecuritySource($osvFlag, $vendorFlag),
+            'security_fixed_in'         => [
+                'osv'    => $osvFlag ? $this->osvFixedIn('statamic/cms', $current, $composerAudit) : null,
+                'vendor' => $vendorFlag ? $this->vendorFixedIn('statamic/cms', $current) : null,
+            ],
+            'newer_versions'            => $newer,
         ];
     }
 
@@ -1002,13 +1104,97 @@ class AuditService
         return false;
     }
 
+    /**
+     * Lowest version that clears every fixable OSV advisory on a package, so
+     * reconcile can drop the flag after a partial update without rescanning.
+     * Per advisory that's the smallest fixed version above the installed one;
+     * overall it's the highest of those. Null when an advisory has no usable
+     * fixed version above the installed one - the flag then waits for a scan.
+     */
+    protected function osvFixedIn(string $name, string $current, array $audit): ?string
+    {
+        $current = ltrim($current, 'v');
+        $needed  = null;
+
+        foreach ($audit['severities'] ?? [] as $severity) {
+            foreach ($severity['vulns'] ?? [] as $vuln) {
+                if (($vuln['package'] ?? null) !== $name || empty($vuln['fix_available'])) {
+                    continue;
+                }
+
+                $candidates = array_values(array_filter(
+                    (array) ($vuln['fixed_versions'] ?? []),
+                    fn ($v) => is_string($v) && version_compare($v, $current, '>')
+                ));
+
+                if (empty($candidates)) {
+                    return null;
+                }
+
+                usort($candidates, 'version_compare');
+
+                if ($needed === null || version_compare($candidates[0], $needed, '>')) {
+                    $needed = $candidates[0];
+                }
+            }
+        }
+
+        return $needed;
+    }
+
+    /**
+     * Highest marketplace security release above the installed version: once
+     * the live install reaches it, no newer security release remains.
+     */
+    protected function vendorFixedIn(string $name, string $current): ?string
+    {
+        $highest = null;
+
+        foreach ($this->marketplace()->releasesAfter($name, $current) as $release) {
+            if (! empty($release['security']) && ($highest === null || version_compare($release['version'], $highest, '>'))) {
+                $highest = $release['version'];
+            }
+        }
+
+        return $highest;
+    }
+
+    /**
+     * Security flags for a live version that differs from the scanned one,
+     * from the fixed-in versions stored at scan time. A source without a
+     * stored fixed-in version stays flagged until the next scan.
+     *
+     * @return array{0: bool, 1: bool} [osv, vendor]
+     */
+    protected function reconcileSecurityFlags(bool $osv, bool $vendor, $fixedIn, string $live): array
+    {
+        $fixedIn = is_array($fixedIn) ? $fixedIn : [];
+        $live    = ltrim($live, 'v');
+        $cleared = fn ($version) => is_string($version) && $version !== '' && version_compare($live, $version, '>=');
+
+        return [
+            $osv && ! $cleared($fixedIn['osv'] ?? null),
+            $vendor && ! $cleared($fixedIn['vendor'] ?? null),
+        ];
+    }
+
+    /**
+     * "N behind" recounted from the newer versions stored at scan time.
+     */
+    protected function releasesBehindLive(array $newer, string $live): int
+    {
+        $live = ltrim($live, 'v');
+
+        return count(array_filter($newer, fn ($v) => is_string($v) && version_compare($v, $live, '>')));
+    }
+
     // -------------------------------------------------------------------------
     // PHP
     // -------------------------------------------------------------------------
 
-    protected function phpInfo(?array $branches): array
+    protected function phpInfo(?array $branches, ?string $version = null): array
     {
-        $full       = PHP_VERSION;
+        $full       = $version ?? PHP_VERSION;
         $majorMinor = implode('.', array_slice(explode('.', $full), 0, 2));
 
         // Absolute newest stable across all branches, not just the user's own.
@@ -1045,6 +1231,7 @@ class AuditService
                         'releases_behind' => $behind,
                         'status'          => $status,
                         'label'           => $label,
+                        'branches'        => $this->compactPhpBranches($branches),
                     ];
                 }
             } catch (\Throwable $e) {
@@ -1059,7 +1246,21 @@ class AuditService
             'releases_behind' => $behind,
             'status'          => 'unknown',
             'label'           => 'Unknown',
+            'branches'        => $this->compactPhpBranches($branches),
         ];
+    }
+
+    /**
+     * The endoflife.date fields phpInfo() reads, kept in the audit so
+     * reconcile can recompute PHP status for the live version (and as
+     * support dates pass) without a network call.
+     */
+    protected function compactPhpBranches(?array $branches): array
+    {
+        return array_values(array_map(fn ($branch) => array_intersect_key(
+            (array) $branch,
+            array_flip(['cycle', 'latest', 'support', 'eol', 'releaseDate'])
+        ), $branches ?? []));
     }
 
     /**
@@ -1363,6 +1564,7 @@ class AuditService
                 'package'       => $pair['package'],
                 'summary'       => $summary['summary'],
                 'fix_available' => $summary['fix_available'],
+                'fixed_versions' => array_values($summary['fixed'][$pair['package']] ?? []),
                 'url'           => 'https://osv.dev/vulnerability/' . $pair['id'],
             ];
         }
@@ -1506,7 +1708,8 @@ class AuditService
             && in_array($hit['severity'] ?? null, ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'UNKNOWN'], true)
             && is_string($hit['summary'] ?? null)
             && array_key_exists('cve', $hit) && ($hit['cve'] === null || is_string($hit['cve']))
-            && is_bool($hit['fix_available'] ?? null);
+            && is_bool($hit['fix_available'] ?? null)
+            && is_array($hit['fixed'] ?? null);
     }
 
     /**
@@ -1514,17 +1717,33 @@ class AuditService
      */
     protected function summariseVuln(array $vuln): array
     {
+        // `fixed` keeps each package's fixed versions so reconcile can clear
+        // a security flag once the live install reaches one. GIT ranges fix
+        // at a commit hash, not a version, so they only count towards
+        // fix_available.
         $fixAvailable = false;
-        foreach ($vuln['affected'] ?? [] as $affected) {
-            foreach ($affected['ranges'] ?? [] as $range) {
-                foreach ($range['events'] ?? [] as $event) {
-                    if (isset($event['fixed'])) {
-                        $fixAvailable = true;
-                        break 3;
+        $fixed        = [];
+
+        foreach ((array) ($vuln['affected'] ?? []) as $affected) {
+            $name = $affected['package']['name'] ?? null;
+
+            foreach ((array) ($affected['ranges'] ?? []) as $range) {
+                foreach ((array) ($range['events'] ?? []) as $event) {
+                    if (! isset($event['fixed'])) {
+                        continue;
+                    }
+
+                    $fixAvailable = true;
+                    $version      = ltrim((string) $event['fixed'], 'v');
+
+                    if (is_string($name) && ($range['type'] ?? null) !== 'GIT' && preg_match('/^\d+(\.\d+)*/', $version)) {
+                        $fixed[$name][] = $version;
                     }
                 }
             }
         }
+
+        $fixed = array_map(fn ($versions) => array_values(array_unique($versions)), $fixed);
 
         // OSV `id` is usually a GHSA; the CVE (when one exists) lives in
         // `aliases`. Surface it so the utility can label each issue by CVE.
@@ -1541,6 +1760,7 @@ class AuditService
             'summary'       => $vuln['summary'] ?? 'No description available.',
             'cve'           => $cve,
             'fix_available' => $fixAvailable,
+            'fixed'         => $fixed,
         ];
     }
 

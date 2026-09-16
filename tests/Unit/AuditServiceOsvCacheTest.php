@@ -123,7 +123,7 @@ class AuditServiceOsvCacheTest extends TestCase
         Cache::forever(AuditService::OSV_SUMMARY_CACHE_KEY, [
             'schema'    => AuditService::OSV_SUMMARY_SCHEMA,
             'summaries' => [
-                'GHSA-aaaa' => ['modified' => '2026-09-01T00:00:00Z', 'severity' => 'HIGH', 'summary' => 'ok', 'cve' => null, 'fix_available' => true],
+                'GHSA-aaaa' => ['modified' => '2026-09-01T00:00:00Z', 'severity' => 'HIGH', 'summary' => 'ok', 'cve' => null, 'fix_available' => true, 'fixed' => []],
                 'GHSA-bbbb' => ['modified' => '2026-09-01T00:00:00Z', 'severity' => 'SEVERE'],
             ],
         ]);
