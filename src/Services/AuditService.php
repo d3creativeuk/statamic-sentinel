@@ -1191,31 +1191,88 @@ class AuditService
             return ['status' => 'unavailable', 'message' => 'package-lock.json not found.', 'severities' => [], 'counts' => [], 'total_packages' => 0, 'total_vulns' => 0];
         }
 
-        // Support both lockfile v1 (dependencies) and v2/v3 (packages)
-        $packages = [];
-
-        if (! empty($lock['packages'])) {
-            foreach ($lock['packages'] as $path => $data) {
-                if ($path === '' || empty($data['version'])) continue; // skip root
-                $name = preg_replace('#^node_modules/#', '', $path);
-                $packages[$name] = $data['version'];
-            }
-        } elseif (! empty($lock['dependencies'])) {
-            foreach ($lock['dependencies'] as $name => $data) {
-                $packages[$name] = ltrim($data['version'] ?? '', 'v^~');
-            }
-        }
+        $packages = $this->npmLockPackages($lock);
 
         if (empty($packages)) {
             return ['status' => 'ok', 'message' => 'No packages found.', 'severities' => [], 'counts' => [], 'total_packages' => 0, 'total_vulns' => 0];
         }
 
-        $queries = array_map(fn($name, $version) => [
-            'package' => ['name' => $name, 'ecosystem' => 'npm'],
-            'version' => $version,
-        ], array_keys($packages), array_values($packages));
+        $queries = array_map(fn ($pkg) => [
+            'package' => ['name' => $pkg['name'], 'ecosystem' => 'npm'],
+            'version' => $pkg['version'],
+        ], array_values($packages));
 
-        return $this->queryOsv(array_values($queries), count($packages));
+        return $this->queryOsv($queries, count($packages));
+    }
+
+    /**
+     * Every installed npm package as a unique name@version pair, for the OSV
+     * query. Keyed by "name@version" so a package installed at two versions is
+     * checked at both.
+     *
+     * - v2/v3 `packages` keys are install paths. Nested copies
+     *   (`node_modules/a/node_modules/semver`) are named by the segment after
+     *   the last `node_modules/`, not the whole path, which OSV never matched.
+     *   An alias (`node_modules/string-width-cjs`) carries the real package in
+     *   `name`. Paths outside node_modules are workspace folders and `link`
+     *   entries point at them, so neither is a registry package.
+     * - v1 `dependencies` nest, so they're walked recursively. Aliases there
+     *   put the real package in the version, as `npm:name@1.2.3`.
+     *
+     * Versions that aren't plain semver (git, file, tarball specs) are skipped
+     * since OSV can't match them.
+     */
+    protected function npmLockPackages(array $lock): array
+    {
+        $packages = [];
+
+        $add = function (?string $name, $version) use (&$packages) {
+            $version = ltrim((string) $version, 'v^~');
+
+            if (str_starts_with($version, 'npm:')) {
+                $spec    = substr($version, 4);
+                $at      = strrpos($spec, '@');
+                $name    = $at > 0 ? substr($spec, 0, $at) : $name;
+                $version = $at > 0 ? substr($spec, $at + 1) : '';
+            }
+
+            if ($name === null || $name === '' || ! preg_match('/^\d+\.\d+\.\d+/', $version)) {
+                return;
+            }
+
+            $packages["{$name}@{$version}"] = ['name' => $name, 'version' => $version];
+        };
+
+        if (! empty($lock['packages']) && is_array($lock['packages'])) {
+            foreach ($lock['packages'] as $path => $data) {
+                $path = (string) $path;
+                $pos  = strrpos($path, 'node_modules/');
+
+                if ($pos === false || ! is_array($data) || ! empty($data['link'])) {
+                    continue;
+                }
+
+                $add($data['name'] ?? substr($path, $pos + strlen('node_modules/')), $data['version'] ?? '');
+            }
+        } elseif (! empty($lock['dependencies']) && is_array($lock['dependencies'])) {
+            $walk = function (array $deps) use (&$walk, $add) {
+                foreach ($deps as $name => $data) {
+                    if (! is_array($data)) {
+                        continue;
+                    }
+
+                    $add((string) $name, $data['version'] ?? '');
+
+                    if (! empty($data['dependencies']) && is_array($data['dependencies'])) {
+                        $walk($data['dependencies']);
+                    }
+                }
+            };
+
+            $walk($lock['dependencies']);
+        }
+
+        return $packages;
     }
 
     // -------------------------------------------------------------------------
@@ -1252,8 +1309,10 @@ class AuditService
                     $pkg = $chunk[$index]['package']['name'];
 
                     foreach ($result['vulns'] as $vuln) {
+                        // Keyed by package + advisory so a package installed at
+                        // two affected versions counts each advisory once.
                         if (! empty($vuln['id'])) {
-                            $pairs[] = ['package' => $pkg, 'id' => $vuln['id'], 'modified' => $vuln['modified'] ?? null];
+                            $pairs[$pkg . '|' . $vuln['id']] = ['package' => $pkg, 'id' => $vuln['id'], 'modified' => $vuln['modified'] ?? null];
                         }
                     }
                 }

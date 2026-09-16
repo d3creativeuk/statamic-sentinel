@@ -57,6 +57,12 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
   check as failed. A failed check also no longer writes zeros into history, which made the update
   and Plan Summary reports claim every issue was resolved and then re-introduced on the next good
   scan; history keeps the previous figures for that ecosystem instead.
+- **Nested npm packages were never checked for vulnerabilities.** A package installed inside
+  another package's `node_modules` was sent to the vulnerability database under its whole install
+  path, which never matches, so an older vulnerable copy deep in the tree went unreported (on one
+  test site, a nested `qs` with its own advisory). npm aliases are now checked under the real
+  package name, workspace folders are no longer sent as packages, v1 lockfiles are walked in full,
+  and an advisory affecting two installed versions of a package is counted once.
 
 ## [2.1.1] - 2026-07-27
 
