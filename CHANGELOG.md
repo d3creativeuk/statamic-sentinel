@@ -15,6 +15,8 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Changed
 
+- **The Notify tab's link is now `#notify`,** matching its name, instead of `#content-freeze`.
+  Old `#content-freeze` links still open the tab and switch to the new address.
 - **Lighter scans.** Every registry request now asks for gzip (Packagist's laravel/framework
   feed drops from about 1 MB to 100 KB). The Statamic and Laravel Packagist feeds are downloaded
   once per scan instead of twice. Statamic marketplace security lookups now only run for

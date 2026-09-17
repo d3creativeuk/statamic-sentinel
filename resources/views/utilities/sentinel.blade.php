@@ -120,7 +120,7 @@
             ['key' => 'users',              'label' => 'Users',
                 'badge' => $onlineCount > 0 ? ['text' => $onlineCount, 'bg' => '#dcfce7', 'fg' => '#166534', 'dot' => '#16a34a'] : null],
             // Pushed to the far right of the strip.
-            ['key' => 'content-freeze',     'label' => 'Notify', 'push' => true,
+            ['key' => 'notify',             'label' => 'Notify', 'push' => true,
                 'badge' => $freezeStatus === \D3Creative\Sentinel\Services\ContentFreezeService::STATUS_ACTIVE
                     ? ['text' => 'Active', 'bg' => '#fef3c7', 'fg' => '#92400e']
                     : (! empty($freeze_current) ? ['text' => 'Scheduled', 'bg' => '#dbeafe', 'fg' => '#1d4ed8'] : null)],
@@ -144,6 +144,8 @@
     <div x-data="{
         tab: 'current',
         valid: @js($tabKeys),
+        // Old hashes that still land on the renamed tab (and get rewritten to its new name).
+        renamed: { 'content-freeze': 'notify' },
         init() {
             this.syncFromHash();
             this.$watch('tab', function (v) {
@@ -154,6 +156,7 @@
         },
         syncFromHash() {
             var h = (window.location.hash || '').replace('#', '');
+            h = this.renamed[h] || h;
             if (this.valid.indexOf(h) !== -1 && this.tab !== h) this.tab = h;
         }
     }" x-on:hashchange.window="syncFromHash()">
@@ -989,7 +992,7 @@
         </div>
 
         {{-- Content Freeze tab --}}
-        <div x-show="tab === 'content-freeze'" role="tabpanel" id="sentinel-panel-content-freeze" aria-labelledby="sentinel-tab-content-freeze" x-cloak>
+        <div x-show="tab === 'notify'" role="tabpanel" id="sentinel-panel-notify" aria-labelledby="sentinel-tab-notify" x-cloak>
             @include('statamic-sentinel::utilities._content_freeze', [
                 'freeze_service' => $freeze,
                 'freeze_current' => $freeze_current,

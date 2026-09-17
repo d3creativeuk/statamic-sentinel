@@ -45,11 +45,15 @@ class ViewRenderTest extends TestCase
 
         $html = $this->renderUtility($this->audit());
 
-        foreach (['current', 'history', 'status-report', 'update-report', 'maintenance-report', 'users', 'content-freeze'] as $key) {
+        foreach (['current', 'history', 'status-report', 'update-report', 'maintenance-report', 'users', 'notify'] as $key) {
             $this->assertStringContainsString('id="sentinel-tab-' . $key . '"', $html);
             $this->assertStringContainsString('aria-controls="sentinel-panel-' . $key . '"', $html);
             $this->assertMatchesRegularExpression('/id="sentinel-panel-' . $key . '"\s+aria-labelledby="sentinel-tab-' . $key . '"/', $html);
         }
+
+        // Old #content-freeze links still reach the renamed Notify tab.
+        $this->assertStringContainsString("renamed: { 'content-freeze': 'notify' }", $html);
+        $this->assertStringNotContainsString("tab === 'content-freeze'", $html);
 
         $this->assertStringContainsString('aria-labelledby="sentinel-confirm-title"', $html);
         $this->assertSame(4, substr_count($html, 'aria-label="Recipient email addresses"')); // three report forms + Notify
