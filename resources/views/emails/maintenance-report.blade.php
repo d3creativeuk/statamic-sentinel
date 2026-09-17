@@ -152,9 +152,9 @@
                     <td class="sentinel-row-cell" style="padding:12px 16px; vertical-align:middle;">
                         <div style="font-size:13px; font-weight:600; color:#0f172a;">{{ $r['label'] }}</div>
                         <div style="font-size:12px; color:#475569; margin-top:3px;">{{ $row['description'] }}</div>
-                    </td>
-                    <td align="right" class="sentinel-row-cell sentinel-row-meta" style="padding:12px 16px; font-size:12px; color:#475569; vertical-align:middle; white-space:nowrap; font-variant-numeric:tabular-nums;">
-                        <span class="sentinel-pill" style="display:inline-block; font-size:11px; font-weight:600; padding:2px 8px; border-radius:4px; color:{{ $r['colour'] }}; border:1px solid {{ $r['colour'] }}; background:#fff;">{{ $r['pill'] }}</span>
+                        <div class="sentinel-row-meta" style="margin-top:8px; font-size:12px; color:#475569; font-variant-numeric:tabular-nums; line-height:1.8;">
+                            <span class="sentinel-pill" style="display:inline-block; font-size:11px; font-weight:600; padding:2px 8px; border-radius:4px; color:{{ $r['colour'] }}; border:1px solid {{ $r['colour'] }}; background:#fff;">{{ $r['pill'] }}</span>
+                        </div>
                     </td>
                 </tr>
             </table>
@@ -179,9 +179,9 @@
                         @if ($secLine)
                             <div style="font-size:12px; color:#b45309; margin-top:5px; font-weight:500;">{{ $secLine }}@if ($partial) <span style="color:#94a3b8; font-weight:400;">(severity recorded for newer updates)</span>@endif</div>
                         @endif
-                    </td>
-                    <td align="right" class="sentinel-row-cell sentinel-row-meta" style="padding:12px 16px; font-size:12px; color:#475569; vertical-align:middle; white-space:nowrap; font-variant-numeric:tabular-nums;">
-                        <span class="sentinel-pill" style="display:inline-block; font-size:11px; font-weight:600; padding:2px 8px; border-radius:4px; color:{{ $updates > 0 ? '#475569' : '#94a3b8' }}; border:1px solid {{ $updates > 0 ? '#475569' : '#94a3b8' }}; background:#fff;">{{ $updates }} {{ \Illuminate\Support\Str::plural('update', $updates) }}</span>
+                        <div class="sentinel-row-meta" style="margin-top:8px; font-size:12px; color:#475569; font-variant-numeric:tabular-nums; line-height:1.8;">
+                            <span class="sentinel-pill" style="display:inline-block; font-size:11px; font-weight:600; padding:2px 8px; border-radius:4px; color:{{ $updates > 0 ? '#475569' : '#94a3b8' }}; border:1px solid {{ $updates > 0 ? '#475569' : '#94a3b8' }}; background:#fff;">{{ $updates }} {{ \Illuminate\Support\Str::plural('update', $updates) }}</span>
+                        </div>
                     </td>
                 </tr>
             </table>

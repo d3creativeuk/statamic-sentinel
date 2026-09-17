@@ -7,9 +7,9 @@
     <meta name="format-detection" content="telephone=no,address=no,email=no,date=no,url=no">
     <title>Statamic Package Status Report</title>
     <style>
-        /* On narrow screens the two-column row layout squeezes the version +
-           pill into a cramped column, so stack each row: label, description,
-           then version + pill drop onto their own full-width rows. */
+        /* Summary rows always stack the version + pills under the description.
+           On narrow screens the remaining two-column rows (package lists)
+           stack too. */
         @media only screen and (max-width:480px) {
             .sentinel-row-cell { display:block !important; width:100% !important; }
             .sentinel-row-meta {
@@ -241,14 +241,14 @@
                     <td class="sentinel-row-cell" style="padding:12px 16px; vertical-align:middle;">
                         <div style="font-size:13px; font-weight:600; color:#0f172a;">{{ $row['label'] }}</div>
                         <div style="font-size:12px; color:#475569; margin-top:3px;">{{ $row['description'] }}</div>
-                    </td>
-                    <td align="right" class="sentinel-row-cell sentinel-row-meta" style="padding:12px 16px; font-size:12px; color:#475569; vertical-align:middle; white-space:nowrap; font-variant-numeric:tabular-nums;">
-                        @if (! empty($b['detail']))
-                            <span style="color:#475569;">{{ $b['detail'] }}</span>
-                        @endif
-                        @foreach ($pills as $pill)
-                            <span class="sentinel-pill" style="display:inline-block; margin-left:10px; font-size:11px; font-weight:600; padding:2px 8px; border-radius:4px; border:1px solid {{ $pill['colour'] }}; @if (! empty($pill['solid'])) color:#ffffff; background:{{ $pill['colour'] }}; @else color:{{ $pill['colour'] }}; background:#fff; @endif">{{ $pill['text'] }}</span>
-                        @endforeach
+                        <div class="sentinel-row-meta" style="margin-top:8px; font-size:12px; color:#475569; font-variant-numeric:tabular-nums; line-height:1.8;">
+                            @if (! empty($b['detail']))
+                                <span style="color:#475569; margin-right:8px;">{{ $b['detail'] }}</span>
+                            @endif
+                            @foreach ($pills as $pill)
+                                <span class="sentinel-pill" style="display:inline-block; margin:2px 6px 2px 0; font-size:11px; font-weight:600; padding:2px 8px; border-radius:4px; border:1px solid {{ $pill['colour'] }}; @if (! empty($pill['solid'])) color:#ffffff; background:{{ $pill['colour'] }}; @else color:{{ $pill['colour'] }}; background:#fff; @endif">{{ $pill['text'] }}</span>
+                            @endforeach
+                        </div>
                     </td>
                 </tr>
             </table>
@@ -264,9 +264,9 @@
                     <td class="sentinel-row-cell" style="padding:12px 16px; vertical-align:middle;">
                         <div style="font-size:13px; font-weight:600; color:#0f172a;">Statamic License Status</div>
                         <div style="font-size:12px; color:#475569; margin-top:3px;">The commercial licence for your CMS</div>
-                    </td>
-                    <td align="right" class="sentinel-row-cell sentinel-row-meta" style="padding:12px 16px; font-size:12px; color:#475569; vertical-align:middle; white-space:nowrap; font-variant-numeric:tabular-nums;">
-                        <span class="sentinel-pill" style="display:inline-block; margin-left:10px; font-size:11px; font-weight:600; padding:2px 8px; border-radius:4px; color:{{ $lb['colour'] }}; border:1px solid {{ $lb['colour'] }}; background:#fff;">{{ $lb['text'] }}</span>
+                        <div class="sentinel-row-meta" style="margin-top:8px; font-size:12px; color:#475569; font-variant-numeric:tabular-nums; line-height:1.8;">
+                            <span class="sentinel-pill" style="display:inline-block; margin:2px 6px 2px 0; font-size:11px; font-weight:600; padding:2px 8px; border-radius:4px; color:{{ $lb['colour'] }}; border:1px solid {{ $lb['colour'] }}; background:#fff;">{{ $lb['text'] }}</span>
+                        </div>
                     </td>
                 </tr>
             </table>

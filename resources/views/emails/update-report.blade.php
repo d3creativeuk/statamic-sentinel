@@ -7,9 +7,9 @@
     <meta name="format-detection" content="telephone=no,address=no,email=no,date=no,url=no">
     <title>Statamic Package Update Report</title>
     <style>
-        /* On narrow screens the two-column row layout squeezes the version +
-           pill into a cramped column, so stack each row: label, description,
-           then version + pill drop onto their own full-width rows. */
+        /* Summary rows always stack the version + pills under the description.
+           On narrow screens the remaining two-column rows (package lists)
+           stack too. */
         @media only screen and (max-width:480px) {
             .sentinel-row-cell { display:block !important; width:100% !important; }
             .sentinel-row-meta {
@@ -147,14 +147,16 @@
                     <td class="sentinel-row-cell" style="padding:12px 16px; vertical-align:middle;">
                         <div style="font-size:13px; font-weight:600; color:#0f172a;">{{ $r['label'] }}</div>
                         <div style="font-size:12px; color:#475569; margin-top:3px;">{{ $row['description'] }}</div>
-                    </td>
-                    <td class="sentinel-row-cell sentinel-row-meta" style="padding:12px 16px; font-size:12px; color:#475569; font-variant-numeric:tabular-nums; vertical-align:middle; text-align:right; white-space:nowrap;">
-                        @if ($r['changed'])
-                            {{ $platform[$row['key']]['from'] }} <span style="color:#94a3b8;">→</span> <strong style="color:#0f172a;">{{ $platform[$row['key']]['to'] }}</strong>
-                        @else
-                            {{ $r['detail'] }}
-                        @endif
-                        <span class="sentinel-pill" style="display:inline-block; margin-left:10px; font-size:11px; font-weight:600; padding:2px 8px; border-radius:4px; color:{{ $r['colour'] }}; border:1px solid {{ $r['colour'] }}; background:#fff;">{{ $r['badge'] }}</span>
+                        <div class="sentinel-row-meta" style="margin-top:8px; font-size:12px; color:#475569; font-variant-numeric:tabular-nums; line-height:1.8;">
+                            <span style="margin-right:8px;">
+                                @if ($r['changed'])
+                                    {{ $platform[$row['key']]['from'] }} <span style="color:#94a3b8;">→</span> <strong style="color:#0f172a;">{{ $platform[$row['key']]['to'] }}</strong>
+                                @else
+                                    {{ $r['detail'] }}
+                                @endif
+                            </span>
+                            <span class="sentinel-pill" style="display:inline-block; margin:2px 6px 2px 0; font-size:11px; font-weight:600; padding:2px 8px; border-radius:4px; color:{{ $r['colour'] }}; border:1px solid {{ $r['colour'] }}; background:#fff;">{{ $r['badge'] }}</span>
+                        </div>
                     </td>
                 </tr>
             </table>
@@ -167,9 +169,9 @@
                 <td class="sentinel-row-cell" style="padding:12px 16px; vertical-align:middle;">
                     <div style="font-size:13px; font-weight:600; color:#0f172a;">Composer</div>
                     <div style="font-size:12px; color:#475569; margin-top:3px;">Third-party PHP packages your site uses</div>
-                </td>
-                <td align="right" class="sentinel-row-cell sentinel-row-meta" style="padding:12px 16px; white-space:nowrap; vertical-align:middle;">
-                    <span style="font-size:11px; font-weight:600; padding:2px 8px; border-radius:4px; color:{{ $cs['colour'] }}; border:1px solid {{ $cs['colour'] }}; background:#fff;">{{ $cs['badge'] }}</span>
+                    <div class="sentinel-row-meta" style="margin-top:8px; font-size:12px; color:#475569; font-variant-numeric:tabular-nums; line-height:1.8;">
+                        <span style="font-size:11px; font-weight:600; padding:2px 8px; border-radius:4px; color:{{ $cs['colour'] }}; border:1px solid {{ $cs['colour'] }}; background:#fff;">{{ $cs['badge'] }}</span>
+                    </div>
                 </td>
             </tr>
             @foreach ($composer['updated'] as $pkg)
@@ -205,9 +207,9 @@
                 <td class="sentinel-row-cell" style="padding:12px 16px; vertical-align:middle;">
                     <div style="font-size:13px; font-weight:600; color:#0f172a;">npm</div>
                     <div style="font-size:12px; color:#475569; margin-top:3px;">Third-party JavaScript packages your site uses</div>
-                </td>
-                <td align="right" class="sentinel-row-cell sentinel-row-meta" style="padding:12px 16px; white-space:nowrap; vertical-align:middle;">
-                    <span style="font-size:11px; font-weight:600; padding:2px 8px; border-radius:4px; color:{{ $ns['colour'] }}; border:1px solid {{ $ns['colour'] }}; background:#fff;">{{ $ns['badge'] }}</span>
+                    <div class="sentinel-row-meta" style="margin-top:8px; font-size:12px; color:#475569; font-variant-numeric:tabular-nums; line-height:1.8;">
+                        <span style="font-size:11px; font-weight:600; padding:2px 8px; border-radius:4px; color:{{ $ns['colour'] }}; border:1px solid {{ $ns['colour'] }}; background:#fff;">{{ $ns['badge'] }}</span>
+                    </div>
                 </td>
             </tr>
             @foreach ($npm['updated'] as $pkg)
@@ -291,13 +293,13 @@
                     <td class="sentinel-row-cell" style="padding:12px 16px; vertical-align:middle;">
                         <div style="font-size:13px; font-weight:600; color:#0f172a;">Statamic License Status</div>
                         <div style="font-size:12px; color:#475569; margin-top:3px;">The commercial licence for your CMS</div>
-                    </td>
-                    <td class="sentinel-row-cell sentinel-row-meta" style="padding:12px 16px; font-size:12px; color:#475569; font-variant-numeric:tabular-nums; vertical-align:middle; text-align:right; white-space:nowrap;">
-                        @php $licenseNow = $license['to'] ?? $license['from']; @endphp
-                        @if ($licenseChanged)
-                            {{ $licenseLabel($license['from']) }} <span style="color:#94a3b8;">→</span>
-                        @endif
-                        <span class="sentinel-pill" style="display:inline-block; margin-left:10px; font-size:11px; font-weight:600; padding:2px 8px; border-radius:4px; color:{{ $licenseColour($licenseNow) }}; border:1px solid {{ $licenseColour($licenseNow) }}; background:#fff;">{{ $licenseLabel($licenseNow) }}</span>
+                        <div class="sentinel-row-meta" style="margin-top:8px; font-size:12px; color:#475569; font-variant-numeric:tabular-nums; line-height:1.8;">
+                            @php $licenseNow = $license['to'] ?? $license['from']; @endphp
+                            @if ($licenseChanged)
+                                <span style="margin-right:4px;">{{ $licenseLabel($license['from']) }} <span style="color:#94a3b8;">→</span></span>
+                            @endif
+                            <span class="sentinel-pill" style="display:inline-block; margin:2px 6px 2px 0; font-size:11px; font-weight:600; padding:2px 8px; border-radius:4px; color:{{ $licenseColour($licenseNow) }}; border:1px solid {{ $licenseColour($licenseNow) }}; background:#fff;">{{ $licenseLabel($licenseNow) }}</span>
+                        </div>
                     </td>
                 </tr>
             </table>

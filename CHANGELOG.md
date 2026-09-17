@@ -15,6 +15,10 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Changed
 
+- **Report emails stack each row.** In the status, update and Plan Summary emails, the version
+  and status pills now sit under each row's description at every screen width, instead of in a
+  right-hand column that squeezed the description onto several lines when a row had two pills.
+  Package lists in the update report stay on one line.
 - **Tab links match their names:** Notify is now `#notify` (was `#content-freeze`) and Plan Summary
   is `#plan-summary` (was `#maintenance-report`).
 - **Lighter scans.** Every registry request now asks for gzip (Packagist's laravel/framework
