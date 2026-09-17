@@ -6,7 +6,6 @@ use Carbon\Carbon;
 use D3Creative\Sentinel\Http\Middleware\AdvanceFreezeState;
 use D3Creative\Sentinel\Services\ContentFreezeService;
 use D3Creative\Sentinel\Tests\TestCase;
-use Illuminate\Auth\GenericUser;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Cache;
@@ -44,7 +43,7 @@ class AdvanceFreezeStateTest extends TestCase
             $ticks++;
         });
         $this->app->instance(ContentFreezeService::class, $service);
-        $this->actingAs(new GenericUser(['id' => 1]));
+        $this->allowCp(true);
 
         $middleware = new AdvanceFreezeState;
         $request    = Request::create('/cp/dashboard');
@@ -57,11 +56,12 @@ class AdvanceFreezeStateTest extends TestCase
         $this->assertSame(1, $ticks);
     }
 
-    public function test_guests_do_not_tick(): void
+    public function test_users_without_cp_access_do_not_tick(): void
     {
         $service = Mockery::mock(ContentFreezeService::class);
         $service->shouldReceive('tickIfDue')->never();
         $this->app->instance(ContentFreezeService::class, $service);
+        $this->allowCp(false);
 
         (new AdvanceFreezeState)->terminate(Request::create('/cp/auth/login'), new Response('ok'));
 
@@ -108,5 +108,12 @@ class AdvanceFreezeStateTest extends TestCase
 
             $this->assertSame($due, $service->hasDueTransition(), "{$status} {$notify} {$freeze}");
         }
+    }
+
+    protected function allowCp(bool $allowed): void
+    {
+        $access = Mockery::mock(\D3Creative\Sentinel\Support\CpAccess::class);
+        $access->shouldReceive('allows')->andReturn($allowed);
+        $this->app->instance(\D3Creative\Sentinel\Support\CpAccess::class, $access);
     }
 }

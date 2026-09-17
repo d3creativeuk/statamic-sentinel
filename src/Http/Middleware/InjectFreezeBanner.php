@@ -209,7 +209,7 @@ HTML;
             return false;
         }
 
-        if (! auth()->check()) {
+        if (! app(\D3Creative\Sentinel\Support\CpAccess::class)->allows()) {
             return false;
         }
 

@@ -25,7 +25,7 @@ use Symfony\Component\HttpFoundation\Response;
  * Inertia-driven and never returns an HTML response after the first load.
  *
  * The tick runs in terminate(), after the response has been sent, and only
- * for signed-in users. On a sync queue the heads-up email is sent during
+ * for signed-in CP users. On a sync queue the heads-up email is sent during
  * the tick, so running it in handle() made whoever loaded a page as
  * notify_at passed (even a guest on the login screen) wait for SMTP. The
  * banner can therefore trail the transition by one page load.
@@ -42,7 +42,7 @@ class AdvanceFreezeState
     public function terminate(Request $request, $response): void
     {
         try {
-            if (! auth()->check()) {
+            if (! app(\D3Creative\Sentinel\Support\CpAccess::class)->allows()) {
                 return;
             }
 
