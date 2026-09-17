@@ -1009,8 +1009,11 @@
     </div>
 
     @if ($isSuper)
-    {{-- Email preview modal (shared between Status Report and Update Report tabs) --}}
-    <div x-data="{ src: '', title: '' }"
+    {{-- Email preview modal, shared by every preview (reports, sent emails, Notify
+         emails). Phone narrows the frame to 375px, so the emails' own narrow-screen
+         rules apply exactly as they would on a phone. The choice sticks between
+         previews until the page reloads. --}}
+    <div x-data="{ src: '', title: '', device: 'desktop' }"
          x-on:sentinel-preview-open.window="
             title = $event.detail.title;
             src = $event.detail.url;
@@ -1022,17 +1025,43 @@
                 x-on:click.self="$refs.dlg.close()"
                 x-on:close="src = ''"
                 style="position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); width:min(960px,95vw); height:min(820px,90vh); margin:0; padding:0; border:none; border-radius:10px; overflow:hidden; box-shadow:0 25px 50px -12px rgba(0,0,0,0.25);">
-            <div style="display:flex; align-items:center; justify-content:space-between; padding:10px 14px; border-bottom:1px solid #e2e8f0; background:#f8fafc;">
-                <strong id="sentinel-preview-title" style="font-size:13px; color:#0f172a;" x-text="title"></strong>
-                <button type="button"
-                        x-on:click="$refs.dlg.close()"
-                        style="font-size:12px; font-weight:600; color:#0f172a; background:#fff; border:1px solid #e2e8f0; padding:4px 10px; border-radius:5px; cursor:pointer; font-family:inherit;">
-                    Close
-                </button>
+            {{-- Flex column on an inner wrapper, not the dialog: an inline display on
+                 <dialog> would override the browser hiding it while closed. --}}
+            <div style="display:flex; flex-direction:column; height:100%;">
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 14px; border-bottom:1px solid #e2e8f0; background:#f8fafc; flex-shrink:0;">
+                <strong id="sentinel-preview-title" style="font-size:13px; color:#0f172a; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" x-text="title"></strong>
+                <div style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
+                    <div role="group" aria-label="Preview width" style="display:inline-flex; padding:2px; border:1px solid #e2e8f0; border-radius:6px; background:#fff;">
+                        <button type="button"
+                                x-on:click="device = 'desktop'"
+                                x-bind:aria-pressed="device === 'desktop'"
+                                x-bind:style="{ background: device === 'desktop' ? '#0f172a' : 'transparent', color: device === 'desktop' ? '#fff' : '#475569' }"
+                                style="font-size:12px; font-weight:600; padding:3px 10px; border:0; border-radius:4px; cursor:pointer; font-family:inherit;">
+                            Desktop
+                        </button>
+                        <button type="button"
+                                x-on:click="device = 'phone'"
+                                x-bind:aria-pressed="device === 'phone'"
+                                x-bind:style="{ background: device === 'phone' ? '#0f172a' : 'transparent', color: device === 'phone' ? '#fff' : '#475569' }"
+                                style="font-size:12px; font-weight:600; padding:3px 10px; border:0; border-radius:4px; cursor:pointer; font-family:inherit;">
+                            Phone
+                        </button>
+                    </div>
+                    <button type="button"
+                            x-on:click="$refs.dlg.close()"
+                            style="font-size:12px; font-weight:600; color:#0f172a; background:#fff; border:1px solid #e2e8f0; padding:4px 10px; border-radius:5px; cursor:pointer; font-family:inherit;">
+                        Close
+                    </button>
+                </div>
             </div>
-            <iframe x-bind:src="src"
-                    title="Email preview"
-                    style="display:block; width:100%; height:calc(100% - 41px); border:none; background:#fff;"></iframe>
+            <div x-bind:style="{ background: device === 'phone' ? '#e2e8f0' : '#fff' }"
+                 style="flex:1; min-height:0; overflow:auto; background:#fff;">
+                <iframe x-bind:src="src"
+                        title="Email preview"
+                        x-bind:style="{ width: device === 'phone' ? '375px' : '100%', borderLeft: device === 'phone' ? '1px solid #cbd5e1' : 'none', borderRight: device === 'phone' ? '1px solid #cbd5e1' : 'none' }"
+                        style="display:block; width:100%; height:100%; margin:0 auto; border:none; background:#fff;"></iframe>
+            </div>
+            </div>
         </dialog>
     </div>
 

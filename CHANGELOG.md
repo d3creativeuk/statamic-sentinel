@@ -15,6 +15,9 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Changed
 
+- **Desktop / Phone toggle on email previews.** Every preview in the utility (status, update and
+  Plan Summary reports, sent emails, and the Notify emails) can switch to a 375px phone width,
+  which applies the emails' own phone layout, so you can check it without sending a test.
 - **Report emails stack each row.** In the status, update and Plan Summary emails, the version
   and status pills now sit under each row's description at every screen width, instead of in a
   right-hand column that squeezed the description onto several lines when a row had two pills.
@@ -55,6 +58,9 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Fixed
 
+- **Report emails clipped text on phones.** On narrow screens each row cell became full width plus
+  its padding, so the right edge of descriptions (e.g. "runs everythi") was cut off by the rounded
+  card. The cells now include their padding in that width.
 - **Blocked npm updates missed on large packages.** The publish-time lookup fetched each
   package's full registry document, which for vite (about 39 MB) and tailwindcss (about 11 MB)
   timed out, so fresh releases showed as installable while npm's `min-release-age` guard was

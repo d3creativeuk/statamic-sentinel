@@ -52,6 +52,8 @@ class ViewRenderTest extends TestCase
         }
 
         $this->assertStringContainsString('aria-labelledby="sentinel-confirm-title"', $html);
+        $this->assertStringContainsString('aria-label="Preview width"', $html);
+        $this->assertStringContainsString("x-bind:aria-pressed=\"device === 'phone'\"", $html);
         $this->assertSame(4, substr_count($html, 'aria-label="Recipient email addresses"')); // three report forms + Notify
         $this->assertStringNotContainsString('outline:none', $html);
     }
