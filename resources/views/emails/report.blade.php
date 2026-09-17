@@ -206,6 +206,36 @@
         $intro        = 'Your Statamic website is fully up to date and in good health.';
         $statusAccent = '#10b981';
     }
+
+    // The banner reads like the opening of an email about the Statamic
+    // install. The accent colour above still reflects the overall state; the
+    // rows below carry the detail. Falls back to the summary line when the
+    // audit has no Statamic version.
+    $statamicCurrent = $statamic['current'] ?? null;
+    $statamicLatest  = $statamic['latest']  ?? null;
+    $introMessage    = null;
+
+    if ($statamicCurrent) {
+        if ($statamicLatest && version_compare($statamicCurrent, $statamicLatest, '<')) {
+            $behind   = (int) ($statamic['releases_behind'] ?? 0);
+            $messages = [
+                'Hi, your Statamic installation is running version ' . $statamicCurrent . '.',
+                'The latest version is ' . $statamicLatest . '.',
+            ];
+
+            if ($behind > 0) {
+                $messages[] = "That's " . $behind . ' ' . \Illuminate\Support\Str::plural('version', $behind) . ' behind.';
+            }
+
+            if (($license['status'] ?? null) === 'ok') {
+                $messages[] = 'Since you have an active license, it would make sense to keep this updated.';
+            }
+
+            $introMessage = implode(' ', $messages);
+        } else {
+            $introMessage = 'Hi, your Statamic installation is running the latest version, ' . $statamicCurrent . '.';
+        }
+    }
 @endphp
 
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f1f5f9;">
@@ -224,9 +254,13 @@
 
         {{-- Status banner --}}
         <div style="background:{{ $statusAccent }}1a; border-left:3px solid {{ $statusAccent }}; padding:14px 16px; border-radius:6px; margin-bottom:24px;">
-            <div style="font-size:15px; font-weight:600; color:#0f172a; line-height:1.4;">{{ $intro }}</div>
-            @if ($introDetail)
-                <div style="font-size:13px; font-weight:400; color:#475569; line-height:1.4; margin-top:4px;">{{ $introDetail }}</div>
+            @if ($introMessage)
+                <div style="font-size:15px; font-weight:400; color:#0f172a; line-height:1.55;">{{ $introMessage }}</div>
+            @else
+                <div style="font-size:15px; font-weight:600; color:#0f172a; line-height:1.4;">{{ $intro }}</div>
+                @if ($introDetail)
+                    <div style="font-size:13px; font-weight:400; color:#475569; line-height:1.4; margin-top:4px;">{{ $introDetail }}</div>
+                @endif
             @endif
         </div>
 

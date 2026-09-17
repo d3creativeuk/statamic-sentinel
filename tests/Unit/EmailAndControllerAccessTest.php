@@ -80,6 +80,19 @@ class EmailAndControllerAccessTest extends TestCase
         $this->assertStringNotContainsString('across 1 package', $rendered['status']);
         $this->assertStringNotContainsString('1 update available', $rendered['status']);
 
+        // The banner reads like an email about the Statamic install.
+        $this->assertStringContainsString("Hi, your Statamic installation is running version 6.0.0. The latest version is 6.1.0. That&#039;s 1 version behind.", $rendered['status']);
+        $this->assertStringNotContainsString('active license', $rendered['status']); // licence is due for renewal here
+
+        $licensed = $this->audit();
+        $licensed['license']['status'] = 'ok';
+        $licensed['statamic']['releases_behind'] = 34;
+        $this->assertStringContainsString('That&#039;s 34 versions behind. Since you have an active license, it would make sense to keep this updated.', (new SentinelReport($licensed))->render());
+
+        $current = $this->audit();
+        $current['statamic'] = ['current' => '6.1.0', 'latest' => '6.1.0', 'is_latest' => true, 'status' => 'ok'];
+        $this->assertStringContainsString('Hi, your Statamic installation is running the latest version, 6.1.0.', (new SentinelReport($current))->render());
+
         // "Major version behind" is always the first pill.
         $majorAudit = $this->audit();
         $majorAudit['statamic'] = ['current' => '5.73.2', 'latest' => '6.33.0', 'is_latest' => false, 'status' => 'outdated', 'security_update_available' => true, 'security_source' => 'osv'];
