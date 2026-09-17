@@ -127,6 +127,11 @@
         ] : [
             ['key' => 'current', 'label' => 'Current'],
         ];
+        // Printed with @js, not @json: this x-data attribute is double-quoted,
+        // and json_encode only hex-escapes quotes inside strings, never the
+        // ones delimiting them, so @json's ["current",...] ended the attribute
+        // and Vue couldn't compile the page.
+        $tabKeys = array_column($tabs, 'key');
         $tabStyle = fn (bool $active, bool $push) => 'cursor:pointer; background:transparent; border:0; border-bottom:2px solid '
             . ($active ? '#0f172a' : 'transparent') . '; padding:10px 14px; margin-bottom:-1px;' . ($push ? ' margin-left:auto;' : '')
             . ' font-size:13px; font-weight:600; font-family:inherit; color:' . ($active ? '#0f172a' : '#64748b') . ';';
@@ -138,7 +143,7 @@
          Inertia navigation unmounts the page instead of piling up one per visit. --}}
     <div x-data="{
         tab: 'current',
-        valid: @json(array_column($tabs, 'key')),
+        valid: @js($tabKeys),
         init() {
             this.syncFromHash();
             this.$watch('tab', function (v) {

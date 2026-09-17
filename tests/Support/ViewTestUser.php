@@ -21,6 +21,11 @@ class ViewTestUser implements Authenticatable
         return $this->super;
     }
 
+    public function can($ability, $arguments = []): bool
+    {
+        return $this->super;
+    }
+
     public function getAuthIdentifierName(): string { return 'id'; }
     public function getAuthIdentifier(): mixed { return 1; }
     public function getAuthPasswordName(): string { return 'password'; }

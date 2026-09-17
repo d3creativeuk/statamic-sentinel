@@ -56,6 +56,40 @@ class ViewRenderTest extends TestCase
         $this->assertStringNotContainsString('outline:none', $html);
     }
 
+    /**
+     * Statamic compiles this HTML as a Vue template (3.3-5 via #statamic, 6 via
+     * dynamic-html-renderer). A raw `"` inside a double-quoted Alpine attribute
+     * ends it early; the rest of the expression becomes junk attributes, the
+     * template fails to compile and the utility renders empty tabs that can't
+     * be clicked. That happened with `valid: @json([...])`: json_encode's
+     * JSON_HEX_QUOT never escapes the quotes that delimit strings.
+     */
+    public function test_alpine_attributes_are_not_cut_short_by_quotes(): void
+    {
+        $this->actingAs(new ViewTestUser(true));
+
+        $pages = [
+            'utility' => $this->renderUtility($this->audit()),
+            'widget'  => (string) view('statamic-sentinel::widgets.sentinel', ['audit' => $this->audit()]),
+        ];
+
+        foreach ($pages as $page => $html) {
+            preg_match_all('/\s(x-[\w:.\-]+)="([^"]*)"/', $html, $attributes, PREG_SET_ORDER);
+
+            $this->assertNotEmpty($attributes, $page);
+
+            foreach ($attributes as [, $name, $value]) {
+                foreach (['{' => '}', '[' => ']', '(' => ')'] as $open => $close) {
+                    $this->assertSame(
+                        substr_count($value, $open),
+                        substr_count($value, $close),
+                        "{$page}: {$name} looks cut short: " . substr(preg_replace('/\s+/', ' ', $value), 0, 120)
+                    );
+                }
+            }
+        }
+    }
+
     public function test_utility_renders_for_a_non_super(): void
     {
         $this->actingAs(new ViewTestUser(false));
