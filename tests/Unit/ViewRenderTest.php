@@ -47,6 +47,23 @@ class ViewRenderTest extends TestCase
         $this->assertStringContainsString('Vendor security release', $html);
     }
 
+    public function test_tabs_panels_and_dialogs_are_wired_for_assistive_tech(): void
+    {
+        $this->actingAs(new ViewTestUser(true));
+
+        $html = $this->renderUtility($this->audit());
+
+        foreach (['current', 'history', 'status-report', 'update-report', 'maintenance-report', 'users', 'content-freeze'] as $key) {
+            $this->assertStringContainsString('id="sentinel-tab-' . $key . '"', $html);
+            $this->assertStringContainsString('aria-controls="sentinel-panel-' . $key . '"', $html);
+            $this->assertMatchesRegularExpression('/id="sentinel-panel-' . $key . '"\s+aria-labelledby="sentinel-tab-' . $key . '"/', $html);
+        }
+
+        $this->assertStringContainsString('aria-labelledby="sentinel-confirm-title"', $html);
+        $this->assertSame(4, substr_count($html, 'aria-label="Recipient email addresses"')); // three report forms + Notify
+        $this->assertStringNotContainsString('outline:none', $html);
+    }
+
     public function test_utility_renders_for_a_non_super(): void
     {
         $this->actingAs(new ViewTestUser(false));

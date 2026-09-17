@@ -113,6 +113,9 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
   the "Send anyway" notice lost their spacing and alignment once shown. On Statamic 6, each visit to
   Sentinel also added another URL-change listener that was never removed. A sent-email record
   missing its id no longer breaks the whole page.
+- **Accessibility and small screens.** Keyboard focus is visible again on inputs and help buttons,
+  email fields have labels for screen readers, tabs and dialogs are properly announced, and the
+  tab bar and send forms wrap instead of overflowing on phones.
 
 ## [2.1.1] - 2026-07-27
 

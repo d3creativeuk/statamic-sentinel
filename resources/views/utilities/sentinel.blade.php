@@ -146,9 +146,11 @@
     }" x-on:hashchange.window="syncFromHash()">
 
         @if ($isSuper)
-        <div role="tablist" style="display:flex; gap:4px; border-bottom:1px solid #e2e8f0; margin-bottom:18px;">
+        <div role="tablist" aria-label="Sentinel sections" style="display:flex; flex-wrap:wrap; gap:4px; border-bottom:1px solid #e2e8f0; margin-bottom:18px;">
             <button type="button"
                     role="tab"
+                    id="sentinel-tab-current"
+                    aria-controls="sentinel-panel-current"
                     x-on:click="tab = 'current'"
                     x-bind:aria-selected="tab === 'current'"
                     x-bind:style="tab === 'current'
@@ -158,6 +160,8 @@
             </button>
             <button type="button"
                     role="tab"
+                    id="sentinel-tab-history"
+                    aria-controls="sentinel-panel-history"
                     x-on:click="tab = 'history'"
                     x-bind:aria-selected="tab === 'history'"
                     x-bind:style="tab === 'history'
@@ -170,6 +174,8 @@
             </button>
             <button type="button"
                     role="tab"
+                    id="sentinel-tab-status-report"
+                    aria-controls="sentinel-panel-status-report"
                     x-on:click="tab = 'status-report'"
                     x-bind:aria-selected="tab === 'status-report'"
                     x-bind:style="tab === 'status-report'
@@ -179,6 +185,8 @@
             </button>
             <button type="button"
                     role="tab"
+                    id="sentinel-tab-update-report"
+                    aria-controls="sentinel-panel-update-report"
                     x-on:click="tab = 'update-report'"
                     x-bind:aria-selected="tab === 'update-report'"
                     x-bind:style="tab === 'update-report'
@@ -188,6 +196,8 @@
             </button>
             <button type="button"
                     role="tab"
+                    id="sentinel-tab-maintenance-report"
+                    aria-controls="sentinel-panel-maintenance-report"
                     x-on:click="tab = 'maintenance-report'"
                     x-bind:aria-selected="tab === 'maintenance-report'"
                     x-bind:style="tab === 'maintenance-report'
@@ -197,6 +207,8 @@
             </button>
             <button type="button"
                     role="tab"
+                    id="sentinel-tab-users"
+                    aria-controls="sentinel-panel-users"
                     x-on:click="tab = 'users'"
                     x-bind:aria-selected="tab === 'users'"
                     x-bind:style="tab === 'users'
@@ -209,6 +221,8 @@
             </button>
             <button type="button"
                     role="tab"
+                    id="sentinel-tab-content-freeze"
+                    aria-controls="sentinel-panel-content-freeze"
                     x-on:click="tab = 'content-freeze'"
                     x-bind:aria-selected="tab === 'content-freeze'"
                     x-bind:style="tab === 'content-freeze'
@@ -225,7 +239,7 @@
         @endif
 
         {{-- Current tab --}}
-        <div x-show="tab === 'current'" role="tabpanel">
+        <div x-show="tab === 'current'" role="tabpanel" id="sentinel-panel-current" @if ($isSuper) aria-labelledby="sentinel-tab-current" @endif>
 
     {{-- Version list: Statamic / Laravel / PHP --}}
     <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden; margin-bottom:12px;">
@@ -300,7 +314,7 @@
                 @endif
             </span>
             <span x-data="{ show: false }" x-on:keydown.escape.window="show = false" x-on:sentinel-tooltip-open.window="if ($event.detail !== $root) show = false" style="position:relative; display:inline-flex; align-items:center;">
-                <button type="button" x-on:click.stop="show = !show; if (show) $dispatch('sentinel-tooltip-open', $root)" aria-label="About {{ $row['label'] }}" style="display:inline-flex; align-items:center; justify-content:center; background:transparent; border:0; padding:0; color:#64748b; cursor:pointer; outline:none;">
+                <button type="button" x-on:click.stop="show = !show; if (show) $dispatch('sentinel-tooltip-open', $root)" aria-label="About {{ $row['label'] }}" style="display:inline-flex; align-items:center; justify-content:center; background:transparent; border:0; padding:0; color:#64748b; cursor:pointer;">
                     <span style="display:inline-flex; align-items:center; justify-content:center; width:16px; height:16px; border:1.3px solid currentColor; border-radius:50%; font-size:11px; font-weight:600; line-height:1; box-sizing:border-box; font-family:inherit;">?</span>
                 </button>
                 <span x-show="show" x-cloak x-on:click.outside="show = false" style="position:absolute; bottom:calc(100% + 10px); left:50%; transform:translateX(-50%); width:300px; background:#fff; border:1px solid #e2e8f0; border-radius:8px; padding:14px 16px; font-size:13px; font-weight:400; color:#1e293b; line-height:1.55; box-shadow:0 8px 24px rgba(15,23,42,0.1); z-index:30; letter-spacing:-0.01em;">
@@ -523,7 +537,7 @@
 
         @if ($isSuper)
         {{-- History tab --}}
-        <div x-show="tab === 'history'" role="tabpanel" x-cloak>
+        <div x-show="tab === 'history'" role="tabpanel" id="sentinel-panel-history" aria-labelledby="sentinel-tab-history" x-cloak>
 
             @if (empty($history))
 
@@ -629,7 +643,7 @@
         </div>
 
         {{-- Status Report tab --}}
-        <div x-show="tab === 'status-report'" role="tabpanel" x-cloak>
+        <div x-show="tab === 'status-report'" role="tabpanel" id="sentinel-panel-status-report" aria-labelledby="sentinel-tab-status-report" x-cloak>
             <div x-data="{
                     sending: false,
                     state: 'idle',
@@ -665,14 +679,15 @@
                 <form action="{{ route('statamic.cp.d3-sentinel.send-report') }}"
                       method="POST"
                       x-on:submit.prevent="send($event.target)"
-                      style="display:flex; gap:8px; align-items:center;">
+                      style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
                     @csrf
                     <input type="text"
                            name="email"
+                           aria-label="Recipient email addresses"
                            value="{{ $statusEmail }}"
                            required
                            placeholder="email@example.com, another@example.com"
-                           style="flex:1; font-size:13px; padding:7px 12px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#1e293b; outline:none; min-width:0;">
+                           style="flex:1 1 220px; font-size:13px; padding:7px 12px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#1e293b; min-width:0;">
                     <button type="button"
                             x-on:click="$dispatch('sentinel-preview-open', { url: @js(route('statamic.cp.d3-sentinel.preview-report')), title: 'Status report preview' })"
                             style="flex-shrink:0; font-size:13px; font-weight:600; color:#0f172a; background:#fff; border:1px solid #e2e8f0; padding:7px 12px; border-radius:6px; cursor:pointer; white-space:nowrap;">
@@ -709,7 +724,7 @@
         </div>
 
         {{-- Update Report tab --}}
-        <div x-show="tab === 'update-report'" role="tabpanel" x-cloak>
+        <div x-show="tab === 'update-report'" role="tabpanel" id="sentinel-panel-update-report" aria-labelledby="sentinel-tab-update-report" x-cloak>
             <div x-data="{
                     sending: false,
                     state: 'idle',
@@ -757,14 +772,15 @@
                       action="{{ route('statamic.cp.d3-sentinel.send-update-report') }}"
                       method="POST"
                       x-on:submit.prevent="send($refs.form)"
-                      style="display:flex; gap:8px; align-items:center;">
+                      style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
                     @csrf
                     <input type="text"
                            name="email"
+                           aria-label="Recipient email addresses"
                            value="{{ $updateEmail }}"
                            required
                            placeholder="email@example.com, another@example.com"
-                           style="flex:1; font-size:13px; padding:7px 12px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#1e293b; outline:none; min-width:0;">
+                           style="flex:1 1 220px; font-size:13px; padding:7px 12px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#1e293b; min-width:0;">
                     <button type="button"
                             x-on:click="$dispatch('sentinel-preview-open', { url: @js(route('statamic.cp.d3-sentinel.preview-update-report')), title: 'Update report preview' })"
                             style="flex-shrink:0; font-size:13px; font-weight:600; color:#0f172a; background:#fff; border:1px solid #e2e8f0; padding:7px 12px; border-radius:6px; cursor:pointer; white-space:nowrap;">
@@ -804,7 +820,7 @@
         </div>
 
         {{-- Plan Summary tab --}}
-        <div x-show="tab === 'maintenance-report'" role="tabpanel" x-cloak>
+        <div x-show="tab === 'maintenance-report'" role="tabpanel" id="sentinel-panel-maintenance-report" aria-labelledby="sentinel-tab-maintenance-report" x-cloak>
 
             {{-- Plan details --}}
             <div x-data="{
@@ -847,17 +863,17 @@
                         <label style="flex:1 1 100%; min-width:0; font-size:12px; color:#475569;">
                             <span style="display:block; margin-bottom:4px; font-weight:600; color:#0f172a;">Plan name</span>
                             <input type="text" name="plan_name" value="{{ $plan['plan_name'] ?? '' }}" placeholder="e.g. Gold Care Plan"
-                                   style="width:100%; box-sizing:border-box; font-size:13px; padding:7px 12px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#1e293b; outline:none;">
+                                   style="width:100%; box-sizing:border-box; font-size:13px; padding:7px 12px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#1e293b;">
                         </label>
                         <label style="flex:1 1 160px; min-width:0; font-size:12px; color:#475569;">
                             <span style="display:block; margin-bottom:4px; font-weight:600; color:#0f172a;">Start date</span>
                             <input type="date" name="start_date" value="{{ $plan['start_date'] ?? '' }}"
-                                   style="width:100%; box-sizing:border-box; font-size:13px; padding:7px 12px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#1e293b; outline:none;">
+                                   style="width:100%; box-sizing:border-box; font-size:13px; padding:7px 12px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#1e293b;">
                         </label>
                         <label style="flex:1 1 160px; min-width:0; font-size:12px; color:#475569;">
                             <span style="display:block; margin-bottom:4px; font-weight:600; color:#0f172a;">Expiry date</span>
                             <input type="date" name="expiry_date" value="{{ $plan['expiry_date'] ?? '' }}"
-                                   style="width:100%; box-sizing:border-box; font-size:13px; padding:7px 12px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#1e293b; outline:none;">
+                                   style="width:100%; box-sizing:border-box; font-size:13px; padding:7px 12px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#1e293b;">
                         </label>
                     </div>
                     <div style="display:flex; align-items:center; margin-top:12px;">
@@ -914,14 +930,15 @@
                 <form action="{{ route('statamic.cp.d3-sentinel.send-maintenance-report') }}"
                       method="POST"
                       x-on:submit.prevent="send($event.target)"
-                      style="display:flex; gap:8px; align-items:center;">
+                      style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
                     @csrf
                     <input type="text"
                            name="email"
+                           aria-label="Recipient email addresses"
                            value="{{ $maintenanceEmail }}"
                            required
                            placeholder="email@example.com, another@example.com"
-                           style="flex:1; font-size:13px; padding:7px 12px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#1e293b; outline:none; min-width:0;">
+                           style="flex:1 1 220px; font-size:13px; padding:7px 12px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#1e293b; min-width:0;">
                     <button type="button"
                             x-on:click="$dispatch('sentinel-preview-open', { url: @js(route('statamic.cp.d3-sentinel.preview-maintenance-report')), title: 'Plan summary preview' })"
                             style="flex-shrink:0; font-size:13px; font-weight:600; color:#0f172a; background:#fff; border:1px solid #e2e8f0; padding:7px 12px; border-radius:6px; cursor:pointer; white-space:nowrap;">
@@ -955,7 +972,7 @@
         </div>
 
         {{-- Users tab --}}
-        <div x-show="tab === 'users'" role="tabpanel" x-cloak>
+        <div x-show="tab === 'users'" role="tabpanel" id="sentinel-panel-users" aria-labelledby="sentinel-tab-users" x-cloak>
 
             @if (empty($users))
 
@@ -1031,7 +1048,7 @@
         </div>
 
         {{-- Content Freeze tab --}}
-        <div x-show="tab === 'content-freeze'" role="tabpanel" x-cloak>
+        <div x-show="tab === 'content-freeze'" role="tabpanel" id="sentinel-panel-content-freeze" aria-labelledby="sentinel-tab-content-freeze" x-cloak>
             @include('statamic-sentinel::utilities._content_freeze', [
                 'freeze_service' => $freeze,
                 'freeze_current' => $freeze_current,
@@ -1060,11 +1077,12 @@
          "
          x-cloak>
         <dialog x-ref="dlg"
+                aria-labelledby="sentinel-preview-title"
                 x-on:click.self="$refs.dlg.close()"
                 x-on:close="src = ''"
                 style="position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); width:min(960px,95vw); height:min(820px,90vh); margin:0; padding:0; border:none; border-radius:10px; overflow:hidden; box-shadow:0 25px 50px -12px rgba(0,0,0,0.25);">
             <div style="display:flex; align-items:center; justify-content:space-between; padding:10px 14px; border-bottom:1px solid #e2e8f0; background:#f8fafc;">
-                <strong style="font-size:13px; color:#0f172a;" x-text="title"></strong>
+                <strong id="sentinel-preview-title" style="font-size:13px; color:#0f172a;" x-text="title"></strong>
                 <button type="button"
                         x-on:click="$refs.dlg.close()"
                         style="font-size:12px; font-weight:600; color:#0f172a; background:#fff; border:1px solid #e2e8f0; padding:4px 10px; border-radius:5px; cursor:pointer; font-family:inherit;">
@@ -1091,12 +1109,14 @@
          "
          x-cloak>
         <dialog x-ref="cdlg"
+                aria-labelledby="sentinel-confirm-title"
+                aria-describedby="sentinel-confirm-message"
                 x-on:click.self="$refs.cdlg.close()"
                 x-on:close="onConfirm = null"
                 style="position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); width:min(440px,90vw); margin:0; padding:0; border:none; border-radius:10px; overflow:hidden; box-shadow:0 25px 50px -12px rgba(0,0,0,0.25);">
             <div style="padding:20px 24px;">
-                <h2 style="font-size:15px; font-weight:600; color:#0f172a; margin:0 0 8px 0;">Confirm delete</h2>
-                <p style="font-size:13px; color:#475569; margin:0; line-height:1.55;" x-text="message"></p>
+                <h2 id="sentinel-confirm-title" style="font-size:15px; font-weight:600; color:#0f172a; margin:0 0 8px 0;">Confirm delete</h2>
+                <p id="sentinel-confirm-message" style="font-size:13px; color:#475569; margin:0; line-height:1.55;" x-text="message"></p>
             </div>
             <div style="display:flex; align-items:center; justify-content:flex-end; gap:8px; padding:12px 24px; background:#f8fafc; border-top:1px solid #e2e8f0;">
                 <button type="button"

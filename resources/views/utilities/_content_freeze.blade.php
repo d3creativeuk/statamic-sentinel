@@ -107,10 +107,11 @@
                 <div style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; color:#64748b; margin-bottom:10px;">Notify recipients</div>
                 <input type="text"
                        name="email"
+                       aria-label="Recipient email addresses"
                        value="{{ $userEmailDefault }}"
                        required
                        placeholder="email@example.com, another@example.com"
-                       style="width:100%; box-sizing:border-box; font-size:13px; padding:7px 12px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#1e293b; outline:none;">
+                       style="width:100%; box-sizing:border-box; font-size:13px; padding:7px 12px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#1e293b;">
             </div>
 
             {{-- Schedule box --}}
@@ -137,12 +138,12 @@
                         <input type="date"
                                x-model="notifyDate"
                                required
-                               style="flex:1; min-width:0; font-size:13px; padding:7px 10px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#1e293b; outline:none; font-family:inherit;">
+                               style="flex:1; min-width:0; font-size:13px; padding:7px 10px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#1e293b; font-family:inherit;">
                         <input type="time"
                                x-model="notifyTime"
                                step="900"
                                required
-                               style="font-size:13px; padding:7px 10px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#1e293b; outline:none; font-family:inherit;">
+                               style="font-size:13px; padding:7px 10px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#1e293b; font-family:inherit;">
                     </div>
                 </label>
                 <label style="display:flex; flex-direction:column; gap:4px;">
@@ -151,12 +152,12 @@
                         <input type="date"
                                x-model="freezeDate"
                                required
-                               style="flex:1; min-width:0; font-size:13px; padding:7px 10px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#1e293b; outline:none; font-family:inherit;">
+                               style="flex:1; min-width:0; font-size:13px; padding:7px 10px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#1e293b; font-family:inherit;">
                         <input type="time"
                                x-model="freezeTime"
                                step="900"
                                required
-                               style="font-size:13px; padding:7px 10px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#1e293b; outline:none; font-family:inherit;">
+                               style="font-size:13px; padding:7px 10px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#1e293b; font-family:inherit;">
                     </div>
                 </label>
             </div>
@@ -170,11 +171,11 @@
                     <div style="display:flex; gap:8px;">
                         <input type="date"
                                x-model="freezeEndsDate"
-                               style="flex:1; min-width:0; font-size:13px; padding:7px 10px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#1e293b; outline:none; font-family:inherit;">
+                               style="flex:1; min-width:0; font-size:13px; padding:7px 10px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#1e293b; font-family:inherit;">
                         <input type="time"
                                x-model="freezeEndsTime"
                                step="900"
-                               style="font-size:13px; padding:7px 10px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#1e293b; outline:none; font-family:inherit;">
+                               style="font-size:13px; padding:7px 10px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#1e293b; font-family:inherit;">
                     </div>
                     <input type="hidden" name="freeze_ends_at" x-bind:value="freezeEndsAt">
                     <span style="font-size:11px; color:#64748b;">Optional. Used in the notification email.</span>
@@ -187,10 +188,10 @@
                                min="1"
                                placeholder="e.g. 30"
                                x-model="expectedDuration"
-                               style="flex:1; min-width:0; font-size:13px; padding:7px 10px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#1e293b; outline:none; font-family:inherit;">
+                               style="flex:1; min-width:0; font-size:13px; padding:7px 10px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#1e293b; font-family:inherit;">
                         <select name="expected_duration_unit"
                                 x-model="expectedDurationUnit"
-                                style="font-size:13px; padding:7px 10px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#1e293b; outline:none; font-family:inherit;">
+                                style="font-size:13px; padding:7px 10px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#1e293b; font-family:inherit;">
                             <option value="minutes">Minutes</option>
                             <option value="hours">Hours</option>
                             <option value="days">Days</option>

@@ -136,7 +136,7 @@
                 @endif
             </span>
             <span x-data="{ show: false }" x-on:keydown.escape.window="show = false" x-on:sentinel-tooltip-open.window="if ($event.detail !== $root) show = false" style="position:relative; display:inline-flex; align-items:center;">
-                <button type="button" x-on:click.stop="show = !show; if (show) $dispatch('sentinel-tooltip-open', $root)" aria-label="About {{ $row['label'] }}" style="display:inline-flex; align-items:center; justify-content:center; background:transparent; border:0; padding:0; color:#64748b; cursor:pointer; outline:none;">
+                <button type="button" x-on:click.stop="show = !show; if (show) $dispatch('sentinel-tooltip-open', $root)" aria-label="About {{ $row['label'] }}" style="display:inline-flex; align-items:center; justify-content:center; background:transparent; border:0; padding:0; color:#64748b; cursor:pointer;">
                     <span style="display:inline-flex; align-items:center; justify-content:center; width:14px; height:14px; border:1.2px solid currentColor; border-radius:50%; font-size:10px; font-weight:600; line-height:1; box-sizing:border-box; font-family:inherit;">?</span>
                 </button>
                 <span x-show="show" x-cloak x-on:click.outside="show = false" style="position:absolute; bottom:calc(100% + 8px); left:50%; transform:translateX(-50%); width:260px; background:#fff; border:1px solid #e2e8f0; border-radius:8px; padding:12px 14px; font-size:12px; font-weight:400; color:#1e293b; line-height:1.55; box-shadow:0 8px 24px rgba(15,23,42,0.1); z-index:30; letter-spacing:-0.01em;">
