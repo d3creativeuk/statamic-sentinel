@@ -152,7 +152,7 @@
                         <div style="font-size:15px; font-weight:600; color:#0f172a;">{{ $r['label'] }}<span style="font-weight:500; color:#475569; margin-left:8px; font-variant-numeric:tabular-nums;">@if ($r['changed']){{ $platform[$row['key']]['from'] }} <span style="color:#94a3b8;">→</span> <strong style="color:#0f172a;">{{ $platform[$row['key']]['to'] }}</strong>@else{{ $r['detail'] }}@endif</span></div>
                         <div style="font-size:13px; color:#475569; margin-top:3px;">{{ $row['description'] }}</div>
                         <div class="sentinel-row-meta" style="margin-top:8px; font-size:12px; color:#475569; font-variant-numeric:tabular-nums; line-height:1.8;">
-                            <span class="sentinel-pill" style="display:inline-block; margin:2px 6px 2px 0; font-size:10.5px; font-weight:400; padding:1px 7px; border-radius:4px; color:{{ $r['colour'] }}; border:1px solid {{ $r['colour'] }}; background:#fff;">{{ $r['badge'] }}</span>
+                            <span class="sentinel-pill" style="display:inline-block; margin:2px 6px 2px 0; font-size:10.5px; font-weight:500; padding:1px 7px; border-radius:4px; color:{{ $r['colour'] }}; border:1px solid {{ $r['colour'] }}; background:#fff;">{{ $r['badge'] }}</span>
                         </div>
                     </td>
                 </tr>
@@ -168,7 +168,7 @@
                     <div style="font-size:15px; font-weight:600; color:#0f172a;">Composer</div>
                     <div style="font-size:13px; color:#475569; margin-top:3px;">Third-party PHP packages your site uses</div>
                     <div class="sentinel-row-meta" style="margin-top:8px; font-size:12px; color:#475569; font-variant-numeric:tabular-nums; line-height:1.8;">
-                        <span style="font-size:10.5px; font-weight:400; padding:1px 7px; border-radius:4px; color:{{ $cs['colour'] }}; border:1px solid {{ $cs['colour'] }}; background:#fff;">{{ $cs['badge'] }}</span>
+                        <span style="font-size:10.5px; font-weight:500; padding:1px 7px; border-radius:4px; color:{{ $cs['colour'] }}; border:1px solid {{ $cs['colour'] }}; background:#fff;">{{ $cs['badge'] }}</span>
                     </div>
                 </td>
             </tr>
@@ -207,7 +207,7 @@
                     <div style="font-size:15px; font-weight:600; color:#0f172a;">npm</div>
                     <div style="font-size:13px; color:#475569; margin-top:3px;">Third-party JavaScript packages your site uses</div>
                     <div class="sentinel-row-meta" style="margin-top:8px; font-size:12px; color:#475569; font-variant-numeric:tabular-nums; line-height:1.8;">
-                        <span style="font-size:10.5px; font-weight:400; padding:1px 7px; border-radius:4px; color:{{ $ns['colour'] }}; border:1px solid {{ $ns['colour'] }}; background:#fff;">{{ $ns['badge'] }}</span>
+                        <span style="font-size:10.5px; font-weight:500; padding:1px 7px; border-radius:4px; color:{{ $ns['colour'] }}; border:1px solid {{ $ns['colour'] }}; background:#fff;">{{ $ns['badge'] }}</span>
                     </div>
                 </td>
             </tr>
@@ -298,7 +298,7 @@
                             @if ($licenseChanged)
                                 <span style="margin-right:4px;">{{ $licenseLabel($license['from']) }} <span style="color:#94a3b8;">→</span></span>
                             @endif
-                            <span class="sentinel-pill" style="display:inline-block; margin:2px 6px 2px 0; font-size:10.5px; font-weight:400; padding:1px 7px; border-radius:4px; color:{{ $licenseColour($licenseNow) }}; border:1px solid {{ $licenseColour($licenseNow) }}; background:#fff;">{{ $licenseLabel($licenseNow) }}</span>
+                            <span class="sentinel-pill" style="display:inline-block; margin:2px 6px 2px 0; font-size:10.5px; font-weight:500; padding:1px 7px; border-radius:4px; color:{{ $licenseColour($licenseNow) }}; border:1px solid {{ $licenseColour($licenseNow) }}; background:#fff;">{{ $licenseLabel($licenseNow) }}</span>
                         </div>
                     </td>
                 </tr>
