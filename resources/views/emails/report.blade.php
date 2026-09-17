@@ -40,14 +40,6 @@
 
     // Build the badge for each row: pill text + colour, and an optional
     // `detail` line shown to its left. A null `text` means no pill.
-    $isPatchOnly = function ($current, $latest) {
-        if (! $current || ! $latest) return false;
-        $c = explode('.', $current);
-        $l = explode('.', $latest);
-        // Same major + minor, only patch differs → understated update.
-        return ($c[0] ?? null) === ($l[0] ?? null) && ($c[1] ?? null) === ($l[1] ?? null);
-    };
-
     $isMajorBehind = function ($current, $latest, $platform = null) {
         if (! $current || ! $latest) return false;
         $c = explode('.', $current);
@@ -65,7 +57,7 @@
     // Platform rows can carry two pills: the primary status (security / EOL)
     // plus a solid "Major version behind" pill, so a security flag never hides
     // a major gap - and never implies the security fix needs the major jump.
-    $platformBadge = function (array $p, ?string $platform = null) use ($isPatchOnly, $isMajorBehind) {
+    $platformBadge = function (array $p, ?string $platform = null) use ($isMajorBehind) {
         $status      = $p['status'] ?? 'unknown';
         $security    = ! empty($p['security_update_available']);
         $current     = $p['current'] ?? $p['version'] ?? null;
@@ -89,13 +81,8 @@
         }
 
         if ($outdated) {
-            // Patch-only bumps (e.g. 8.4.18 → 8.4.20) get no pill - the
-            // version arrow conveys the change without sounding the alarm.
-            if ($isPatchOnly($current, $latest)) {
-                return ['pills' => [], 'detail' => $arrow];
-            }
-            // Minor bumps are routine updates and read as "Update available"
-            // in blue, matching the ecosystem badges.
+            // Minor and patch bumps are routine updates and read as
+            // "Update available" in blue, matching the ecosystem badges.
             return ['pills' => [['text' => 'Update available', 'colour' => '#3b82f6']], 'detail' => $arrow];
         }
         if (in_array($status, ['ok', 'active'])) return ['pills' => [['text' => 'Up to date', 'colour' => '#10b981']], 'detail' => $current];

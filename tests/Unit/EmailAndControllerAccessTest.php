@@ -119,6 +119,12 @@ class EmailAndControllerAccessTest extends TestCase
         $this->assertStringNotContainsString('Update available', $phpRow);
         $this->assertStringNotContainsString('is also available', $phpRow);
 
+        // A patch-only update still gets the "Update available" pill.
+        $patch = $this->audit();
+        $patch['php'] = ['version' => '8.5.7', 'latest' => '8.5.10', 'status' => 'active', 'label' => 'Active Support'];
+        $patchRow = substr($html = (new SentinelReport($patch))->render(), strpos($html, '>PHP<'), 1500);
+        $this->assertStringContainsString('Update available', $patchRow);
+
         // Platform versions sit beside the title, not in front of the pills.
         $this->assertMatchesRegularExpression('/>Statamic<span[^>]*>6\.0\.0 → 6\.1\.0<\/span><\/div>/u', $rendered['status']);
         $this->assertStringContainsString('1 hour 30 minutes', $rendered['notification']);
