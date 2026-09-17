@@ -46,9 +46,9 @@ Coordinate update windows with CP users. Schedule a heads-up email, show banners
 - **Scheduling** - super admins set two times on the utility's **Content Freeze** tab: when the heads-up email goes out, and when the freeze starts. Recipients are a comma-separated list (max 10).
 - **Heads-up email** - sent automatically at the notification time. Tells recipients when the window starts and what to expect.
 - **CP banners** - injected below the global header on every authenticated CP page, in normal document flow (no fixed overlay). Three states:
-  - **Upcoming** (blue, dismissable) - shows from schedule through to freeze start. Includes a **Learn more** button that opens a modal mirroring the heads-up email. Dismissals are session-scoped, so the banner reappears the next time a user signs in.
-  - **Active** (amber, non-dismissible) - shows once the freeze starts. Paired with a first-load modal per user (cookie-scoped to the freeze id, so each new freeze re-prompts).
-  - **Complete** (green, dismissable) - briefly shown after the freeze ends.
+  - **Upcoming** (blue, non-dismissible) - shows from schedule through to freeze start. Includes a **Learn more** button that opens a modal mirroring the heads-up email. The modal opens once per browser session, so it reappears the next time a user signs in.
+  - **Active** (amber, non-dismissible) - shows once the freeze starts. Paired with a first-load modal, again once per browser session per freeze.
+  - **Complete** (green, dismissable) - shown for 7 days after the freeze ends, or until the user dismisses it.
 - **Mark complete** - one-click in the CP (or `php please sentinel:freeze:complete`) sends the all-clear email and switches to the green banner. Available from any pre-complete state, so you can end early if the update finishes faster than scheduled.
 - **Cancel freeze** - one-click in the CP. Aborts a scheduled or notified freeze without sending the all-clear email. The confirm prompt adapts: from notified it warns that recipients already received the heads-up. Not available once the freeze is active - use Mark complete instead so the all-clear still goes out.
 - **Email previews** - both the heads-up and all-clear emails have **Preview** buttons in the CP that render exactly what recipients will receive.

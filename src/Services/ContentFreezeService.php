@@ -38,6 +38,13 @@ class ContentFreezeService
     const HISTORY_LIMIT     = 50;
     const SCHEDULE_LEAD_MIN = 5;
 
+    // The green "update complete" banner shows for this long after completion.
+    const COMPLETE_BANNER_DAYS = 7;
+
+    // Expected duration is informational; anything longer is a typo, and huge
+    // values overflowed int when formatted for the email.
+    const MAX_EXPECTED_DURATION_MINUTES = 60 * 24 * 60;
+
     const STATUS_SCHEDULED  = 'scheduled';
     const STATUS_NOTIFIED   = 'notified';
     const STATUS_ACTIVE     = 'active';
@@ -106,6 +113,19 @@ class ContentFreezeService
 
         $cancelAt = $this->lastCancelAt();
         $doneAt   = $latest['completed_at'] ?? null;
+
+        // Only recent completions get the banner. Without this the latest
+        // history entry showed forever, coming back each time the 30-day
+        // dismissal cookie expired.
+        if ($doneAt) {
+            try {
+                if (Carbon::parse($doneAt)->lessThan(Carbon::now()->subDays(self::COMPLETE_BANNER_DAYS))) {
+                    return null;
+                }
+            } catch (\Throwable $e) {
+                // Unparseable date: fall through, as before.
+            }
+        }
 
         if ($cancelAt && $doneAt) {
             try {
@@ -197,6 +217,10 @@ class ContentFreezeService
 
             if ($number === false || $number <= 0 || ! isset($multipliers[$unit])) {
                 return $this->failure('Expected duration must be a positive number of minutes, hours, or days.');
+            }
+
+            if ($number > intdiv(self::MAX_EXPECTED_DURATION_MINUTES, $multipliers[$unit])) {
+                return $this->failure('Expected duration can be at most 60 days.');
             }
 
             $expectedDurationMinutes = $number * $multipliers[$unit];
@@ -639,7 +663,7 @@ class ContentFreezeService
         }
 
         $expectedText = null;
-        if (is_numeric($expected) && (int) $expected > 0) {
+        if (is_numeric($expected) && $expected > 0 && $expected <= self::MAX_EXPECTED_DURATION_MINUTES) {
             $expectedText = $this->formatDuration((int) $expected) ?: null;
         }
 
@@ -670,7 +694,8 @@ class ContentFreezeService
         $unit            = strtolower(trim((string) ($input['expected_duration_unit'] ?? 'minutes'))) ?: 'minutes';
         $multipliers     = ['minutes' => 1, 'hours' => 60, 'days' => 1440];
 
-        if ($number !== false && $number > 0 && isset($multipliers[$unit])) {
+        if ($number !== false && $number > 0 && isset($multipliers[$unit])
+            && $number <= intdiv(self::MAX_EXPECTED_DURATION_MINUTES, $multipliers[$unit])) {
             $expectedMinutes = $number * $multipliers[$unit];
         }
 

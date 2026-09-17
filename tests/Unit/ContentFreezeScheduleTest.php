@@ -208,4 +208,63 @@ class ContentFreezeScheduleTest extends TestCase
         $this->assertNull($legacy['expected_text']);
         $this->assertNull($legacy['ends_display']);
     }
+
+    public function test_expected_duration_is_capped_at_sixty_days(): void
+    {
+        $svc = $this->service();
+        $t   = $this->times();
+
+        foreach ([['61', 'days'], ['1441', 'hours'], ['9223372036854775807', 'days']] as [$n, $unit]) {
+            $result = $svc->schedule($t['notify'], $t['start'], ['a@b.com'], null, [
+                'expected_duration'      => $n,
+                'expected_duration_unit' => $unit,
+            ]);
+
+            $this->assertFalse($result['ok'], "{$n}/{$unit} should be rejected");
+        }
+
+        $ok = $svc->schedule($t['notify'], $t['start'], ['a@b.com'], null, ['expected_duration' => '60', 'expected_duration_unit' => 'days']);
+        $this->assertTrue($ok['ok']);
+
+        // The preview's draft ignores an oversized value instead of overflowing.
+        $this->assertNull($svc->draftRecord(['expected_duration' => '9223372036854775807', 'expected_duration_unit' => 'days'])['expected_duration_minutes']);
+
+        // A stored oversized value (from before the cap) renders without throwing.
+        $this->assertNull($svc->notificationExtras(['expected_duration_minutes' => 1.3e22])['expected_text']);
+    }
+
+    public function test_the_complete_banner_only_shows_for_recent_completions(): void
+    {
+        $svc = $this->service();
+
+        Storage::disk('local')->put(ContentFreezeService::HISTORY_PATH, json_encode([
+            ['id' => 'f2', 'completed_at' => Carbon::now()->subDays(6)->toIso8601String()],
+        ]));
+        $this->assertSame('f2', $svc->lastCompleted()['id']);
+
+        Storage::disk('local')->put(ContentFreezeService::HISTORY_PATH, json_encode([
+            ['id' => 'f1', 'completed_at' => Carbon::now()->subDays(8)->toIso8601String()],
+        ]));
+        $this->assertNull($svc->lastCompleted());
+    }
+
+    public function test_the_form_default_notify_time_passes_validation(): void
+    {
+        $tz = $this->service()->timezone();
+
+        // Every minute of an hour, at the worst second, as the view computes it.
+        for ($minute = 0; $minute < 60; $minute++) {
+            Carbon::setTestNow(Carbon::create(2026, 9, 17, 10, $minute, 59, $tz));
+
+            $ceil15  = fn (Carbon $c) => $c->minute % 15 === 0 ? $c->copy() : $c->copy()->addMinutes(15 - $c->minute % 15);
+            $default = $ceil15(Carbon::now($tz)->addMinutes(ContentFreezeService::SCHEDULE_LEAD_MIN + 1))->format('Y-m-d H:i');
+            $start   = Carbon::now($tz)->addDays(3)->format('Y-m-d H:i');
+
+            $result = $this->service()->schedule($default, $start, ['a@b.com']);
+            $this->assertTrue($result['ok'], "10:{$minute}:59 default {$default}: " . ($result['message'] ?? ''));
+            $this->service()->cancel();
+        }
+
+        Carbon::setTestNow();
+    }
 }

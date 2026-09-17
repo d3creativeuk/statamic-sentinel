@@ -28,7 +28,10 @@
         $r = $c->minute % 15;
         return $r === 0 ? $c->copy() : $c->copy()->addMinutes(15 - $r);
     };
-    $nowRounded    = $ceil15(\Carbon\Carbon::now($tz));
+    // The notify default must clear schedule()'s minimum lead once the form is
+    // submitted. Rounding up from "now" alone often landed inside it (10:15
+    // at 10:12), and the minute input drops seconds, hence the extra minute.
+    $nowRounded    = $ceil15(\Carbon\Carbon::now($tz)->addMinutes(\D3Creative\Sentinel\Services\ContentFreezeService::SCHEDULE_LEAD_MIN + 1));
     $freezeRounded = $ceil15(\Carbon\Carbon::now($tz)->addDays(3));
 
     $nowDate    = $nowRounded->format('Y-m-d');

@@ -116,6 +116,12 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 - **Accessibility and small screens.** Keyboard focus is visible again on inputs and help buttons,
   email fields have labels for screen readers, tabs and dialogs are properly announced, and the
   tab bar and send forms wrap instead of overflowing on phones.
+- **Content Freeze details.** The schedule form's default notification time was usually too soon
+  to pass the 5-minute minimum, so a first attempt with the defaults failed. The green "update
+  complete" banner now only appears for 7 days after completion instead of indefinitely (it came
+  back every 30 days). Expected duration is capped at 60 days, where an absurdly large value
+  previously broke the heads-up email. The README and USAGE descriptions of the banners are
+  corrected.
 
 ## [2.1.1] - 2026-07-27
 

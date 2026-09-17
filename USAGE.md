@@ -34,7 +34,7 @@ Content Freeze is a coordinated update-window workflow. The lifecycle has four s
 1. **Scheduled** - waiting for the notification time. Nothing visible to other CP users yet.
 2. **Notified** - heads-up email has been sent. Still no banner. Waiting for the freeze start time.
 3. **Active** - the banner is up. Editors see an amber "update in progress" strip at the top of every CP page, and a one-shot modal the first time they load any CP page during the window.
-4. **Complete** - the all-clear email has been sent and the banner switches to a green dismissible "update complete" message until each user dismisses it (per-user, per-freeze cookie).
+4. **Complete** - the all-clear email has been sent and the banner switches to a green dismissible "update complete" message, shown for 7 days or until each user dismisses it (per-user, per-freeze cookie).
 
 ### What triggers each transition
 
@@ -44,20 +44,21 @@ Content Freeze is a coordinated update-window workflow. The lifecycle has four s
 
 Both tick commands are no-ops when there's nothing to do. Both use `withoutOverlapping` and check the freeze's current status before transitioning, so duplicate runs are safe.
 
-### Cookies
+### Dismissal state
 
-The CP-wide injector reads two cookies to scope dismissal state per freeze ID:
+The CP-wide injector remembers dismissals per freeze ID:
 
-- `sentinel_freeze_modal_seen_{id}` - set when the user dismisses the active-phase modal. 30-day expiry. Prevents the modal from reappearing on subsequent loads.
-- `sentinel_freeze_dismissed_{id}` - set when the user closes the green "update complete" banner. 30-day expiry. Hides the banner without a page reload.
+- **Upcoming and active modals** - marked as seen in `sessionStorage`, keyed by the freeze ID and the user's session, so each modal opens once per browser session and again after the user signs back in.
+- **Complete banner** - `sentinel_freeze_dismissed_{id}` cookie, set when the user closes the green banner (30-day expiry). The banner itself only shows for 7 days after the freeze completes.
 
-Because cookie names include the freeze ID, the next freeze re-prompts every user cleanly. Clearing cookies during a freeze re-shows the modal once - harmless.
+Because the keys include the freeze ID, the next freeze prompts every user again.
 
 ### Validation rules
 
 - `notify_at` must be at least 5 minutes from now.
 - `freeze_at` must be strictly after `notify_at`.
 - At least one recipient, max 10, each a valid email.
+- Expected duration, if given, is at most 60 days.
 - Only one freeze can be scheduled or active at a time.
 
 All four are checked server-side by `ContentFreezeService::schedule()` whether you come in via the CP form or the CLI command - the validation rules are not duplicated.
