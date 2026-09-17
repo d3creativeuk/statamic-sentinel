@@ -29,7 +29,14 @@ jobs:
       - name: Validate composer.json
         run: composer validate --strict
 
+      # Composer 2.9+ refuses to install package versions with known security
+      # advisories. PHP 8.0 and 8.1 can only resolve Testbench 7 / Laravel 9,
+      # every release of which now has advisories, so nothing would install.
+      # These are dev dependencies for the test run only; sites installing the
+      # addon never get them.
       - name: Install dependencies
+        env:
+          COMPOSER_NO_SECURITY_BLOCKING: 1
         run: composer update --no-interaction --no-progress --prefer-dist
 
       - name: Run tests
