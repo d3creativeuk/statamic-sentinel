@@ -56,37 +56,6 @@
     // define $license - fall back explicitly so the row below never errors.
     $license = $audit['license'] ?? ['supported' => false];
 
-    $statusColours = [
-        'ok'         => '#047857',
-        'active'     => '#047857',
-        'outdated'   => '#f59e0b',
-        'security'   => '#f59e0b',
-        'vulnerable' => '#ef4444',
-        'eol'        => '#ef4444',
-        'error'      => '#ef4444',
-    ];
-
-    $severityColours = [
-        'CRITICAL' => '#ef4444',
-        'HIGH'     => '#f97316',
-        'MEDIUM'   => '#f59e0b',
-        'LOW'      => '#1d4ed8',
-        'UNKNOWN'  => '#94a3b8',
-    ];
-
-    $statusColour   = fn($s) => $statusColours[$s]   ?? '#94a3b8';
-    $severityColour = fn($s) => $severityColours[$s] ?? '#94a3b8';
-
-    $overallOk =
-        ($statamic['status'] === 'ok') &&
-        in_array($laravel['status'], ['ok', 'active', 'security']) &&
-        in_array($php['status'], ['ok', 'active', 'security']) &&
-        ($composer['status'] === 'ok' || $composer['status'] === 'unavailable') &&
-        ($npm['status'] === 'ok' || $npm['status'] === 'unavailable');
-
-    $hasCritical =
-        ($composer['counts']['CRITICAL'] ?? 0) > 0 ||
-        ($npm['counts']['CRITICAL'] ?? 0) > 0;
 @endphp
 
     {{-- Card header: title + action --}}
