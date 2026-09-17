@@ -42,5 +42,10 @@
             ]
         }
     },
-    "prefer-stable": true
+    "prefer-stable": true,
+    "config": {
+        "allow-plugins": {
+            "pixelfear/composer-dist-plugin": true
+        }
+    }
 }

@@ -67,7 +67,11 @@ class AuditServiceOutdatedTest extends TestCase
             'repo.packagist.org/p2/foo/bar.json' => Http::response([
                 'packages' => ['foo/bar' => [['version' => '2.0.0']]],
             ]),
-            'repo.packagist.org/p2/baz/qux.json' => fn () => throw new ConnectionException('boom'),
+            // A rejected promise, as a real connect failure produces. Throwing from
+            // the fake instead escapes the whole pool on Laravel 10 and below.
+            'repo.packagist.org/p2/baz/qux.json' => fn ($request) => new \GuzzleHttp\Promise\RejectedPromise(
+                new \GuzzleHttp\Exception\ConnectException('boom', $request->toPsrRequest())
+            ),
         ]);
 
         $method = new ReflectionMethod($service, 'composerOutdated');
@@ -106,7 +110,7 @@ class AuditServiceOutdatedTest extends TestCase
                 'time' => [
                     '4.3.2' => '2026-06-01T14:30:01.000Z',
                     // Published 1 day ago relative to the frozen "now".
-                    '4.3.3' => now()->subDays(1)->toIso8601String(),
+                    '4.3.3' => CarbonImmutable::now()->subDays(1)->toIso8601String(),
                 ],
             ]),
         ]);
@@ -141,7 +145,7 @@ class AuditServiceOutdatedTest extends TestCase
         Http::fake([
             'registry.npmjs.org/tailwindcss/latest' => Http::response(['version' => '4.3.3']),
             'registry.npmjs.org/tailwindcss' => Http::response([
-                'time' => ['4.3.3' => now()->subDays(30)->toIso8601String()],
+                'time' => ['4.3.3' => CarbonImmutable::now()->subDays(30)->toIso8601String()],
             ]),
         ]);
 
