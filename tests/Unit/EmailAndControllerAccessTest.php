@@ -79,6 +79,12 @@ class EmailAndControllerAccessTest extends TestCase
         $this->assertStringContainsString('1 security issue across 1 package</div>', $rendered['status']);
         $this->assertStringNotContainsString('1 update available', $rendered['status']);
 
+        // "Major version behind" is always the first pill.
+        $majorAudit = $this->audit();
+        $majorAudit['statamic'] = ['current' => '5.73.2', 'latest' => '6.33.0', 'is_latest' => false, 'status' => 'outdated', 'security_update_available' => true, 'security_source' => 'osv'];
+        $majorHtml  = (new SentinelReport($majorAudit))->render();
+        $this->assertLessThan(strpos($majorHtml, 'Security update</span>'), strpos($majorHtml, 'Major version behind</span>'));
+
         // Platform versions sit beside the title, not in front of the pills.
         $this->assertMatchesRegularExpression('/>Statamic<span[^>]*>6\.0\.0 → 6\.1\.0<\/span><\/div>/u', $rendered['status']);
         $this->assertStringContainsString('1 hour 30 minutes', $rendered['notification']);

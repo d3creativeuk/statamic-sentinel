@@ -79,8 +79,9 @@
         elseif ($status === 'eol')      $pills[] = ['text' => 'End of life',     'colour' => '#dc2626'];
         elseif ($status === 'security') $pills[] = ['text' => 'Security only',   'colour' => '#b45309'];
 
+        // The major gap always leads: it's the solid pill and the bigger job.
         if ($majorBehind) {
-            $pills[] = ['text' => 'Major version behind', 'colour' => '#dc2626', 'solid' => true];
+            array_unshift($pills, ['text' => 'Major version behind', 'colour' => '#dc2626', 'solid' => true]);
         }
 
         if ($pills) {
