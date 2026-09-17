@@ -128,10 +128,6 @@
                 ? $vulnsText . ' across ' . $vulnerable . ' ' . \Illuminate\Support\Str::plural('package', $vulnerable)
                 : '';
 
-            if ($outdated > 0) {
-                $note .= ($note !== '' ? ' · ' : '') . $updatesText;
-            }
-
             return ['text' => $vulnsText, 'colour' => '#dc2626', 'detail' => '', 'note' => $note];
         }
 
