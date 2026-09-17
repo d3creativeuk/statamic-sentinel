@@ -45,14 +45,7 @@
     <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:48px 24px; text-align:center;">
         <p style="font-size:18px; font-weight:600; color:#0f172a; margin:0 0 6px 0;">No scan yet</p>
         <p style="font-size:13px; color:#64748b; margin:0 0 20px 0; line-height:1.55; max-width:420px; margin-left:auto; margin-right:auto;">Run your first scan to see Statamic, Laravel, PHP and dependency status. Re-run any time using the Refresh button.</p>
-        <a x-data
-           x-init="if (! document.getElementById('sentinel-keyframes')) { var s = document.createElement('style'); s.id = 'sentinel-keyframes'; s.textContent = '@keyframes sentinel-spin { to { transform: rotate(360deg); } }'; document.head.appendChild(s); }"
-           x-on:click.prevent="$el.querySelector('[data-sentinel-label]').textContent = 'Scanning…'; $el.querySelector('[data-sentinel-icon]').style.animation = 'sentinel-spin 1s linear infinite'; requestAnimationFrame(() => requestAnimationFrame(() => location.href = $el.href + location.hash))"
-           href="?d3_refresh={{ \D3Creative\Sentinel\Support\ManualScan::token() }}"
-           style="display:inline-flex; align-items:center; justify-content:center; gap:8px; white-space:nowrap; font-weight:600; cursor:pointer; text-decoration:none; color:#fff; background:#0f172a; padding:0 18px; height:38px; font-size:13px; line-height:1.25; border-radius:8px;">
-            <span data-sentinel-label>Scan Now</span>
-            <span data-sentinel-icon aria-hidden="true" style="display:inline-block; font-size:14px; line-height:1; flex-shrink:0; transform-origin:center;">↻</span>
-        </a>
+        @include('statamic-sentinel::utilities._scan_link', ['label' => 'Scan Now', 'style' => 'display:inline-flex; align-items:center; justify-content:center; gap:8px; white-space:nowrap; font-weight:600; cursor:pointer; text-decoration:none; color:#fff; background:#0f172a; padding:0 18px; height:38px; font-size:13px; line-height:1.25; border-radius:8px;', 'keepHash' => true])
         <p style="font-size:11px; color:#64748b; margin:14px 0 0 0;">Takes 10-20 seconds.</p>
     </div>
     <div style="display:flex; align-items:center; justify-content:flex-start; margin-top:16px; padding-top:14px;">
@@ -110,19 +103,34 @@
         </h1>
         <div style="display:flex; align-items:center; gap:14px;">
             <span style="font-size:12px; color:rgb(63 63 71);">Last scanned: {{ $audited_at }}</span>
-            <a x-data
-               x-init="if (! document.getElementById('sentinel-keyframes')) { var s = document.createElement('style'); s.id = 'sentinel-keyframes'; s.textContent = '@keyframes sentinel-spin { to { transform: rotate(360deg); } }'; document.head.appendChild(s); }"
-               x-on:click.prevent="$el.querySelector('[data-sentinel-label]').textContent = 'Scanning…'; $el.querySelector('[data-sentinel-icon]').style.animation = 'sentinel-spin 1s linear infinite'; requestAnimationFrame(() => requestAnimationFrame(() => location.href = $el.href + location.hash))"
-               href="?d3_refresh={{ \D3Creative\Sentinel\Support\ManualScan::token() }}"
-               title="Refresh audit results"
-               style="display:inline-flex; align-items:center; gap:4px; font-size:12px; color:rgb(63 63 71); text-decoration:none;">
-                <span data-sentinel-icon aria-hidden="true" style="display:inline-block; font-size:14px; line-height:1; flex-shrink:0; transform-origin:center;">↻</span>
-                <span data-sentinel-label>Refresh</span>
-            </a>
+            @include('statamic-sentinel::utilities._scan_link', ['label' => 'Refresh', 'style' => 'display:inline-flex; align-items:center; gap:4px; font-size:12px; color:rgb(63 63 71); text-decoration:none;', 'title' => 'Refresh audit results', 'iconFirst' => true, 'keepHash' => true])
         </div>
     </header>
 
     {{-- Tabs --}}
+    @php
+        $freezeStatus = $freeze_current['status'] ?? null;
+        $tabs = $isSuper ? [
+            ['key' => 'current',            'label' => 'Current'],
+            ['key' => 'history',            'label' => 'History',
+                'badge' => ! empty($history) ? ['text' => count($history), 'bg' => '#e2e8f0', 'fg' => '#475569'] : null],
+            ['key' => 'status-report',      'label' => 'Status Report'],
+            ['key' => 'update-report',      'label' => 'Update Report'],
+            ['key' => 'maintenance-report', 'label' => 'Plan Summary'],
+            ['key' => 'users',              'label' => 'Users',
+                'badge' => $onlineCount > 0 ? ['text' => $onlineCount, 'bg' => '#dcfce7', 'fg' => '#166534', 'dot' => '#16a34a'] : null],
+            // Pushed to the far right of the strip.
+            ['key' => 'content-freeze',     'label' => 'Notify', 'push' => true,
+                'badge' => $freezeStatus === \D3Creative\Sentinel\Services\ContentFreezeService::STATUS_ACTIVE
+                    ? ['text' => 'Active', 'bg' => '#fef3c7', 'fg' => '#92400e']
+                    : (! empty($freeze_current) ? ['text' => 'Scheduled', 'bg' => '#dbeafe', 'fg' => '#1d4ed8'] : null)],
+        ] : [
+            ['key' => 'current', 'label' => 'Current'],
+        ];
+        $tabStyle = fn (bool $active, bool $push) => 'cursor:pointer; background:transparent; border:0; border-bottom:2px solid '
+            . ($active ? '#0f172a' : 'transparent') . '; padding:10px 14px; margin-bottom:-1px;' . ($push ? ' margin-left:auto;' : '')
+            . ' font-size:13px; font-weight:600; font-family:inherit; color:' . ($active ? '#0f172a' : '#64748b') . ';';
+    @endphp
     {{-- Tab state is mirrored to location.hash (e.g. #history) so refresh and
          back/forward land on the active tab instead of jumping to Current. --}}
     {{-- The hashchange listener is an x-on:...window attribute rather than
@@ -130,7 +138,7 @@
          Inertia navigation unmounts the page instead of piling up one per visit. --}}
     <div x-data="{
         tab: 'current',
-        valid: {!! $isSuper ? "['current', 'history', 'status-report', 'update-report', 'maintenance-report', 'users', 'content-freeze']" : "['current']" !!},
+        valid: @json(array_column($tabs, 'key')),
         init() {
             this.syncFromHash();
             this.$watch('tab', function (v) {
@@ -147,94 +155,22 @@
 
         @if ($isSuper)
         <div role="tablist" aria-label="Sentinel sections" style="display:flex; flex-wrap:wrap; gap:4px; border-bottom:1px solid #e2e8f0; margin-bottom:18px;">
-            <button type="button"
-                    role="tab"
-                    id="sentinel-tab-current"
-                    aria-controls="sentinel-panel-current"
-                    x-on:click="tab = 'current'"
-                    x-bind:aria-selected="tab === 'current'"
-                    x-bind:style="tab === 'current'
-                        ? 'cursor:pointer; background:transparent; border:0; border-bottom:2px solid #0f172a; padding:10px 14px; margin-bottom:-1px; font-size:13px; font-weight:600; font-family:inherit; color:#0f172a;'
-                        : 'cursor:pointer; background:transparent; border:0; border-bottom:2px solid transparent; padding:10px 14px; margin-bottom:-1px; font-size:13px; font-weight:600; font-family:inherit; color:#64748b;'">
-                Current
-            </button>
-            <button type="button"
-                    role="tab"
-                    id="sentinel-tab-history"
-                    aria-controls="sentinel-panel-history"
-                    x-on:click="tab = 'history'"
-                    x-bind:aria-selected="tab === 'history'"
-                    x-bind:style="tab === 'history'
-                        ? 'cursor:pointer; background:transparent; border:0; border-bottom:2px solid #0f172a; padding:10px 14px; margin-bottom:-1px; font-size:13px; font-weight:600; font-family:inherit; color:#0f172a;'
-                        : 'cursor:pointer; background:transparent; border:0; border-bottom:2px solid transparent; padding:10px 14px; margin-bottom:-1px; font-size:13px; font-weight:600; font-family:inherit; color:#64748b;'">
-                History
-                @if (! empty($history))
-                    <span style="display:inline-block; margin-left:6px; padding:1px 7px; border-radius:9px; background:#e2e8f0; color:#475569; font-size:11px; font-weight:600;">{{ count($history) }}</span>
-                @endif
-            </button>
-            <button type="button"
-                    role="tab"
-                    id="sentinel-tab-status-report"
-                    aria-controls="sentinel-panel-status-report"
-                    x-on:click="tab = 'status-report'"
-                    x-bind:aria-selected="tab === 'status-report'"
-                    x-bind:style="tab === 'status-report'
-                        ? 'cursor:pointer; background:transparent; border:0; border-bottom:2px solid #0f172a; padding:10px 14px; margin-bottom:-1px; font-size:13px; font-weight:600; font-family:inherit; color:#0f172a;'
-                        : 'cursor:pointer; background:transparent; border:0; border-bottom:2px solid transparent; padding:10px 14px; margin-bottom:-1px; font-size:13px; font-weight:600; font-family:inherit; color:#64748b;'">
-                Status Report
-            </button>
-            <button type="button"
-                    role="tab"
-                    id="sentinel-tab-update-report"
-                    aria-controls="sentinel-panel-update-report"
-                    x-on:click="tab = 'update-report'"
-                    x-bind:aria-selected="tab === 'update-report'"
-                    x-bind:style="tab === 'update-report'
-                        ? 'cursor:pointer; background:transparent; border:0; border-bottom:2px solid #0f172a; padding:10px 14px; margin-bottom:-1px; font-size:13px; font-weight:600; font-family:inherit; color:#0f172a;'
-                        : 'cursor:pointer; background:transparent; border:0; border-bottom:2px solid transparent; padding:10px 14px; margin-bottom:-1px; font-size:13px; font-weight:600; font-family:inherit; color:#64748b;'">
-                Update Report
-            </button>
-            <button type="button"
-                    role="tab"
-                    id="sentinel-tab-maintenance-report"
-                    aria-controls="sentinel-panel-maintenance-report"
-                    x-on:click="tab = 'maintenance-report'"
-                    x-bind:aria-selected="tab === 'maintenance-report'"
-                    x-bind:style="tab === 'maintenance-report'
-                        ? 'cursor:pointer; background:transparent; border:0; border-bottom:2px solid #0f172a; padding:10px 14px; margin-bottom:-1px; font-size:13px; font-weight:600; font-family:inherit; color:#0f172a;'
-                        : 'cursor:pointer; background:transparent; border:0; border-bottom:2px solid transparent; padding:10px 14px; margin-bottom:-1px; font-size:13px; font-weight:600; font-family:inherit; color:#64748b;'">
-                Plan Summary
-            </button>
-            <button type="button"
-                    role="tab"
-                    id="sentinel-tab-users"
-                    aria-controls="sentinel-panel-users"
-                    x-on:click="tab = 'users'"
-                    x-bind:aria-selected="tab === 'users'"
-                    x-bind:style="tab === 'users'
-                        ? 'cursor:pointer; background:transparent; border:0; border-bottom:2px solid #0f172a; padding:10px 14px; margin-bottom:-1px; font-size:13px; font-weight:600; font-family:inherit; color:#0f172a;'
-                        : 'cursor:pointer; background:transparent; border:0; border-bottom:2px solid transparent; padding:10px 14px; margin-bottom:-1px; font-size:13px; font-weight:600; font-family:inherit; color:#64748b;'">
-                Users
-                @if ($onlineCount > 0)
-                    <span style="display:inline-flex; align-items:center; gap:4px; margin-left:6px; padding:1px 7px; border-radius:9px; background:#dcfce7; color:#166534; font-size:11px; font-weight:600;"><span style="display:inline-block; width:6px; height:6px; border-radius:50%; background:#16a34a;"></span>{{ $onlineCount }}</span>
-                @endif
-            </button>
-            <button type="button"
-                    role="tab"
-                    id="sentinel-tab-content-freeze"
-                    aria-controls="sentinel-panel-content-freeze"
-                    x-on:click="tab = 'content-freeze'"
-                    x-bind:aria-selected="tab === 'content-freeze'"
-                    x-bind:style="tab === 'content-freeze'
-                        ? 'cursor:pointer; background:transparent; border:0; border-bottom:2px solid #0f172a; padding:10px 14px; margin-bottom:-1px; margin-left:auto; font-size:13px; font-weight:600; font-family:inherit; color:#0f172a;'
-                        : 'cursor:pointer; background:transparent; border:0; border-bottom:2px solid transparent; padding:10px 14px; margin-bottom:-1px; margin-left:auto; font-size:13px; font-weight:600; font-family:inherit; color:#64748b;'">
-                Notify
-                @if (! empty($freeze_current) && ($freeze_current['status'] ?? null) === \D3Creative\Sentinel\Services\ContentFreezeService::STATUS_ACTIVE)
-                    <span style="display:inline-block; margin-left:6px; padding:1px 7px; border-radius:9px; background:#fef3c7; color:#92400e; font-size:11px; font-weight:600;">Active</span>
-                @elseif (! empty($freeze_current))
-                    <span style="display:inline-block; margin-left:6px; padding:1px 7px; border-radius:9px; background:#dbeafe; color:#1d4ed8; font-size:11px; font-weight:600;">Scheduled</span>
-                @endif
-            </button>
+            @foreach ($tabs as $t)
+                <button type="button"
+                        role="tab"
+                        id="sentinel-tab-{{ $t['key'] }}"
+                        aria-controls="sentinel-panel-{{ $t['key'] }}"
+                        x-on:click="tab = '{{ $t['key'] }}'"
+                        x-bind:aria-selected="tab === '{{ $t['key'] }}'"
+                        x-bind:style="tab === '{{ $t['key'] }}'
+                            ? '{{ $tabStyle(true, ! empty($t['push'])) }}'
+                            : '{{ $tabStyle(false, ! empty($t['push'])) }}'">
+                    {{ $t['label'] }}
+                    @if (! empty($t['badge']))
+                        <span style="{{ empty($t['badge']['dot']) ? 'display:inline-block;' : 'display:inline-flex; align-items:center; gap:4px;' }} margin-left:6px; padding:1px 7px; border-radius:9px; background:{{ $t['badge']['bg'] }}; color:{{ $t['badge']['fg'] }}; font-size:11px; font-weight:600;">@if (! empty($t['badge']['dot']))<span style="display:inline-block; width:6px; height:6px; border-radius:50%; background:{{ $t['badge']['dot'] }};"></span>@endif{{ $t['badge']['text'] }}</span>
+                    @endif
+                </button>
+            @endforeach
         </div>
         @endif
 

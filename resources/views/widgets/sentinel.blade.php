@@ -31,14 +31,7 @@
     <div style="padding:24px 18px; text-align:center;">
         <p style="font-size:13px; font-weight:600; color:#0f172a; margin:8px 0 4px 0;">No scan yet</p>
         <p style="font-size:12px; color:#64748b; margin:0 0 14px 0; line-height:1.5;">Run your first scan to see Statamic, Laravel, PHP and dependency status.</p>
-        <a x-data
-           x-init="if (! document.getElementById('sentinel-keyframes')) { var s = document.createElement('style'); s.id = 'sentinel-keyframes'; s.textContent = '@keyframes sentinel-spin { to { transform: rotate(360deg); } }'; document.head.appendChild(s); }"
-           x-on:click.prevent="$el.querySelector('[data-sentinel-label]').textContent = 'Scanning…'; $el.querySelector('[data-sentinel-icon]').style.animation = 'sentinel-spin 1s linear infinite'; requestAnimationFrame(() => requestAnimationFrame(() => location.href = $el.href))"
-           href="?d3_refresh={{ \D3Creative\Sentinel\Support\ManualScan::token() }}"
-           style="display:inline-flex; align-items:center; justify-content:center; gap:8px; white-space:nowrap; font-weight:600; cursor:pointer; text-decoration:none; color:#fff; background:#0f172a; padding:0 16px; height:34px; font-size:13px; line-height:1.25; border-radius:8px;">
-            <span data-sentinel-label>Scan Now</span>
-            <span data-sentinel-icon aria-hidden="true" style="display:inline-block; font-size:14px; line-height:1; flex-shrink:0; transform-origin:center;">↻</span>
-        </a>
+        @include('statamic-sentinel::utilities._scan_link', ['label' => 'Scan Now', 'style' => 'display:inline-flex; align-items:center; justify-content:center; gap:8px; white-space:nowrap; font-weight:600; cursor:pointer; text-decoration:none; color:#fff; background:#0f172a; padding:0 16px; height:34px; font-size:13px; line-height:1.25; border-radius:8px;'])
         <p style="font-size:11px; color:#64748b; margin:10px 0 0 0;">Takes 10-20 seconds.</p>
     </div>
     <div style="padding:10px 18px; border-top:1px solid #e4e4e7; background:#fafafa; border-radius:0 0 8px 8px;">
@@ -175,15 +168,7 @@
         {{-- Meta: last scanned + refresh --}}
         <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:4px; font-size:12px; color:#64748b;">
             <span>Last scanned: {{ $audited_at }}</span>
-            <a x-data
-               x-init="if (! document.getElementById('sentinel-keyframes')) { var s = document.createElement('style'); s.id = 'sentinel-keyframes'; s.textContent = '@keyframes sentinel-spin { to { transform: rotate(360deg); } }'; document.head.appendChild(s); }"
-               x-on:click.prevent="$el.querySelector('[data-sentinel-label]').textContent = 'Scanning…'; $el.querySelector('[data-sentinel-icon]').style.animation = 'sentinel-spin 1s linear infinite'; requestAnimationFrame(() => requestAnimationFrame(() => location.href = $el.href))"
-               href="?d3_refresh={{ \D3Creative\Sentinel\Support\ManualScan::token() }}"
-               title="Refresh audit results"
-               style="display:inline-flex; align-items:center; gap:4px; color:#64748b; text-decoration:none;">
-                <span data-sentinel-icon aria-hidden="true" style="display:inline-block; font-size:14px; line-height:1; flex-shrink:0; transform-origin:center;">↻</span>
-                <span data-sentinel-label>Refresh</span>
-            </a>
+            @include('statamic-sentinel::utilities._scan_link', ['label' => 'Refresh', 'style' => 'display:inline-flex; align-items:center; gap:4px; color:#64748b; text-decoration:none;', 'title' => 'Refresh audit results', 'iconFirst' => true])
         </div>
 
     </div>{{-- /card body --}}

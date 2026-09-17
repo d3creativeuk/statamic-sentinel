@@ -55,20 +55,7 @@
     </div>
 
     {{-- Footer --}}
-    @php
-        $_devName = $sentinelDevName ?? null;
-        $_devUrl  = $sentinelDevUrl ?? null;
-        $sentinelFooterAttribution = $_devName
-            ? ($_devUrl
-                ? '<a href="' . e($_devUrl) . '" style="color:#64748b; text-decoration:underline;">' . e($_devName) . '</a>'
-                : e($_devName))
-            : 'Sentinel for Statamic';
-    @endphp
-    <div style="background:#f8fafc; border-top:1px solid #e2e8f0; padding:20px 32px;">
-        <div style="font-size:12px; color:#64748b;">
-            This notification was sent by {!! $sentinelFooterAttribution !!}.
-        </div>
-    </div>
+    @include('statamic-sentinel::emails._footer', ['lead' => 'This notification was sent by'])
 
 </td></tr>
 </table>
