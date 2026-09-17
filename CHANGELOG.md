@@ -15,12 +15,6 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Changed
 
-- **The status email's PHP row shows the update within your PHP version first.** It used to show
-  only the newest PHP release on any branch (e.g. 8.4.20 → 8.5.10), which hid that 8.4.25, with
-  its bug and security fixes, was available without a major upgrade. The row now reads
-  "8.4.20 → 8.4.25" with an "Update available" pill, adds "PHP 8.5.10 is also available" underneath,
-  and shows "Security only" or "End of life" once the installed branch reaches those stages. Needs a
-  fresh scan to pick up the branch data.
 - **Clearer security counts in the status email.** The Composer and npm rows lead with the security
   issues pill, with a grey line underneath such as "72 security issues across 15 packages". The
   issue count is per advisory across every installed package, so next to a smaller "updates

@@ -74,41 +74,6 @@
         $majorBehind = $outdated && $isMajorBehind($current, $latest, $platform);
         $arrow       = $current . ' → ' . $latest;
 
-        // PHP with branch data: lead with the upgrade inside the installed
-        // branch (8.4.20 → 8.4.25), which is where the fixes are, and name a
-        // newer branch separately. `latest` alone is the newest release on any
-        // branch, so "8.4.20 → 8.5.10" hid the patch update and read as though
-        // the only way forward was the major upgrade. Scans from before the
-        // branch data existed fall through to the generic row below.
-        if ($platform === 'PHP' && $current && ! empty($p['branches']) && is_array($p['branches'])) {
-            $cycle        = implode('.', array_slice(explode('.', $current), 0, 2));
-            $branchLatest = null;
-
-            foreach ($p['branches'] as $branch) {
-                if (($branch['cycle'] ?? null) === $cycle && preg_match('/^\d+\.\d+\.\d+$/', (string) ($branch['latest'] ?? ''))) {
-                    $branchLatest = $branch['latest'];
-                }
-            }
-
-            if ($branchLatest) {
-                $patchBehind = version_compare($current, $branchLatest, '<');
-                $newerBranch = $latest && version_compare($branchLatest, $latest, '<') ? $latest : null;
-
-                $pills = [];
-                if ($newerBranch)               $pills[] = ['text' => 'Major version behind', 'colour' => '#dc2626', 'solid' => true];
-                if ($status === 'eol')          $pills[] = ['text' => 'End of life',          'colour' => '#dc2626'];
-                elseif ($status === 'security') $pills[] = ['text' => 'Security only',        'colour' => '#b45309'];
-                if ($patchBehind)               $pills[] = ['text' => 'Update available',     'colour' => '#3b82f6'];
-                if (! $pills)                   $pills[] = ['text' => 'Up to date',           'colour' => '#10b981'];
-
-                return [
-                    'pills'  => $pills,
-                    'detail' => $patchBehind ? $current . ' → ' . $branchLatest : $current,
-                    'note'   => $newerBranch ? 'PHP ' . $newerBranch . ' is also available' : '',
-                ];
-            }
-        }
-
         $pills = [];
         if ($security)                  $pills[] = ['text' => 'Security update', 'colour' => '#dc2626'];
         elseif ($status === 'eol')      $pills[] = ['text' => 'End of life',     'colour' => '#dc2626'];
