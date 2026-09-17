@@ -78,6 +78,9 @@ class EmailAndControllerAccessTest extends TestCase
         // The security pill leads; the grey note spreads the count across packages.
         $this->assertStringContainsString('1 security issue across 1 package</div>', $rendered['status']);
         $this->assertStringNotContainsString('1 update available', $rendered['status']);
+
+        // Platform versions sit beside the title, not in front of the pills.
+        $this->assertMatchesRegularExpression('/>Statamic<span[^>]*>6\.0\.0 → 6\.1\.0<\/span><\/div>/u', $rendered['status']);
         $this->assertStringContainsString('1 hour 30 minutes', $rendered['notification']);
     }
 

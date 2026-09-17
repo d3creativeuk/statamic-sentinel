@@ -23,10 +23,10 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 - **Desktop / Phone toggle on email previews.** Every preview in the utility (status, update and
   Plan Summary reports, sent emails, and the Notify emails) can switch to a 375px phone width,
   which applies the emails' own phone layout, so you can check it without sending a test.
-- **Report emails stack each row.** In the status, update and Plan Summary emails, the version
-  and status pills now sit under each row's description at every screen width, instead of in a
-  right-hand column that squeezed the description onto several lines when a row had two pills.
-  Package lists in the update report stay on one line.
+- **Report emails stack each row.** In the status, update and Plan Summary emails, the status pills
+  now sit under each row's description at every screen width, instead of in a right-hand column
+  that squeezed the description onto several lines when a row had two pills. Statamic, Laravel and
+  PHP show their version beside the title. Package lists in the update report stay on one line.
 - **Tab links match their names:** Notify is now `#notify` (was `#content-freeze`) and Plan Summary
   is `#plan-summary` (was `#maintenance-report`).
 - **Lighter scans.** Every registry request now asks for gzip (Packagist's laravel/framework
