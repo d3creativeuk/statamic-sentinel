@@ -29,7 +29,7 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
   now sit under each row's description at every screen width, instead of in a right-hand column
   that squeezed the description onto several lines when a row had two pills. Statamic, Laravel and
   PHP show their version beside the title, and "Major version behind" is always their first pill.
-  Row titles and descriptions are a size larger.
+  Row titles and descriptions are a size larger, and a thin line separates each row.
   Package lists in the update report stay on one line.
 - **Tab links match their names:** Notify is now `#notify` (was `#content-freeze`) and Plan Summary
   is `#plan-summary` (was `#maintenance-report`).

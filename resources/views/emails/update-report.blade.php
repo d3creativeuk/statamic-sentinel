@@ -142,6 +142,9 @@
             ['key' => 'php',      'label' => 'PHP',      'description' => 'The server-side language that runs everything'],
         ] as $row)
             @php $r = $platformRow($row['label'], $platform[$row['key']]); @endphp
+            @if (! $loop->first)
+                <div style="border-top:1px solid #e2e8f0; margin:18px 0;"></div>
+            @endif
             <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden; margin-bottom:10px;">
                 <tr>
                     <td class="sentinel-row-cell" style="padding:12px 16px; vertical-align:middle;">
@@ -158,6 +161,7 @@
 
         {{-- Composer section --}}
         @php $cs = $ecosystemSummary($composer); @endphp
+        <div style="border-top:1px solid #e2e8f0; margin:18px 0;"></div>
         <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden; margin-bottom:10px;">
             <tr style="{{ $composerChanges > 0 ? 'border-bottom:1px solid #f1f5f9;' : '' }}">
                 <td class="sentinel-row-cell" style="padding:12px 16px; vertical-align:middle;">
@@ -196,7 +200,8 @@
 
         {{-- npm section --}}
         @php $ns = $ecosystemSummary($npm); @endphp
-        <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden; margin-bottom:24px;">
+        <div style="border-top:1px solid #e2e8f0; margin:18px 0;"></div>
+        <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden; margin-bottom:10px;">
             <tr style="{{ $npmChanges > 0 ? 'border-bottom:1px solid #f1f5f9;' : '' }}">
                 <td class="sentinel-row-cell" style="padding:12px 16px; vertical-align:middle;">
                     <div style="font-size:15px; font-weight:600; color:#0f172a;">npm</div>
@@ -253,7 +258,8 @@
                     ));
                 };
             @endphp
-            <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden; margin-bottom:24px;">
+            <div style="border-top:1px solid #e2e8f0; margin:18px 0;"></div>
+            <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden; margin-bottom:10px;">
                 <tr style="{{ $vulnsResolved > 0 && $vulnsIntro > 0 ? 'border-bottom:1px solid #f1f5f9;' : '' }}">
                     <td class="sentinel-row-cell" style="padding:12px 16px; font-size:13px; font-weight:600; color:#0f172a;">Vulnerabilities</td>
                     <td align="right" class="sentinel-row-cell sentinel-row-meta" style="padding:12px 16px; font-size:12px; color:#475569;">
