@@ -51,10 +51,6 @@ class ViewRenderTest extends TestCase
             $this->assertMatchesRegularExpression('/id="sentinel-panel-' . $key . '"\s+aria-labelledby="sentinel-tab-' . $key . '"/', $html);
         }
 
-        // Old #content-freeze links still reach the renamed Notify tab.
-        $this->assertStringContainsString("renamed: { 'content-freeze': 'notify' }", $html);
-        $this->assertStringNotContainsString("tab === 'content-freeze'", $html);
-
         $this->assertStringContainsString('aria-labelledby="sentinel-confirm-title"', $html);
         $this->assertSame(4, substr_count($html, 'aria-label="Recipient email addresses"')); // three report forms + Notify
         $this->assertStringNotContainsString('outline:none', $html);

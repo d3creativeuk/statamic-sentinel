@@ -144,8 +144,6 @@
     <div x-data="{
         tab: 'current',
         valid: @js($tabKeys),
-        // Old hashes that still land on the renamed tab (and get rewritten to its new name).
-        renamed: { 'content-freeze': 'notify' },
         init() {
             this.syncFromHash();
             this.$watch('tab', function (v) {
@@ -156,7 +154,6 @@
         },
         syncFromHash() {
             var h = (window.location.hash || '').replace('#', '');
-            h = this.renamed[h] || h;
             if (this.valid.indexOf(h) !== -1 && this.tab !== h) this.tab = h;
         }
     }" x-on:hashchange.window="syncFromHash()">
