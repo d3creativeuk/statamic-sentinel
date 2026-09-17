@@ -15,11 +15,10 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Changed
 
-- **Clearer security counts in the status email.** The Composer and npm rows lead with the security
-  issues pill, with a grey line underneath such as "72 security issues across 15 packages". The
-  issue count is per advisory across every installed package, so next to a smaller "updates
-  available" count it looked like the numbers didn't add up. Rows with no issues still show the
-  updates count as their pill.
+- **Security issues lead the status email's package rows.** When Composer or npm has security
+  issues, the row shows just the security issues pill instead of "20 updates available" beside it,
+  since the two counts measure different things and read as a contradiction side by side. Rows
+  with no issues still show the updates count as their pill.
 - **Desktop / Phone toggle on email previews.** Every preview in the utility (status, update and
   Plan Summary reports, sent emails, and the Notify emails) can switch to a 375px phone width,
   which applies the emails' own phone layout, so you can check it without sending a test.

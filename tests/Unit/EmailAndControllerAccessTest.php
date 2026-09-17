@@ -75,8 +75,9 @@ class EmailAndControllerAccessTest extends TestCase
         }
 
         $this->assertStringContainsString('Care Plan', $rendered['maintenance']);
-        // The security pill leads; the grey note spreads the count across packages.
-        $this->assertStringContainsString('1 security issue across 1 package</div>', $rendered['status']);
+        // With security issues, the pill is the whole row summary.
+        $this->assertStringContainsString('1 security issue</span>', $rendered['status']);
+        $this->assertStringNotContainsString('across 1 package', $rendered['status']);
         $this->assertStringNotContainsString('1 update available', $rendered['status']);
 
         // "Major version behind" is always the first pill.

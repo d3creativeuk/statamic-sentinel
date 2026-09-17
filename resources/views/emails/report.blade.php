@@ -118,18 +118,9 @@
         $updatesText = $outdated . ' ' . \Illuminate\Support\Str::plural('update', $outdated) . ' available';
         $vulnsText   = $totalSec . ' security ' . \Illuminate\Support\Str::plural('issue', $totalSec);
 
-        // Vulns lead with the (red) pill. The note under it says how many
-        // packages the issues are spread across, because the issue count is
-        // per advisory across every installed package and reads oddly next
-        // to a smaller "updates available" count of direct dependencies.
+        // Security issues are the headline, so the (red) pill stands alone.
         if ($totalSec > 0) {
-            $vulnerable = count($eco['by_package'] ?? \D3Creative\Sentinel\Services\AuditService::groupBySeverity($eco['severities'] ?? []))
-                + $vendorOnly;
-            $note = $vulnerable > 0
-                ? $vulnsText . ' across ' . $vulnerable . ' ' . \Illuminate\Support\Str::plural('package', $vulnerable)
-                : '';
-
-            return ['text' => $vulnsText, 'colour' => '#dc2626', 'detail' => '', 'note' => $note];
+            return ['text' => $vulnsText, 'colour' => '#dc2626', 'detail' => ''];
         }
 
         // No vulns: updates own the pill (blue), no detail line needed.
@@ -259,9 +250,6 @@
                             @foreach ($pills as $pill)
                                 <span class="sentinel-pill" style="display:inline-block; margin:2px 6px 2px 0; font-size:11px; font-weight:600; padding:2px 8px; border-radius:4px; border:1px solid {{ $pill['colour'] }}; @if (! empty($pill['solid'])) color:#ffffff; background:{{ $pill['colour'] }}; @else color:{{ $pill['colour'] }}; background:#fff; @endif">{{ $pill['text'] }}</span>
                             @endforeach
-                            @if (! empty($b['note']))
-                                <div style="font-size:12px; color:#64748b; line-height:1.5; margin-top:2px;">{{ $b['note'] }}</div>
-                            @endif
                         </div>
                     </td>
                 </tr>
