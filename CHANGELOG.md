@@ -6,36 +6,37 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). Releases are git-tag driven
 (`composer.json` carries no `version` field).
 
-## [Unreleased]
+## [2.3.0] - 2026-09-17
 
 ### Added
 
 - **Scheduled scans (opt-in).** Set `SENTINEL_SCAN_SCHEDULE` to `daily`, `weekly` or a cron
   expression to have Sentinel scan unattended through Laravel's scheduler. Off by default.
+- **Desktop / Phone toggle on email previews.** Every preview in the utility (status, update and
+  Plan Summary reports, sent emails, and the Notify emails) can switch to a 375px phone width,
+  which applies the emails' own phone layout, so you can check it without sending a test.
 
 ### Changed
 
-- **The status email opens like a message.** The banner now reads, for example, "Hi, your Statamic
+- **The status email opens like a message.** It now reads, for example, "Hi, your Statamic
   installation is running version 5.73.2. The latest version is 6.33.0. That's 84 versions behind."
-  instead of "Your Statamic website needs attention", as plain text rather than a coloured box. The
-  update report's opening line is plain text too.
+  instead of "Your Statamic website needs attention", as plain text rather than a coloured box.
   Underneath, a short "Did you know?" explains that a site is several pieces of software (Statamic,
-  Laravel, PHP and smaller packages), each with its own updates.
+  Laravel, PHP and smaller packages), each with its own updates. The update report's opening line
+  is plain text too.
 - **Security issues lead the status email's package rows.** When Composer or npm has security
   issues, the row shows just the security issues pill instead of "20 updates available" beside it,
   since the two counts measure different things and read as a contradiction side by side. Rows
   with no issues still show the updates count as their pill.
-- **Desktop / Phone toggle on email previews.** Every preview in the utility (status, update and
-  Plan Summary reports, sent emails, and the Notify emails) can switch to a 375px phone width,
-  which applies the emails' own phone layout, so you can check it without sending a test.
-- **Report emails stack each row.** In the status, update and Plan Summary emails, the status pills
-  now sit under each row's description at every screen width, instead of in a right-hand column
-  that squeezed the description onto several lines when a row had two pills. Statamic, Laravel and
-  PHP show their version beside the title, and "Major version behind" is always their first pill.
-  Row titles and descriptions are a size larger, a thin line separates each row, and the pills use
-  medium-weight, slightly smaller text. Patch updates (e.g. PHP 8.5.7 → 8.5.10) now get an "Update available"
-  pill like other updates, instead of no pill.
-  Package lists in the update report stay on one line.
+- **Report emails have a calmer, stacked layout.** In the status, update and Plan Summary emails:
+  - Pills sit under each row's description at every screen width, instead of in a right-hand
+    column that squeezed the description onto several lines. Package lists in the update report
+    stay on one line.
+  - Statamic, Laravel and PHP show their version beside the title, and "Major version behind" is
+    always their first pill.
+  - Row titles and descriptions are a size larger, a thin line separates each row, and pills use
+    medium-weight, slightly smaller text.
+  - Patch updates (e.g. PHP 8.5.7 → 8.5.10) get an "Update available" pill like other updates.
 - **Tab links match their names:** Notify is now `#notify` (was `#content-freeze`) and Plan Summary
   is `#plan-summary` (was `#maintenance-report`).
 - **Lighter scans.** Every registry request now asks for gzip (Packagist's laravel/framework
@@ -46,6 +47,9 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 - **Vulnerability details are cached between scans.** Sentinel keeps a small summary of each
   OSV advisory and only refetches it when OSV reports it as new or changed. On a stale test
   site that cut a repeat scan from 270 requests to 41, and from about 6s to under 4s.
+- **`ContentFreezeService::markNotified()` and `activate()` are now protected.** They're internal
+  state transitions and must run under the freeze lock; use `tickNotifications()`,
+  `tickActivations()`, `complete()` and `cancel()` instead.
 - **Major version gaps get their own pill in the report email.** Statamic, Laravel and PHP rows
   a major version behind now show a solid red "Major version behind" pill (replacing "Outdated").
   It sits alongside "Security update" / "End of life" instead of being hidden by them, so a
@@ -169,7 +173,9 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
   Scheduled status reports are sent once even when several servers run the scheduler, and a
   failed send-log write no longer leaves an orphaned email snapshot on disk.
 
-## [2.1.1] - 2026-07-27
+## [2.2.1] - 2026-07-27
+
+Released under the tag `v2.2.1` (this section was first published as 2.1.1).
 
 ### Added
 
