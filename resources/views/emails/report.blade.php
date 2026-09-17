@@ -11,7 +11,7 @@
            On narrow screens the remaining two-column rows (package lists)
            stack too. */
         @media only screen and (max-width:480px) {
-            .sentinel-row-cell { display:block !important; width:100% !important; }
+            .sentinel-row-cell { display:block !important; width:100% !important; box-sizing:border-box !important; }
             .sentinel-row-meta {
                 text-align:left !important;
                 padding-top:2px !important;
