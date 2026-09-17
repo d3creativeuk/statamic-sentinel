@@ -10,7 +10,8 @@ Instead:
 
 - **First install:** the widget shows a **Scan Now** button. Click it once to run your first scan (10-20 seconds).
 - **Manual refresh:** the **Refresh** link in the widget/utility header forces an immediate re-check at any time.
-- **CLI:** run `php artisan sentinel:scan` to trigger a scan from the terminal. Wire this into your host app's scheduler (e.g. `$schedule->command('sentinel:scan')->daily()` in your `App\Console\Kernel`) if you want unattended daily scans.
+- **CLI:** run `php artisan sentinel:scan` to trigger a scan from the terminal. It exits non-zero if the vulnerability or update check failed.
+- **Scheduled:** set `SENTINEL_SCAN_SCHEDULE` to `daily`, `weekly` or a cron expression and Sentinel registers the scan with Laravel's scheduler (the host needs the standard `schedule:run` cron entry). A scheduled status report also scans before it sends.
 
 Results are cached using the host's default cache store (`CACHE_STORE`) and mirrored to `storage/app/statamic-sentinel/audit.json`. They persist until the next scan overwrites them, and the disk mirror means a `cache:clear` (common after `composer update`) won't wipe your last scan - on the next read, the cache is rehydrated from disk.
 

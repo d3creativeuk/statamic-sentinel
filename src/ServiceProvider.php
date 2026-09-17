@@ -198,6 +198,11 @@ class ServiceProvider extends AddonServiceProvider
                     $schedule->command('sentinel:send-status-report')->cron($cron)->onOneServer()->withoutOverlapping();
                 }
 
+                // Opt-in unattended scans (SENTINEL_SCAN_SCHEDULE).
+                if ($scanCron = app(ScheduleService::class)->scanCronExpression()) {
+                    $schedule->command('sentinel:scan')->cron($scanCron)->onOneServer()->withoutOverlapping();
+                }
+
                 // Drive the freeze state machine. Every-minute ticks are
                 // cheap (no-op when there's no scheduled / notified freeze)
                 // and give us at-most-one-minute lag between the configured

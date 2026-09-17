@@ -8,6 +8,11 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ## [Unreleased]
 
+### Added
+
+- **Scheduled scans (opt-in).** Set `SENTINEL_SCAN_SCHEDULE` to `daily`, `weekly` or a cron
+  expression to have Sentinel scan unattended through Laravel's scheduler. Off by default.
+
 ### Changed
 
 - **Lighter scans.** Every registry request now asks for gzip (Packagist's laravel/framework

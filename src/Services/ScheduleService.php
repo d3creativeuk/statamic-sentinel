@@ -84,6 +84,30 @@ class ScheduleService
      * weekly  DOW HH:MM  → "MM HH * * DOW"   (DOW: 0=Sun..6=Sat)
      * monthly DOM HH:MM  → "MM HH DOM * *"   (DOM: 1..28)
      */
+    /**
+     * Cron expression for the opt-in scheduled scan
+     * (statamic-sentinel.scan.schedule), or null when unset or invalid.
+     */
+    public function scanCronExpression(): ?string
+    {
+        $value = trim((string) config('statamic-sentinel.scan.schedule', ''));
+
+        $expression = [
+            'daily'  => '0 4 * * *',
+            'weekly' => '0 4 * * 1',
+        ][strtolower($value)] ?? $value;
+
+        if ($expression === '') {
+            return null;
+        }
+
+        try {
+            return \Cron\CronExpression::isValidExpression($expression) ? $expression : null;
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
     public function cronExpression(string $reportKey): ?string
     {
         $cfg = $this->all()[$reportKey] ?? null;

@@ -75,6 +75,24 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Scheduled scans
+    |--------------------------------------------------------------------------
+    |
+    | Off by default: the audit only refreshes when someone clicks Refresh,
+    | runs `php artisan sentinel:scan`, or a scheduled status report sends
+    | (which scans first). Set SENTINEL_SCAN_SCHEDULE to `daily` (04:00),
+    | `weekly` (Monday 04:00) or a cron expression such as `30 2 * * *` to
+    | have Sentinel register the scan with Laravel's scheduler. The host
+    | still needs the usual `* * * * * php artisan schedule:run` cron entry.
+    |
+    */
+
+    'scan' => [
+        'schedule' => env('SENTINEL_SCAN_SCHEDULE'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | User activity ("who's online")
     |--------------------------------------------------------------------------
     |

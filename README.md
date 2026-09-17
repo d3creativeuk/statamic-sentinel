@@ -106,6 +106,8 @@ This renders Sentinel fully unbranded ("Sentinel for Statamic", no link, no CTA 
 
 ## Other settings
 
+- `SENTINEL_SCAN_SCHEDULE` - run scans unattended through Laravel's scheduler: `daily` (04:00), `weekly` (Monday 04:00) or a cron expression such as `30 2 * * *`. Unset by default, so scans only run on demand or before a scheduled status report. Needs the host's `schedule:run` cron entry.
+- `SENTINEL_VENDOR_SECURITY_CHECK=false` - stop asking the Statamic marketplace which releases are flagged as security releases (for air-gapped installs or test environments). Default `true`.
 - `SENTINEL_FREEZE_TIMEZONE` - display timezone for content-freeze times in the CP and freeze emails. Example: `SENTINEL_FREEZE_TIMEZONE='Europe/London'`.
   - **Unset (default):** times use the Laravel app timezone and render *without* timezone letters, e.g. `4 Jul 2026, 08:00`.
   - **Set:** times render the timezone abbreviation too, e.g. `4 Jul 2026, 08:00 BST`. When the configured zone differs from the server (app) timezone, both are shown side-by-side, e.g. `4 Jul 2026, 09:00 BST / 08:00 UTC`.
