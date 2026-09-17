@@ -99,6 +99,16 @@ class SentMailService
 
             return $id;
         } catch (\Throwable $e) {
+            // The snapshot is only reachable through the index, and prune()
+            // only removes files it lists, so don't leave it behind.
+            try {
+                if (isset($id)) {
+                    Storage::disk('local')->delete(self::DIR . '/' . $id . '.html');
+                }
+            } catch (\Throwable $cleanup) {
+                // Nothing more to do.
+            }
+
             return null;
         }
     }

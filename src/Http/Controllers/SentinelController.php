@@ -32,12 +32,7 @@ class SentinelController extends Controller
 
         $result = (new ReportSender())->sendStatus($recipientResult);
 
-        $status = match ($result['kind']) {
-            ReportSender::KIND_SENT        => 200,
-            ReportSender::KIND_QUEUED      => 200,
-            ReportSender::KIND_MAIL_FAILED => 500,
-            default                        => 422,
-        };
+        $status = $this->statusFor($result);
 
         return response()->json(['message' => $result['message']], $status);
     }
@@ -53,12 +48,7 @@ class SentinelController extends Controller
 
         $result = (new ReportSender())->sendUpdate($recipientResult, $request->boolean('force'));
 
-        $status = match ($result['kind']) {
-            ReportSender::KIND_SENT        => 200,
-            ReportSender::KIND_QUEUED      => 200,
-            ReportSender::KIND_MAIL_FAILED => 500,
-            default                        => 422,
-        };
+        $status = $this->statusFor($result);
 
         $payload = ['message' => $result['message']];
         if (! empty($result['can_force'])) {
@@ -79,12 +69,7 @@ class SentinelController extends Controller
 
         $result = (new ReportSender())->sendMaintenance($recipientResult);
 
-        $status = match ($result['kind']) {
-            ReportSender::KIND_SENT        => 200,
-            ReportSender::KIND_QUEUED      => 200,
-            ReportSender::KIND_MAIL_FAILED => 500,
-            default                        => 422,
-        };
+        $status = $this->statusFor($result);
 
         return response()->json(['message' => $result['message']], $status);
     }
@@ -161,6 +146,11 @@ class SentinelController extends Controller
 
             $touched    = true;
             $input      = $request->input($key, []);
+
+            if (! is_array($input)) {
+                return response()->json(['message' => 'Invalid schedule data.'], 422);
+            }
+
             $recipients = $this->parseRecipients($input['recipients'] ?? '');
 
             $validator = Validator::make([
@@ -214,7 +204,7 @@ class SentinelController extends Controller
      * Returns either the parsed recipient array or a JsonResponse to short-
      * circuit the caller with a 422.
      */
-    protected function validateRecipientsInput(string $raw)
+    protected function validateRecipientsInput($raw)
     {
         $recipients = $this->parseRecipients($raw);
 
@@ -233,7 +223,13 @@ class SentinelController extends Controller
         ]);
 
         if ($validator->fails()) {
-            $invalid = array_values(array_filter($recipients, fn ($e) => ! filter_var($e, FILTER_VALIDATE_EMAIL)));
+            // Same rule as the check above. filter_var() disagrees with it both
+            // ways, which printed "Invalid address: " with nothing after it.
+            $invalid = array_values(array_filter(
+                $recipients,
+                fn ($e) => Validator::make(['email' => $e], ['email' => ['email']])->fails()
+            ));
+
             return response()->json([
                 'message' => 'Invalid address: ' . implode(', ', $invalid),
             ], 422);
@@ -418,13 +414,36 @@ class SentinelController extends Controller
         ]);
     }
 
-    protected function parseRecipients(string $input): array
+    /**
+     * Comma-separated string (or, from a crafted request, an array of them)
+     * into a unique list. Anything else is treated as empty rather than
+     * raising a TypeError and a 500.
+     */
+    protected function parseRecipients($input): array
     {
+        if (is_array($input)) {
+            $input = implode(',', array_filter($input, 'is_string'));
+        }
+
+        if (! is_string($input)) {
+            $input = '';
+        }
+
         return collect(explode(',', $input))
             ->map(fn ($e) => trim($e))
             ->filter()
             ->unique()
             ->values()
             ->all();
+    }
+
+    protected function statusFor(array $result): int
+    {
+        return match ($result['kind']) {
+            ReportSender::KIND_SENT        => 200,
+            ReportSender::KIND_QUEUED      => 200,
+            ReportSender::KIND_MAIL_FAILED => 500,
+            default                        => 422,
+        };
     }
 }

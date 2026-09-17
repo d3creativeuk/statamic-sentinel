@@ -2,7 +2,6 @@
 
 namespace D3Creative\Sentinel\Services;
 
-use Illuminate\Support\Facades\Mail;
 use D3Creative\Sentinel\Jobs\SendSentinelMail;
 use D3Creative\Sentinel\Mail\SentinelMaintenanceReport;
 use D3Creative\Sentinel\Mail\SentinelReport;

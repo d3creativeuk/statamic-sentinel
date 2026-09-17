@@ -128,6 +128,11 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
   the cache backend is unavailable, the Control Panel reads the last scan from disk instead of
   erroring. `php artisan sentinel:scan` now reports a failed vulnerability or update check and
   exits non-zero.
+- **Report sending details.** A forced resend of the update report is dated by the scan it
+  describes rather than the day it's sent. The "Invalid address" message now always names the
+  address it rejected. Malformed form data returns a validation message instead of a server error.
+  Scheduled status reports are sent once even when several servers run the scheduler, and a
+  failed send-log write no longer leaves an orphaned email snapshot on disk.
 
 ## [2.1.1] - 2026-07-27
 

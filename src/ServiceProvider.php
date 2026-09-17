@@ -194,7 +194,8 @@ class ServiceProvider extends AddonServiceProvider
         if ($this->app->runningInConsole()) {
             $this->callAfterResolving(\Illuminate\Console\Scheduling\Schedule::class, function ($schedule) {
                 if ($cron = app(ScheduleService::class)->cronExpression('status_report')) {
-                    $schedule->command('sentinel:send-status-report')->cron($cron);
+                    // One send per slot even when several servers run schedule:run.
+                    $schedule->command('sentinel:send-status-report')->cron($cron)->onOneServer()->withoutOverlapping();
                 }
 
                 // Drive the freeze state machine. Every-minute ticks are

@@ -73,7 +73,15 @@
         $intro = 'No updates have been applied to your Statamic website since the last report.';
     }
 
-    $sentDate = now()->format('j M Y, H:i');
+    // Date the report by the scan it describes. A forced resend replays an
+    // older report, and stamping it with today made old changes look new.
+    try {
+        $sentDate = ! empty($report['to_recorded_at'])
+            ? \Carbon\Carbon::parse($report['to_recorded_at'])->format('j M Y, H:i')
+            : now()->format('j M Y, H:i');
+    } catch (\Throwable $e) {
+        $sentDate = now()->format('j M Y, H:i');
+    }
 
     // Inline helpers - keep email template self-contained
     $platformRow = function (string $label, array $p) {
