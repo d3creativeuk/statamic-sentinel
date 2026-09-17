@@ -52,7 +52,6 @@
     $licenseAlert   = $licenseChanged && in_array($license['to'] ?? null, ['renewal', 'invalid']);
 
     $hasAnyChange = $platformChangeCount > 0 || $composerChanges > 0 || $npmChanges > 0 || $vulnsResolved > 0 || $vulnsIntro > 0 || $licenseChanged;
-    $statusAccent = ($vulnsIntro > 0 || $licenseAlert) ? '#ef4444' : ($hasAnyChange ? '#10b981' : '#94a3b8');
 
     $licenseLabel = fn($s) => [
         'ok' => 'Licensed', 'renewal' => 'Renewal due', 'invalid' => 'Not licensed',
@@ -130,8 +129,8 @@
 
     <div style="padding:28px 32px;">
 
-        {{-- Status banner --}}
-        <div style="background:{{ $statusAccent }}1a; border-left:3px solid {{ $statusAccent }}; padding:14px 16px; border-radius:6px; margin-bottom:24px;">
+        {{-- Opening message: plain text, matching the Plan Summary intro --}}
+        <div style="margin-bottom:24px;">
             <div style="font-size:15px; font-weight:600; color:#0f172a; line-height:1.4;">{{ $intro }}</div>
         </div>
 

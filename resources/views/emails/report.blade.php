@@ -191,20 +191,15 @@
     if ($needsAttention) {
         $intro        = 'Your Statamic website needs attention';
         $introDetail  = 'Security or platform issues were found.';
-        $statusAccent = '#ef4444';
     } elseif ($licenseRenewal) {
         $intro        = 'Your Statamic license is due for renewal.';
         $introDetail  = 'The license no longer covers your installed version.';
-        $statusAccent = '#b45309';
     } elseif ($platformMajorBehind) {
         $intro        = 'One or more platforms a major version behind.';
-        $statusAccent = '#b45309';
     } elseif ($totalOutdated > 0) {
         $intro        = 'Your Statamic website is in good health, routine updates available.';
-        $statusAccent = '#3b82f6';
     } else {
         $intro        = 'Your Statamic website is fully up to date and in good health.';
-        $statusAccent = '#10b981';
     }
 
     // The banner reads like the opening of an email about the Statamic
@@ -242,8 +237,8 @@
 
     <div style="padding:28px 32px;">
 
-        {{-- Status banner --}}
-        <div style="background:{{ $statusAccent }}1a; border-left:3px solid {{ $statusAccent }}; padding:14px 16px; border-radius:6px; margin-bottom:24px;">
+        {{-- Opening message: plain text, matching the Plan Summary intro --}}
+        <div style="margin-bottom:24px;">
             @if ($introMessage)
                 <div style="font-size:15px; font-weight:400; color:#0f172a; line-height:1.55;">{{ $introMessage }}</div>
             @else

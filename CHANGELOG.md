@@ -17,7 +17,8 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 - **The status email opens like a message.** The banner now reads, for example, "Hi, your Statamic
   installation is running version 5.73.2. The latest version is 6.33.0. That's 84 versions behind."
-  instead of "Your Statamic website needs attention". Its colour still reflects the overall state.
+  instead of "Your Statamic website needs attention", as plain text rather than a coloured box. The
+  update report's opening line is plain text too.
 - **Security issues lead the status email's package rows.** When Composer or npm has security
   issues, the row shows just the security issues pill instead of "20 updates available" beside it,
   since the two counts measure different things and read as a contradiction side by side. Rows
