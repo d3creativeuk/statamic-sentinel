@@ -3,9 +3,9 @@
 namespace D3Creative\Sentinel\Tests\Unit;
 
 use D3Creative\Sentinel\Services\ContentFreezeService;
+use D3Creative\Sentinel\Tests\Support\RegistersViews;
+use D3Creative\Sentinel\Tests\Support\ViewTestUser;
 use D3Creative\Sentinel\Tests\TestCase;
-use Illuminate\Contracts\Auth\Authenticatable;
-use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 
 /**
@@ -16,23 +16,15 @@ use Illuminate\Support\Facades\Storage;
  */
 class ViewRenderTest extends TestCase
 {
+    use RegistersViews;
+
     protected function setUp(): void
     {
         parent::setUp();
 
         Storage::fake('local');
 
-        $this->app['view']->addNamespace('statamic-sentinel', __DIR__ . '/../../resources/views');
-        $this->app['view']->addNamespace('statamic', __DIR__ . '/../Fixtures/views');
-
-        preg_match_all("/->name\\('(d3-sentinel\\.[a-z0-9.\\-]+)'\\)/", file_get_contents(__DIR__ . '/../../src/ServiceProvider.php'), $names);
-
-        foreach (array_merge($names[1], ['utilities.sentinel']) as $i => $name) {
-            Route::any("/_view-test/{$i}/{id?}", fn () => '')->name('statamic.cp.' . $name);
-            Route::any("/_view-test-bare/{$i}/{id?}", fn () => '')->name($name);
-        }
-
-        $this->app['router']->getRoutes()->refreshNameLookups();
+        $this->registerViews();
     }
 
     public function test_utility_renders_for_a_super_with_a_full_payload(): void
@@ -174,26 +166,4 @@ class ViewRenderTest extends TestCase
             'audited_at' => '16 Sep 2026, 09:00',
         ];
     }
-}
-
-class ViewTestUser implements Authenticatable
-{
-    public string $email = 'super@example.test';
-
-    public function __construct(protected bool $super)
-    {
-    }
-
-    public function isSuper(): bool
-    {
-        return $this->super;
-    }
-
-    public function getAuthIdentifierName(): string { return 'id'; }
-    public function getAuthIdentifier(): mixed { return 1; }
-    public function getAuthPasswordName(): string { return 'password'; }
-    public function getAuthPassword(): string { return ''; }
-    public function getRememberToken(): string { return ''; }
-    public function setRememberToken($value): void {}
-    public function getRememberTokenName(): string { return ''; }
 }

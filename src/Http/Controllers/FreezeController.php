@@ -12,17 +12,17 @@ class FreezeController extends Controller
     {
         abort_unless(auth()->user()?->isSuper(), 403);
 
-        $recipients = $this->parseRecipients((string) $request->input('email', ''));
+        $recipients = $this->parseRecipients($request->input('email', ''));
 
         $result = $service->schedule(
-            (string) $request->input('notify_at', ''),
-            (string) $request->input('freeze_at', ''),
+            $this->stringInput($request, 'notify_at'),
+            $this->stringInput($request, 'freeze_at'),
             $recipients,
             $this->actorId(),
             [
-                'freeze_ends_at'          => (string) $request->input('freeze_ends_at', ''),
-                'expected_duration'       => $request->input('expected_duration'),
-                'expected_duration_unit'  => (string) $request->input('expected_duration_unit', 'minutes'),
+                'freeze_ends_at'          => $this->stringInput($request, 'freeze_ends_at'),
+                'expected_duration'       => is_scalar($request->input('expected_duration')) ? $request->input('expected_duration') : null,
+                'expected_duration_unit'  => $this->stringInput($request, 'expected_duration_unit', 'minutes'),
             ]
         );
 
@@ -95,9 +95,24 @@ class FreezeController extends Controller
         return $user->email ?? null;
     }
 
-    protected function parseRecipients(string $input): array
+    /**
+     * A request field as a string. (string) on an array field (`notify_at[]=`)
+     * raised "Array to string conversion" and a 500 instead of a 422.
+     */
+    protected function stringInput(Request $request, string $key, string $default = ''): string
     {
-        return collect(explode(',', $input))
+        $value = $request->input($key, $default);
+
+        return is_scalar($value) ? (string) $value : $default;
+    }
+
+    protected function parseRecipients($input): array
+    {
+        if (is_array($input)) {
+            $input = implode(',', array_filter($input, 'is_string'));
+        }
+
+        return collect(explode(',', is_string($input) ? $input : ''))
             ->map(fn ($e) => trim($e))
             ->filter()
             ->unique()
