@@ -19,6 +19,8 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
   installation is running version 5.73.2. The latest version is 6.33.0. That's 84 versions behind."
   instead of "Your Statamic website needs attention", as plain text rather than a coloured box. The
   update report's opening line is plain text too.
+  Underneath, a short "Did you know?" explains that a site is several pieces of software (Statamic,
+  Laravel, PHP and smaller packages), each with its own updates.
 - **Security issues lead the status email's package rows.** When Composer or npm has security
   issues, the row shows just the security issues pill instead of "20 updates available" beside it,
   since the two counts measure different things and read as a contradiction side by side. Rows

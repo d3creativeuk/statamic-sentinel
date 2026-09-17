@@ -80,6 +80,8 @@ class EmailAndControllerAccessTest extends TestCase
         $this->assertStringNotContainsString('across 1 package', $rendered['status']);
         $this->assertStringNotContainsString('1 update available', $rendered['status']);
 
+        $this->assertStringContainsString("Did you know?</strong> Your website isn't a single piece of software.", $rendered['status']);
+
         // The banner reads like an email about the Statamic install.
         $this->assertStringContainsString("Hi, your Statamic installation is running version 6.0.0. The latest version is 6.1.0. That&#039;s 1 version behind.", $rendered['status']);
 

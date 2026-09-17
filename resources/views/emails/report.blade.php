@@ -247,6 +247,9 @@
                     <div style="font-size:13px; font-weight:400; color:#475569; line-height:1.4; margin-top:4px;">{{ $introDetail }}</div>
                 @endif
             @endif
+
+            {{-- Context for the rows below, for readers who don't know why a site has several versions. --}}
+            <div style="font-size:13px; font-weight:400; color:#475569; line-height:1.55; margin-top:12px;"><strong style="font-weight:600; color:#0f172a;">Did you know?</strong> Your website isn't a single piece of software. Statamic runs on Laravel, which runs on PHP, and it also uses dozens of smaller packages for things like forms, images and search. Each receives its own updates and security fixes.</div>
         </div>
 
         {{-- Always-visible rows: Statamic / Laravel / PHP / Composer / npm --}}
