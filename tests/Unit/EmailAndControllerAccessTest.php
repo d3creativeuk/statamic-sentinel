@@ -85,6 +85,27 @@ class EmailAndControllerAccessTest extends TestCase
         $majorHtml  = (new SentinelReport($majorAudit))->render();
         $this->assertLessThan(strpos($majorHtml, 'Security update</span>'), strpos($majorHtml, 'Major version behind</span>'));
 
+        // PHP leads with the patch inside its branch and names the newer branch.
+        $phpAudit = $this->audit();
+        $phpAudit['php'] = ['version' => '8.4.20', 'latest' => '8.5.10', 'status' => 'active', 'label' => 'Active Support', 'branches' => [
+            ['cycle' => '8.5', 'latest' => '8.5.10', 'support' => '2027-12-31', 'eol' => '2029-12-31'],
+            ['cycle' => '8.4', 'latest' => '8.4.25', 'support' => '2026-12-31', 'eol' => '2028-12-31'],
+        ]];
+        $phpHtml = (new SentinelReport($phpAudit))->render();
+        $phpRow  = substr($phpHtml, strpos($phpHtml, '>PHP<'), 1500);
+        $this->assertStringContainsString('8.4.20 → 8.4.25', $phpRow);
+        $this->assertStringNotContainsString('8.4.20 → 8.5.10', $phpRow);
+        $this->assertStringContainsString('PHP 8.5.10 is also available', $phpRow);
+        $this->assertLessThan(strpos($phpRow, 'Update available'), strpos($phpRow, 'Major version behind'));
+
+        // On the latest patch of a security-only branch: no update pill.
+        $phpAudit['php'] = ['version' => '8.3.33', 'latest' => '8.5.10', 'status' => 'security', 'label' => 'Security Fixes Only', 'branches' => [
+            ['cycle' => '8.5', 'latest' => '8.5.10'], ['cycle' => '8.3', 'latest' => '8.3.33'],
+        ]];
+        $phpRow = substr($html = (new SentinelReport($phpAudit))->render(), strpos($html, '>PHP<'), 1500);
+        $this->assertStringContainsString('Security only', $phpRow);
+        $this->assertStringNotContainsString('Update available', $phpRow);
+
         // Platform versions sit beside the title, not in front of the pills.
         $this->assertMatchesRegularExpression('/>Statamic<span[^>]*>6\.0\.0 → 6\.1\.0<\/span><\/div>/u', $rendered['status']);
         $this->assertStringContainsString('1 hour 30 minutes', $rendered['notification']);
