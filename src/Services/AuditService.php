@@ -30,6 +30,9 @@ class AuditService
 
     const EOL_DATE_PHP_API = 'https://endoflife.date/api/php.json';
 
+    // A plain stable release: 1.2.3, no pre-release or build suffix.
+    const STABLE_VERSION_PATTERN = '/^[0-9]+\.[0-9]+\.[0-9]+$/';
+
     /**
      * Sent on every outbound request. Guzzle doesn't ask for compression by
      * default, so registries answer uncompressed: Packagist's laravel/framework
@@ -347,14 +350,11 @@ class AuditService
      */
     protected function liveComposerVersions(): array
     {
-        $lock = $this->readJsonFile(base_path('composer.lock'));
-
-        if ($lock === null) return [];
-
         $versions = [];
-        foreach (array_merge($lock['packages'] ?? [], $lock['packages-dev'] ?? []) as $pkg) {
-            if (! empty($pkg['name']) && ! empty($pkg['version'])) {
-                $versions[$pkg['name']] = ltrim($pkg['version'], 'v');
+
+        foreach ($this->composerLockPackages() as $pkg) {
+            if (! empty($pkg['version'])) {
+                $versions[$pkg['name']] = ltrim((string) $pkg['version'], 'v');
             }
         }
 
@@ -362,8 +362,24 @@ class AuditService
     }
 
     /**
-     * `['alpinejs' => '3.13.0', ...]` from the live package-lock.json.
-     * Supports lock v1 (`dependencies`) and v2/v3 (`packages`).
+     * Every package entry in composer.lock (packages + packages-dev) that has
+     * a name. Pass a decoded lock, or omit it to read the project's.
+     */
+    protected function composerLockPackages(?array $lock = null): array
+    {
+        $lock = $lock ?? $this->readJsonFile(base_path('composer.lock')) ?? [];
+
+        return array_values(array_filter(
+            array_merge((array) ($lock['packages'] ?? []), (array) ($lock['packages-dev'] ?? [])),
+            fn ($pkg) => is_array($pkg) && ! empty($pkg['name'])
+        ));
+    }
+
+    /**
+     * `['alpinejs' => '3.13.0', ...]` for the top-level installs in the live
+     * package-lock.json, keyed by the name package.json uses. Supports lock v1
+     * (`dependencies`) and v2/v3 (`packages`). Nested copies are left out;
+     * npmLockPackages() covers the whole tree for the vulnerability check.
      * Empty array if the lock can't be read.
      */
     protected function liveNpmVersions(): array
@@ -376,9 +392,11 @@ class AuditService
 
         if (! empty($lock['packages'])) {
             foreach ($lock['packages'] as $path => $data) {
-                if ($path === '' || empty($data['version'])) continue;
-                $name = preg_replace('#^node_modules/#', '', $path);
-                $versions[$name] = $data['version'];
+                $path = (string) $path;
+
+                if (! str_starts_with($path, 'node_modules/') || substr_count($path, 'node_modules/') > 1 || empty($data['version'])) continue;
+
+                $versions[substr($path, strlen('node_modules/'))] = $data['version'];
             }
         } elseif (! empty($lock['dependencies'])) {
             foreach ($lock['dependencies'] as $name => $data) {
@@ -680,7 +698,7 @@ class AuditService
 
         foreach ($this->packagistVersions($response, $packageKey) as $version) {
             $v = ltrim($version['version'] ?? '', 'v');
-            if (preg_match('/^[0-9]+\.[0-9]+\.[0-9]+$/', $v)) {
+            if (preg_match(self::STABLE_VERSION_PATTERN, $v)) {
                 return $v;
             }
         }
@@ -714,7 +732,7 @@ class AuditService
 
         foreach ($this->packagistVersions($response, $packageKey) as $version) {
             $v = ltrim($version['version'] ?? '', 'v');
-            if (preg_match('/^[0-9]+\.[0-9]+\.[0-9]+$/', $v) && version_compare($v, $current, '>')) {
+            if (preg_match(self::STABLE_VERSION_PATTERN, $v) && version_compare($v, $current, '>')) {
                 $newer[] = $v;
             }
         }
@@ -800,10 +818,8 @@ class AuditService
             return true;
         }
 
-        $lock = $this->readJsonFile(base_path('composer.lock'));
-
-        foreach (array_merge($lock['packages'] ?? [], $lock['packages-dev'] ?? []) as $pkg) {
-            if (($pkg['name'] ?? null) === $name) {
+        foreach ($this->composerLockPackages() as $pkg) {
+            if ($pkg['name'] === $name) {
                 return isset($pkg['extra']['statamic']);
             }
         }
@@ -867,7 +883,7 @@ class AuditService
      */
     protected function composerRequireGraph(array $lock): array
     {
-        $all = array_merge($lock['packages'] ?? [], $lock['packages-dev'] ?? []);
+        $all = $this->composerLockPackages($lock);
 
         $known = [];
         foreach ($all as $pkg) {
@@ -1338,7 +1354,7 @@ class AuditService
             $cycle   = $branch['cycle']  ?? null;   // e.g. "8.5"
             $bLatest = $branch['latest'] ?? null;   // e.g. "8.5.7"
 
-            if (! $cycle || ! $bLatest || ! preg_match('/^[0-9]+\.[0-9]+\.[0-9]+$/', $bLatest)) {
+            if (! $cycle || ! $bLatest || ! preg_match(self::STABLE_VERSION_PATTERN, $bLatest)) {
                 continue;
             }
 
@@ -1380,7 +1396,7 @@ class AuditService
 
         foreach ($branches as $branch) {
             $latest = $branch['latest'] ?? null;
-            if (! $latest || ! preg_match('/^[0-9]+\.[0-9]+\.[0-9]+$/', $latest)) {
+            if (! $latest || ! preg_match(self::STABLE_VERSION_PATTERN, $latest)) {
                 continue;
             }
 
@@ -1414,10 +1430,7 @@ class AuditService
             return ['status' => 'unavailable', 'message' => 'composer.lock not found.', 'severities' => [], 'counts' => [], 'total_packages' => 0, 'total_vulns' => 0];
         }
 
-        $packages = array_merge(
-            $lock['packages']         ?? [],
-            $lock['packages-dev']     ?? []
-        );
+        $packages = $this->composerLockPackages($lock);
 
         if (empty($packages)) {
             return ['status' => 'ok', 'message' => 'No packages found.', 'severities' => [], 'counts' => [], 'total_packages' => 0, 'total_vulns' => 0];
@@ -1925,10 +1938,7 @@ class AuditService
 
         if (empty($direct)) return [];
 
-        $installed = [];
-        foreach (array_merge($lock['packages'] ?? [], $lock['packages-dev'] ?? []) as $pkg) {
-            $installed[$pkg['name']] = ltrim($pkg['version'] ?? '', 'v');
-        }
+        $installed = $this->liveComposerVersions();
 
         $result = [];
         foreach ($direct as $name) {
@@ -1973,7 +1983,7 @@ class AuditService
             $latest = null;
             foreach ($this->packagistVersions($response, $name) as $v) {
                 $ver = ltrim($v['version'] ?? '', 'v');
-                if (preg_match('/^[0-9]+\.[0-9]+\.[0-9]+$/', $ver)) {
+                if (preg_match(self::STABLE_VERSION_PATTERN, $ver)) {
                     $latest = $ver;
                     break;
                 }
@@ -2018,18 +2028,7 @@ class AuditService
 
         if (empty($direct)) return [];
 
-        $installed = [];
-        if (! empty($lock['packages'])) {
-            foreach ($lock['packages'] as $path => $data) {
-                if ($path === '' || empty($data['version'])) continue;
-                $name = preg_replace('#^node_modules/#', '', $path);
-                $installed[$name] = $data['version'];
-            }
-        } elseif (! empty($lock['dependencies'])) {
-            foreach ($lock['dependencies'] as $name => $data) {
-                $installed[$name] = ltrim($data['version'] ?? '', 'v^~');
-            }
-        }
+        $installed = $this->liveNpmVersions();
 
         $result = [];
         foreach ($direct as $name) {
