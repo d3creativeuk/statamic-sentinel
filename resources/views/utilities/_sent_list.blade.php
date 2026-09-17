@@ -4,7 +4,7 @@
 
     Required vars:
       - $entries  array  records from SentMailService::forKind($kind)
-      - $kind     string 'status' or 'update' - used only in copy
+      - $kind     string 'status', 'update' or 'maintenance' - used only in copy
 --}}
 @php
     $kindLabel = [
@@ -74,7 +74,11 @@
                                 $isQueued   = $outcome === 'queued';
                                 $oColour    = $isFailed ? '#ef4444' : ($isQueued ? '#b45309' : '#047857');
                                 $oLabel     = $isFailed ? 'Failed' : ($isQueued ? 'Queued' : 'Sent');
-                                $previewUrl = route('statamic.cp.d3-sentinel.preview-sent-report', ['id' => $entry['id']]);
+                                // A hand-edited or partly written index can lack an id; skip its
+                                // Preview rather than let one bad row break the whole page.
+                                $previewUrl = ! empty($entry['id'])
+                                    ? route('statamic.cp.d3-sentinel.preview-sent-report', ['id' => $entry['id']])
+                                    : null;
                                 $previewTitle = ucfirst($kindLabel) . ' sent ' . $recordedAt;
                             @endphp
                             <tr @if (! $loop->last) style="border-bottom:1px solid #f1f5f9;" @endif>
@@ -99,11 +103,13 @@
                                 </td>
                                 <td style="padding:10px 14px; text-align:right; white-space:nowrap; vertical-align:top;">
                                     <div style="display:inline-flex; align-items:center; gap:6px;">
+                                        @if ($previewUrl)
                                         <button type="button"
                                                 x-on:click="$dispatch('sentinel-preview-open', { url: @js($previewUrl), title: @js($previewTitle) })"
                                                 style="font-size:12px; font-weight:600; color:#0f172a; background:#fff; border:1px solid #e2e8f0; padding:4px 10px; border-radius:5px; cursor:pointer; font-family:inherit;">
                                             Preview
                                         </button>
+                                        @endif
                                         @if (! empty($entry['id']))
                                             @include('statamic-sentinel::utilities._delete_row_button', [
                                                 'url'     => cp_route('d3-sentinel.sent.actions.run'),

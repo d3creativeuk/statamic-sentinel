@@ -210,10 +210,10 @@
                         x-bind:disabled="sending || endsBeforeStart"
                         x-bind:style="{ background: state === 'success' ? '#047857' : (state === 'error' ? '#ef4444' : '#0f172a') }"
                         style="font-size:13px; font-weight:600; color:#fff; background:#0f172a; border:none; padding:8px 16px; border-radius:6px; cursor:pointer; font-family:inherit;">
-                    <span x-show="sending" x-cloak style="display:inline-flex; align-items:center; gap:6px;">
+                    <span x-show="sending" x-cloak><span style="display:inline-flex; align-items:center; gap:6px;">
                         <span aria-hidden="true" style="display:inline-block; font-size:14px; line-height:1; transform-origin:center; animation:sentinel-spin 1s linear infinite;">↻</span>
                         Scheduling…
-                    </span>
+                    </span></span>
                     <span x-show="!sending && state === 'success'" x-cloak>✓ Scheduled</span>
                     <span x-show="!sending && state === 'error'" x-cloak>✕ Failed</span>
                     <span x-show="!sending && state === 'idle'">Schedule update</span>
@@ -316,10 +316,10 @@
                             x-bind:disabled="sending"
                             x-bind:style="{ background: state === 'success' ? '#047857' : (state === 'error' ? '#ef4444' : '#0f172a') }"
                             style="font-size:13px; font-weight:600; color:#fff; background:#0f172a; border:none; padding:8px 16px; border-radius:6px; cursor:pointer; font-family:inherit;">
-                        <span x-show="sending" x-cloak style="display:inline-flex; align-items:center; gap:6px;">
+                        <span x-show="sending" x-cloak><span style="display:inline-flex; align-items:center; gap:6px;">
                             <span aria-hidden="true" style="display:inline-block; font-size:14px; line-height:1; transform-origin:center; animation:sentinel-spin 1s linear infinite;">↻</span>
                             Sending…
-                        </span>
+                        </span></span>
                         <span x-show="!sending && state === 'success'" x-cloak>✓ Complete</span>
                         <span x-show="!sending && state === 'error'" x-cloak>✕ Failed</span>
                         <span x-show="!sending && state === 'idle'">Mark as complete</span>
@@ -382,10 +382,10 @@
                                 onConfirm: () => submit()
                             })"
                             style="font-size:13px; font-weight:600; color:#b91c1c; background:#fff; border:1px solid #fecaca; padding:7px 14px; border-radius:6px; cursor:pointer; font-family:inherit;">
-                        <span x-show="sending" x-cloak style="display:inline-flex; align-items:center; gap:6px;">
+                        <span x-show="sending" x-cloak><span style="display:inline-flex; align-items:center; gap:6px;">
                             <span aria-hidden="true" style="display:inline-block; font-size:14px; line-height:1; transform-origin:center; animation:sentinel-spin 1s linear infinite;">↻</span>
                             Cancelling…
-                        </span>
+                        </span></span>
                         <span x-show="!sending && state === 'success'" x-cloak>✓ Cancelled</span>
                         <span x-show="!sending && state === 'error'" x-cloak>✕ Failed</span>
                         <span x-show="!sending && state === 'idle'">Cancel</span>
@@ -437,10 +437,10 @@
                             })"
                             x-bind:style="{ background: state === 'success' ? '#047857' : (state === 'error' ? '#ef4444' : '#0f172a') }"
                             style="font-size:13px; font-weight:600; color:#fff; background:#0f172a; border:none; padding:8px 14px; border-radius:6px; cursor:pointer; font-family:inherit;">
-                        <span x-show="sending" x-cloak style="display:inline-flex; align-items:center; gap:6px;">
+                        <span x-show="sending" x-cloak><span style="display:inline-flex; align-items:center; gap:6px;">
                             <span aria-hidden="true" style="display:inline-block; font-size:14px; line-height:1; transform-origin:center; animation:sentinel-spin 1s linear infinite;">↻</span>
                             Sending…
-                        </span>
+                        </span></span>
                         <span x-show="!sending && state === 'success'" x-cloak>✓ Complete</span>
                         <span x-show="!sending && state === 'error'" x-cloak>✕ Failed</span>
                         <span x-show="!sending && state === 'idle'">Mark as complete</span>

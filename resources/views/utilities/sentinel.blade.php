@@ -157,23 +157,25 @@
     {{-- Tabs --}}
     {{-- Tab state is mirrored to location.hash (e.g. #history) so refresh and
          back/forward land on the active tab instead of jumping to Current. --}}
+    {{-- The hashchange listener is an x-on:...window attribute rather than
+         window.addEventListener in init(), so Alpine removes it when Statamic 6's
+         Inertia navigation unmounts the page instead of piling up one per visit. --}}
     <div x-data="{
         tab: 'current',
+        valid: {!! $isSuper ? "['current', 'history', 'status-report', 'update-report', 'maintenance-report', 'users', 'content-freeze']" : "['current']" !!},
         init() {
-            var valid = {!! $isSuper ? "['current', 'history', 'status-report', 'update-report', 'maintenance-report', 'users', 'content-freeze']" : "['current']" !!};
-            var hash = (window.location.hash || '').replace('#', '');
-            if (valid.indexOf(hash) !== -1) this.tab = hash;
+            this.syncFromHash();
             this.$watch('tab', function (v) {
                 // Keep the existing state: Statamic 6's Inertia stores the page
                 // in it, and a null state makes Back leave the next page on screen.
                 window.history.replaceState(window.history.state, '', '#' + v);
             });
-            window.addEventListener('hashchange', () => {
-                var h = (window.location.hash || '').replace('#', '');
-                if (valid.indexOf(h) !== -1 && this.tab !== h) this.tab = h;
-            });
+        },
+        syncFromHash() {
+            var h = (window.location.hash || '').replace('#', '');
+            if (this.valid.indexOf(h) !== -1 && this.tab !== h) this.tab = h;
         }
-    }">
+    }" x-on:hashchange.window="syncFromHash()">
 
         @if ($isSuper)
         <div role="tablist" style="display:flex; gap:4px; border-bottom:1px solid #e2e8f0; margin-bottom:18px;">
@@ -712,10 +714,10 @@
                             x-bind:disabled="sending"
                             x-bind:style="{ background: state === 'success' ? '#047857' : (state === 'error' ? '#ef4444' : '#0f172a') }"
                             style="flex-shrink:0; font-size:13px; font-weight:600; color:#fff; background:#0f172a; border:none; padding:7px 14px; border-radius:6px; cursor:pointer; white-space:nowrap;">
-                        <span x-show="sending" x-cloak style="display:inline-flex; align-items:center; gap:6px;">
+                        <span x-show="sending" x-cloak><span style="display:inline-flex; align-items:center; gap:6px;">
                             <span aria-hidden="true" style="display:inline-block; font-size:14px; line-height:1; transform-origin:center; animation:sentinel-spin 1s linear infinite;">↻</span>
                             Sending…
-                        </span>
+                        </span></span>
                         <span x-show="!sending && state === 'success'" x-cloak>✓ Sent</span>
                         <span x-show="!sending && state === 'error'" x-cloak>✕ Failed</span>
                         <span x-show="!sending && state === 'idle'">Send Status Report</span>
@@ -804,18 +806,18 @@
                             x-bind:disabled="sending"
                             x-bind:style="{ background: state === 'success' ? '#047857' : (state === 'notice' ? '#f59e0b' : (state === 'error' ? '#ef4444' : '#0f172a')) }"
                             style="flex-shrink:0; font-size:13px; font-weight:600; color:#fff; background:#0f172a; border:none; padding:7px 14px; border-radius:6px; cursor:pointer; white-space:nowrap;">
-                        <span x-show="sending" x-cloak style="display:inline-flex; align-items:center; gap:6px;">
+                        <span x-show="sending" x-cloak><span style="display:inline-flex; align-items:center; gap:6px;">
                             <span aria-hidden="true" style="display:inline-block; font-size:14px; line-height:1; transform-origin:center; animation:sentinel-spin 1s linear infinite;">↻</span>
                             Sending…
-                        </span>
+                        </span></span>
                         <span x-show="!sending && state === 'success'" x-cloak>✓ Sent</span>
                         <span x-show="!sending && state === 'notice'" x-cloak>Hang on</span>
                         <span x-show="!sending && state === 'error'" x-cloak>✕ Failed</span>
                         <span x-show="!sending && state === 'idle'">Send Update Report</span>
                     </button>
                 </form>
-                <div x-show="message" x-cloak
-                     style="display:flex; align-items:center; gap:10px; font-size:13px; margin-top:8px;">
+                <div x-show="message" x-cloak>
+                <div style="display:flex; align-items:center; gap:10px; font-size:13px; margin-top:8px;">
                     <span x-text="message" x-bind:style="{ color: state === 'success' ? '#047857' : (state === 'notice' ? '#f59e0b' : '#ef4444') }"></span>
                     <button type="button"
                             x-show="canForce && !sending"
@@ -823,6 +825,7 @@
                             style="font-size:12px; font-weight:600; color:#0f172a; background:#fff; border:1px solid #e2e8f0; padding:3px 10px; border-radius:5px; cursor:pointer; font-family:inherit;">
                         Send anyway
                     </button>
+                </div>
                 </div>
             </div>
 
@@ -960,10 +963,10 @@
                             x-bind:disabled="sending"
                             x-bind:style="{ background: state === 'success' ? '#047857' : (state === 'error' ? '#ef4444' : '#0f172a') }"
                             style="flex-shrink:0; font-size:13px; font-weight:600; color:#fff; background:#0f172a; border:none; padding:7px 14px; border-radius:6px; cursor:pointer; white-space:nowrap;">
-                        <span x-show="sending" x-cloak style="display:inline-flex; align-items:center; gap:6px;">
+                        <span x-show="sending" x-cloak><span style="display:inline-flex; align-items:center; gap:6px;">
                             <span aria-hidden="true" style="display:inline-block; font-size:14px; line-height:1; transform-origin:center; animation:sentinel-spin 1s linear infinite;">↻</span>
                             Sending…
-                        </span>
+                        </span></span>
                         <span x-show="!sending && state === 'success'" x-cloak>✓ Sent</span>
                         <span x-show="!sending && state === 'error'" x-cloak>✕ Failed</span>
                         <span x-show="!sending && state === 'idle'">Send Plan Summary</span>

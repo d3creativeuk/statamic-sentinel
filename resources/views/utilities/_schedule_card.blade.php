@@ -115,7 +115,8 @@
                     </select>
                 </label>
 
-                <label x-show="form.frequency === 'weekly'" x-cloak style="display:block; font-size:12px; color:#475569; font-weight:600;">
+                <div x-show="form.frequency === 'weekly'" x-cloak>
+                <label style="display:block; font-size:12px; color:#475569; font-weight:600;">
                     Day of week
                     <select name="{{ $key }}[day_of_week]"
                             x-model.number="form.day_of_week"
@@ -129,8 +130,10 @@
                         <option value="6">Saturday</option>
                     </select>
                 </label>
+                </div>
 
-                <label x-show="form.frequency === 'monthly'" x-cloak style="display:block; font-size:12px; color:#475569; font-weight:600;">
+                <div x-show="form.frequency === 'monthly'" x-cloak>
+                <label style="display:block; font-size:12px; color:#475569; font-weight:600;">
                     Day of month
                     <select name="{{ $key }}[day_of_month]"
                             x-model.number="form.day_of_month"
@@ -140,6 +143,7 @@
                         @endfor
                     </select>
                 </label>
+                </div>
 
                 <label style="display:block; font-size:12px; color:#475569; font-weight:600;">
                     Time
@@ -187,10 +191,10 @@
                         x-bind:disabled="sending"
                         x-bind:style="{ background: state === 'success' ? '#047857' : (state === 'error' ? '#ef4444' : '#0f172a') }"
                         style="font-size:13px; font-weight:600; color:#fff; background:#0f172a; border:none; padding:7px 14px; border-radius:6px; cursor:pointer; white-space:nowrap;">
-                    <span x-show="sending" x-cloak style="display:inline-flex; align-items:center; gap:6px;">
+                    <span x-show="sending" x-cloak><span style="display:inline-flex; align-items:center; gap:6px;">
                         <span aria-hidden="true" style="display:inline-block; font-size:14px; line-height:1; transform-origin:center; animation:sentinel-spin 1s linear infinite;">↻</span>
                         Saving…
-                    </span>
+                    </span></span>
                     <span x-show="!sending && state === 'success'" x-cloak>✓ Saved</span>
                     <span x-show="!sending && state === 'error'" x-cloak>✕ Failed</span>
                     <span x-show="!sending && state === 'idle'">Save schedule</span>

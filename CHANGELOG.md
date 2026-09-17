@@ -109,6 +109,10 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
   Panel request, including the login page, so on a site sending mail synchronously the request that
   reached the notification time waited for the email to send. It now runs after the page has been
   delivered, only for signed-in users, and skips the check entirely when no freeze is due.
+- **Small layout glitches in the Control Panel.** Sending spinners, the schedule's day pickers and
+  the "Send anyway" notice lost their spacing and alignment once shown. On Statamic 6, each visit to
+  Sentinel also added another URL-change listener that was never removed. A sent-email record
+  missing its id no longer breaks the whole page.
 
 ## [2.1.1] - 2026-07-27
 
