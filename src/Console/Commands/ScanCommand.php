@@ -36,6 +36,24 @@ class ScanCommand extends Command
             $this->line("  License:  {$licenseLabel}");
         }
 
-        return self::SUCCESS;
+        // A failed lookup reports zeros, so say so and exit non-zero for cron
+        // monitoring instead of printing "0 security issue(s)" as a success.
+        $failed = [];
+
+        foreach (['composer' => 'Composer', 'npm' => 'npm'] as $key => $label) {
+            if (($result[$key]['status'] ?? null) === 'error') {
+                $failed[] = "{$label} vulnerability check failed: " . ($result[$key]['message'] ?? 'unknown error');
+            }
+
+            if (! empty($result[$key]['outdated']['error'])) {
+                $failed[] = "{$label} update check failed: the package registry could not be reached";
+            }
+        }
+
+        foreach ($failed as $message) {
+            $this->error("  {$message}");
+        }
+
+        return empty($failed) ? self::SUCCESS : self::FAILURE;
     }
 }

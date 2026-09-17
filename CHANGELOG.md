@@ -122,6 +122,12 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
   back every 30 days). Expected duration is capped at 60 days, where an absurdly large value
   previously broke the heads-up email. The README and USAGE descriptions of the banners are
   corrected.
+- **Scan edge cases.** Composer packages with a dot in their name (like `mtdowling/jmespath.php`)
+  are now checked for updates. npm aliases (`"vue2": "npm:vue@^2"`) are checked against the real
+  package, and local, workspace and git dependencies are no longer looked up on the registry. If
+  the cache backend is unavailable, the Control Panel reads the last scan from disk instead of
+  erroring. `php artisan sentinel:scan` now reports a failed vulnerability or update check and
+  exits non-zero.
 
 ## [2.1.1] - 2026-07-27
 

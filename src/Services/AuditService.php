@@ -102,13 +102,23 @@ class AuditService
      */
     public function cached(): ?array
     {
-        $cached = Cache::get(self::CACHE_KEY);
+        // Runs on every dashboard render: a cache backend that's down (Redis
+        // restarting, say) falls back to the disk mirror instead of an error.
+        try {
+            $cached = Cache::get(self::CACHE_KEY);
+        } catch (\Throwable $e) {
+            $cached = null;
+        }
 
         if ($cached === null) {
             $cached = $this->readFromDisk();
 
             if ($cached !== null) {
-                Cache::forever(self::CACHE_KEY, $cached);
+                try {
+                    Cache::forever(self::CACHE_KEY, $cached);
+                } catch (\Throwable $e) {
+                    // Rehydrating the cache is best-effort; disk still has it.
+                }
             }
         }
 
@@ -519,6 +529,7 @@ class AuditService
         // Per-scan state: a reused instance must not serve last scan's data.
         $this->packagistResponses = [];
         $this->marketplace        = null;
+        $this->lockfileCache      = [];
         $this->vulnSummaryCache   = null;
         $this->vulnIdsSeen        = [];
 
@@ -561,7 +572,14 @@ class AuditService
             'audited_at' => now()->format('j M Y, H:i'),
         ];
 
-        Cache::forever(self::CACHE_KEY, $result);
+        // A cache failure must not throw away a finished scan: the disk mirror
+        // below still keeps it, and cached() reads from there.
+        try {
+            Cache::forever(self::CACHE_KEY, $result);
+        } catch (\Throwable $e) {
+            // Fall through to the disk mirror.
+        }
+
         $this->writeToDisk($result);
 
         app(HistoryService::class)->recordIfChanged($result);
@@ -637,6 +655,19 @@ class AuditService
     }
 
     /**
+     * A package's version list from a Packagist p2 response. Indexed directly
+     * rather than with json("packages.{$name}"), whose dot notation splits
+     * names like mtdowling/jmespath.php into a path and finds nothing.
+     */
+    protected function packagistVersions($response, string $name): array
+    {
+        $packages = $response->json('packages');
+        $versions = is_array($packages) ? ($packages[$name] ?? []) : [];
+
+        return is_array($versions) ? $versions : [];
+    }
+
+    /**
      * Pluck the newest stable (X.Y.Z) version from a Packagist p2 response.
      * The p2 API returns versions newest-first; dev / RC / beta releases are
      * filtered out by the regex.
@@ -647,7 +678,7 @@ class AuditService
             return null;
         }
 
-        foreach ($response->json("packages.$packageKey", []) as $version) {
+        foreach ($this->packagistVersions($response, $packageKey) as $version) {
             $v = ltrim($version['version'] ?? '', 'v');
             if (preg_match('/^[0-9]+\.[0-9]+\.[0-9]+$/', $v)) {
                 return $v;
@@ -681,7 +712,7 @@ class AuditService
         $current = ltrim($current, 'v');
         $newer   = [];
 
-        foreach ($response->json("packages.$packageKey", []) as $version) {
+        foreach ($this->packagistVersions($response, $packageKey) as $version) {
             $v = ltrim($version['version'] ?? '', 'v');
             if (preg_match('/^[0-9]+\.[0-9]+\.[0-9]+$/', $v) && version_compare($v, $current, '>')) {
                 $newer[] = $v;
@@ -1940,7 +1971,7 @@ class AuditService
             if (! $this->isOkResponse($response)) continue;
 
             $latest = null;
-            foreach ($response->json("packages.{$name}", []) as $v) {
+            foreach ($this->packagistVersions($response, $name) as $v) {
                 $ver = ltrim($v['version'] ?? '', 'v');
                 if (preg_match('/^[0-9]+\.[0-9]+\.[0-9]+$/', $ver)) {
                     $latest = $ver;
@@ -2010,20 +2041,57 @@ class AuditService
         return $result;
     }
 
+    /**
+     * Registry package name for each direct dependency, keyed by the name in
+     * package.json. An alias (`"vue2": "npm:vue@^2"`) is checked as `vue`,
+     * not as whatever package happens to be called `vue2`. Dependencies that
+     * don't come from the registry (file:, link:, workspace:, git and URL
+     * specs) are left out: the registry has nothing to compare them with.
+     */
+    protected function npmRegistryNames(array $names): array
+    {
+        $manifest = $this->readJsonFile(base_path('package.json')) ?? [];
+        $specs    = array_merge($manifest['dependencies'] ?? [], $manifest['devDependencies'] ?? []);
+        $result   = [];
+
+        foreach ($names as $name) {
+            $spec = is_string($specs[$name] ?? null) ? trim($specs[$name]) : '';
+
+            if (str_starts_with($spec, 'npm:')) {
+                $target = substr($spec, 4);
+                $at     = strrpos($target, '@');
+                $result[$name] = $at > 0 ? substr($target, 0, $at) : $target;
+
+                continue;
+            }
+
+            if (preg_match('#^(file:|link:|workspace:|portal:|git\+|git:|github:|https?:|[.~/])#', $spec) || preg_match('#^[\w.-]+/[\w.-]+(\#.*)?$#', $spec)) {
+                continue;
+            }
+
+            $result[$name] = $name;
+        }
+
+        return $result;
+    }
+
     protected function npmOutdated(): array
     {
         $installed = $this->npmInstalledDirect();
 
         if (empty($installed)) return ['total' => 0, 'packages' => []];
 
-        $toCheck = array_keys($installed);
+        $registryNames = $this->npmRegistryNames(array_keys($installed));
+        $toCheck       = array_keys($registryNames);
+
+        if (empty($toCheck)) return ['total' => 0, 'packages' => []];
 
         // Fetch latest versions from npm registry concurrently
         // Scoped packages (@scope/name) are supported natively by the registry URL
         try {
-            $responses = Http::pool(function ($pool) use ($toCheck) {
+            $responses = Http::pool(function ($pool) use ($toCheck, $registryNames) {
                 return array_map(
-                    fn($name) => $pool->as($name)->withHeaders(self::ACCEPT_GZIP)->timeout(5)->get("https://registry.npmjs.org/{$name}/latest"),
+                    fn($name) => $pool->as($name)->withHeaders(self::ACCEPT_GZIP)->timeout(5)->get("https://registry.npmjs.org/{$registryNames[$name]}/latest"),
                     $toCheck
                 );
             });
@@ -2047,7 +2115,7 @@ class AuditService
             }
 
             if (version_compare($current, $latest, '<')) {
-                $outdated[] = [
+                $row = [
                     'name'         => $name,
                     'current'      => $current,
                     'latest'       => $latest,
@@ -2055,6 +2123,12 @@ class AuditService
                     // need the full registry document (tens of MB for vite).
                     'published_at' => $this->npmPublishedAtFromManifest($response->json('_npmOperationalInternal.tmp')),
                 ];
+
+                if ($registryNames[$name] !== $name) {
+                    $row['registry_name'] = $registryNames[$name];
+                }
+
+                $outdated[] = $row;
             }
         }
 
@@ -2086,7 +2160,9 @@ class AuditService
                 continue;
             }
 
-            foreach (file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {
+            $lines = @file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+
+            foreach ($lines === false ? [] : $lines as $line) {
                 $line = trim($line);
 
                 if ($line === '' || str_starts_with($line, '#') || str_starts_with($line, ';')) {
@@ -2167,17 +2243,14 @@ class AuditService
             return $packages;
         }
 
-        $needDoc = array_column(
-            array_filter($packages, fn ($pkg) => empty($pkg['published_at'])),
-            'name'
-        );
+        $needDoc = array_values(array_filter($packages, fn ($pkg) => empty($pkg['published_at'])));
 
         $docs = [];
 
         if (! empty($needDoc)) {
             try {
                 $docs = Http::pool(fn ($pool) => array_map(
-                    fn ($name) => $pool->as($name)->withHeaders(self::ACCEPT_GZIP)->timeout(5)->get("https://registry.npmjs.org/{$name}"),
+                    fn ($pkg) => $pool->as($pkg['name'])->withHeaders(self::ACCEPT_GZIP)->timeout(5)->get('https://registry.npmjs.org/' . ($pkg['registry_name'] ?? $pkg['name'])),
                     $needDoc
                 ));
             } catch (\Throwable $e) {
