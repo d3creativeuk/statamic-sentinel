@@ -14,7 +14,7 @@ class HistoryService
     const RETENTION_DAYS      = 365;
 
     /**
-     * The seven non-timestamp fields used both for change detection and as the
+     * The non-timestamp fields used both for change detection and as the
      * snapshot's data payload.
      */
     const TRACKED_FIELDS = [

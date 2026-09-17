@@ -28,7 +28,8 @@ class MarketplaceService
 
     /**
      * Negative-cache packages that aren't on the marketplace so we don't keep
-     * hammering 404s for every Sentinel scan. Keyed by package name.
+     * hammering 404s within one scan (the instance lives for a single scan).
+     * Keyed by package name.
      *
      * @var array<string, true>
      */

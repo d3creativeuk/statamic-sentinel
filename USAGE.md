@@ -15,7 +15,7 @@ Instead:
 
 Results are cached using the host's default cache store (`CACHE_STORE`) and mirrored to `storage/app/statamic-sentinel/audit.json`. They persist until the next scan overwrites them, and the disk mirror means a `cache:clear` (common after `composer update`) won't wipe your last scan - on the next read, the cache is rehydrated from disk.
 
-> **After updating dependencies:** Sentinel does not watch `composer.lock` or `package-lock.json` for changes, so a fresh `composer update` or `npm install` won't be reflected until the next scan. Hit **Refresh** in the widget/utility header (or run `php artisan sentinel:scan`) to re-read the lockfiles and overwrite the cached audit. Until then, the CP will keep reporting the versions captured by the previous scan.
+> **After updating dependencies:** on every CP load Sentinel compares the cached scan with the live `composer.lock`, `package-lock.json`, Statamic, Laravel and PHP versions. Installed versions, the updates list, "N behind" counts, support status and security flags follow a `composer update` or `npm install` straight away. What can't change without a scan is anything that needs the network: newly published releases and advisories, and vulnerabilities in packages that weren't installed before. Hit **Refresh** (or run `php artisan sentinel:scan`) for those.
 
 ## What gets scanned vs. what gets shown
 
@@ -75,5 +75,10 @@ Sentinel writes runtime state to the host app's `storage/app/` directory under `
 - `sent/index.json` + `sent/{id}.html` - log and rendered HTML of every report sent, capped per kind
 - `content-freeze.json` - the current freeze record (if one is scheduled / notified / active)
 - `content-freeze-history.json` - completed freeze history, newest first, capped at 50
+- `content-freeze-last-cancel.json` - when the last freeze was cancelled, so an older completed freeze's banner doesn't come back
+- `maintenance-plan.json` - Plan Summary settings (plan name, start and expiry dates)
+- `last-active.json` - each CP user's last-active time for the Users tab (timestamps only, kept 30 days)
+
+Two things live in the host's cache store rather than on disk: the audit itself (`d3creative_sentinel_audit`, mirrored to `audit.json` above) and a summary of each OSV advisory (`d3creative_sentinel_osv_summaries`), which lets repeat scans skip re-downloading advisories that haven't changed. Losing either to `cache:clear` only costs a slower next scan.
 
 All of it is per-environment runtime state - regenerable from `composer.lock`, `package-lock.json`, and the live OSV/Packagist/npm APIs. Laravel's default `.gitignore` already covers `storage/app/`, so these files aren't (and shouldn't be) tracked in git. Back them up with the rest of `storage/` if you want to preserve the sent archive across environment moves.

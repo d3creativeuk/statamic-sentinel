@@ -76,7 +76,7 @@ Then add the widget to your CP dashboard by adding `sentinel` to the widgets arr
 
 ## Usage
 
-Sentinel scans on demand, not on every CP load. After dependency updates, hit **Refresh** in the widget/utility header to re-read your lockfiles - the cached audit doesn't update on its own. See [USAGE.md](USAGE.md) for scanning, scheduling, and storage details.
+Sentinel scans on demand (or on a schedule you opt into with `SENTINEL_SCAN_SCHEDULE`), not on every CP load. Between scans the CP checks your lockfiles and runtime versions, so installed versions, update lists and security flags follow a `composer update` straight away; new advisories and releases only appear after the next scan. See [USAGE.md](USAGE.md) for scanning, scheduling, and storage details.
 
 Reporting, history, scheduling, and Content Freeze are super-admin only. A non-super user granted the `access sentinel utility` permission sees a read-only view: the **Current** audit plus **Refresh**, without the report/history/freeze tabs. The dashboard widget follows the same permission: users without it don't see the widget. Manual scans are limited to one a minute.
 
