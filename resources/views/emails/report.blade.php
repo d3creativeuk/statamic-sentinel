@@ -250,8 +250,8 @@
                     <td class="sentinel-row-cell" style="padding:12px 16px; vertical-align:middle;">
                         {{-- Platform rows put the version beside the title; package rows keep
                              their detail (if any) in front of the pills. --}}
-                        <div style="font-size:13px; font-weight:600; color:#0f172a;">{{ $row['label'] }}@if ($row['kind'] === 'platform' && ! empty($b['detail']))<span style="font-weight:500; color:#475569; margin-left:8px; font-variant-numeric:tabular-nums;">{{ $b['detail'] }}</span>@endif</div>
-                        <div style="font-size:12px; color:#475569; margin-top:3px;">{{ $row['description'] }}</div>
+                        <div style="font-size:15px; font-weight:600; color:#0f172a;">{{ $row['label'] }}@if ($row['kind'] === 'platform' && ! empty($b['detail']))<span style="font-weight:500; color:#475569; margin-left:8px; font-variant-numeric:tabular-nums;">{{ $b['detail'] }}</span>@endif</div>
+                        <div style="font-size:13px; color:#475569; margin-top:3px;">{{ $row['description'] }}</div>
                         <div class="sentinel-row-meta" style="margin-top:8px; font-size:12px; color:#475569; font-variant-numeric:tabular-nums; line-height:1.8;">
                             @if ($row['kind'] !== 'platform' && ! empty($b['detail']))
                                 <span style="color:#475569; margin-right:8px;">{{ $b['detail'] }}</span>
@@ -276,8 +276,8 @@
             <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden; margin-bottom:10px;">
                 <tr>
                     <td class="sentinel-row-cell" style="padding:12px 16px; vertical-align:middle;">
-                        <div style="font-size:13px; font-weight:600; color:#0f172a;">Statamic License Status</div>
-                        <div style="font-size:12px; color:#475569; margin-top:3px;">The commercial licence for your CMS</div>
+                        <div style="font-size:15px; font-weight:600; color:#0f172a;">Statamic License Status</div>
+                        <div style="font-size:13px; color:#475569; margin-top:3px;">The commercial licence for your CMS</div>
                         <div class="sentinel-row-meta" style="margin-top:8px; font-size:12px; color:#475569; font-variant-numeric:tabular-nums; line-height:1.8;">
                             <span class="sentinel-pill" style="display:inline-block; margin:2px 6px 2px 0; font-size:11px; font-weight:600; padding:2px 8px; border-radius:4px; color:{{ $lb['colour'] }}; border:1px solid {{ $lb['colour'] }}; background:#fff;">{{ $lb['text'] }}</span>
                         </div>

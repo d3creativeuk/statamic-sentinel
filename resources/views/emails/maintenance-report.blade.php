@@ -150,8 +150,8 @@
             <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden; margin-bottom:10px;">
                 <tr>
                     <td class="sentinel-row-cell" style="padding:12px 16px; vertical-align:middle;">
-                        <div style="font-size:13px; font-weight:600; color:#0f172a;">{{ $r['label'] }}</div>
-                        <div style="font-size:12px; color:#475569; margin-top:3px;">{{ $row['description'] }}</div>
+                        <div style="font-size:15px; font-weight:600; color:#0f172a;">{{ $r['label'] }}</div>
+                        <div style="font-size:13px; color:#475569; margin-top:3px;">{{ $row['description'] }}</div>
                         <div class="sentinel-row-meta" style="margin-top:8px; font-size:12px; color:#475569; font-variant-numeric:tabular-nums; line-height:1.8;">
                             <span class="sentinel-pill" style="display:inline-block; font-size:11px; font-weight:600; padding:2px 8px; border-radius:4px; color:{{ $r['colour'] }}; border:1px solid {{ $r['colour'] }}; background:#fff;">{{ $r['pill'] }}</span>
                         </div>
@@ -174,8 +174,8 @@
             <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden; margin-bottom:10px;">
                 <tr>
                     <td class="sentinel-row-cell" style="padding:12px 16px; vertical-align:middle;">
-                        <div style="font-size:13px; font-weight:600; color:#0f172a;">{{ $row['label'] }}</div>
-                        <div style="font-size:12px; color:#475569; margin-top:3px;">{{ $row['description'] }}</div>
+                        <div style="font-size:15px; font-weight:600; color:#0f172a;">{{ $row['label'] }}</div>
+                        <div style="font-size:13px; color:#475569; margin-top:3px;">{{ $row['description'] }}</div>
                         @if ($secLine)
                             <div style="font-size:12px; color:#b45309; margin-top:5px; font-weight:500;">{{ $secLine }}@if ($partial) <span style="color:#94a3b8; font-weight:400;">(severity recorded for newer updates)</span>@endif</div>
                         @endif

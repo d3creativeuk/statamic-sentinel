@@ -146,8 +146,8 @@
                 <tr>
                     <td class="sentinel-row-cell" style="padding:12px 16px; vertical-align:middle;">
                         {{-- Version beside the title, pill underneath the description. --}}
-                        <div style="font-size:13px; font-weight:600; color:#0f172a;">{{ $r['label'] }}<span style="font-weight:500; color:#475569; margin-left:8px; font-variant-numeric:tabular-nums;">@if ($r['changed']){{ $platform[$row['key']]['from'] }} <span style="color:#94a3b8;">→</span> <strong style="color:#0f172a;">{{ $platform[$row['key']]['to'] }}</strong>@else{{ $r['detail'] }}@endif</span></div>
-                        <div style="font-size:12px; color:#475569; margin-top:3px;">{{ $row['description'] }}</div>
+                        <div style="font-size:15px; font-weight:600; color:#0f172a;">{{ $r['label'] }}<span style="font-weight:500; color:#475569; margin-left:8px; font-variant-numeric:tabular-nums;">@if ($r['changed']){{ $platform[$row['key']]['from'] }} <span style="color:#94a3b8;">→</span> <strong style="color:#0f172a;">{{ $platform[$row['key']]['to'] }}</strong>@else{{ $r['detail'] }}@endif</span></div>
+                        <div style="font-size:13px; color:#475569; margin-top:3px;">{{ $row['description'] }}</div>
                         <div class="sentinel-row-meta" style="margin-top:8px; font-size:12px; color:#475569; font-variant-numeric:tabular-nums; line-height:1.8;">
                             <span class="sentinel-pill" style="display:inline-block; margin:2px 6px 2px 0; font-size:11px; font-weight:600; padding:2px 8px; border-radius:4px; color:{{ $r['colour'] }}; border:1px solid {{ $r['colour'] }}; background:#fff;">{{ $r['badge'] }}</span>
                         </div>
@@ -161,8 +161,8 @@
         <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden; margin-bottom:10px;">
             <tr style="{{ $composerChanges > 0 ? 'border-bottom:1px solid #f1f5f9;' : '' }}">
                 <td class="sentinel-row-cell" style="padding:12px 16px; vertical-align:middle;">
-                    <div style="font-size:13px; font-weight:600; color:#0f172a;">Composer</div>
-                    <div style="font-size:12px; color:#475569; margin-top:3px;">Third-party PHP packages your site uses</div>
+                    <div style="font-size:15px; font-weight:600; color:#0f172a;">Composer</div>
+                    <div style="font-size:13px; color:#475569; margin-top:3px;">Third-party PHP packages your site uses</div>
                     <div class="sentinel-row-meta" style="margin-top:8px; font-size:12px; color:#475569; font-variant-numeric:tabular-nums; line-height:1.8;">
                         <span style="font-size:11px; font-weight:600; padding:2px 8px; border-radius:4px; color:{{ $cs['colour'] }}; border:1px solid {{ $cs['colour'] }}; background:#fff;">{{ $cs['badge'] }}</span>
                     </div>
@@ -199,8 +199,8 @@
         <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden; margin-bottom:24px;">
             <tr style="{{ $npmChanges > 0 ? 'border-bottom:1px solid #f1f5f9;' : '' }}">
                 <td class="sentinel-row-cell" style="padding:12px 16px; vertical-align:middle;">
-                    <div style="font-size:13px; font-weight:600; color:#0f172a;">npm</div>
-                    <div style="font-size:12px; color:#475569; margin-top:3px;">Third-party JavaScript packages your site uses</div>
+                    <div style="font-size:15px; font-weight:600; color:#0f172a;">npm</div>
+                    <div style="font-size:13px; color:#475569; margin-top:3px;">Third-party JavaScript packages your site uses</div>
                     <div class="sentinel-row-meta" style="margin-top:8px; font-size:12px; color:#475569; font-variant-numeric:tabular-nums; line-height:1.8;">
                         <span style="font-size:11px; font-weight:600; padding:2px 8px; border-radius:4px; color:{{ $ns['colour'] }}; border:1px solid {{ $ns['colour'] }}; background:#fff;">{{ $ns['badge'] }}</span>
                     </div>
@@ -285,8 +285,8 @@
             <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden; margin-bottom:10px;">
                 <tr>
                     <td class="sentinel-row-cell" style="padding:12px 16px; vertical-align:middle;">
-                        <div style="font-size:13px; font-weight:600; color:#0f172a;">Statamic License Status</div>
-                        <div style="font-size:12px; color:#475569; margin-top:3px;">The commercial licence for your CMS</div>
+                        <div style="font-size:15px; font-weight:600; color:#0f172a;">Statamic License Status</div>
+                        <div style="font-size:13px; color:#475569; margin-top:3px;">The commercial licence for your CMS</div>
                         <div class="sentinel-row-meta" style="margin-top:8px; font-size:12px; color:#475569; font-variant-numeric:tabular-nums; line-height:1.8;">
                             @php $licenseNow = $license['to'] ?? $license['from']; @endphp
                             @if ($licenseChanged)
