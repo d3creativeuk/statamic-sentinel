@@ -82,12 +82,20 @@ class EmailAndControllerAccessTest extends TestCase
 
         // The banner reads like an email about the Statamic install.
         $this->assertStringContainsString("Hi, your Statamic installation is running version 6.0.0. The latest version is 6.1.0. That&#039;s 1 version behind.", $rendered['status']);
-        $this->assertStringNotContainsString('active license', $rendered['status']); // licence is due for renewal here
 
         $licensed = $this->audit();
         $licensed['license']['status'] = 'ok';
         $licensed['statamic']['releases_behind'] = 34;
-        $this->assertStringContainsString('That&#039;s 34 versions behind. Since you have an active license, it would make sense to keep this updated.', (new SentinelReport($licensed))->render());
+        $licensedHtml = (new SentinelReport($licensed))->render();
+        $this->assertStringContainsString('That&#039;s 34 versions behind.</div>', $licensedHtml);
+        $this->assertStringNotContainsString('active license', $licensedHtml);
+
+        // Out of date with no behind count: the standard headline, not a shorter message.
+        $noCount = $this->audit();
+        unset($noCount['statamic']['releases_behind']);
+        $noCountHtml = (new SentinelReport($noCount))->render();
+        $this->assertStringNotContainsString('Hi, your Statamic', $noCountHtml);
+        $this->assertStringContainsString('Your Statamic website needs attention', $noCountHtml);
 
         $current = $this->audit();
         $current['statamic'] = ['current' => '6.1.0', 'latest' => '6.1.0', 'is_latest' => true, 'status' => 'ok'];

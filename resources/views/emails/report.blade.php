@@ -210,31 +210,21 @@
     // The banner reads like the opening of an email about the Statamic
     // install. The accent colour above still reflects the overall state; the
     // rows below carry the detail. Falls back to the summary line when the
-    // audit has no Statamic version.
+    // audit has no Statamic version, or is out of date without a
+    // releases-behind count (scans from before that existed).
     $statamicCurrent = $statamic['current'] ?? null;
     $statamicLatest  = $statamic['latest']  ?? null;
+    $statamicBehind  = (int) ($statamic['releases_behind'] ?? 0);
     $introMessage    = null;
 
-    if ($statamicCurrent) {
-        if ($statamicLatest && version_compare($statamicCurrent, $statamicLatest, '<')) {
-            $behind   = (int) ($statamic['releases_behind'] ?? 0);
-            $messages = [
-                'Hi, your Statamic installation is running version ' . $statamicCurrent . '.',
-                'The latest version is ' . $statamicLatest . '.',
-            ];
-
-            if ($behind > 0) {
-                $messages[] = "That's " . $behind . ' ' . \Illuminate\Support\Str::plural('version', $behind) . ' behind.';
-            }
-
-            if (($license['status'] ?? null) === 'ok') {
-                $messages[] = 'Since you have an active license, it would make sense to keep this updated.';
-            }
-
-            $introMessage = implode(' ', $messages);
-        } else {
-            $introMessage = 'Hi, your Statamic installation is running the latest version, ' . $statamicCurrent . '.';
+    if ($statamicCurrent && $statamicLatest && version_compare($statamicCurrent, $statamicLatest, '<')) {
+        if ($statamicBehind > 0) {
+            $introMessage = 'Hi, your Statamic installation is running version ' . $statamicCurrent . '. '
+                . 'The latest version is ' . $statamicLatest . '. '
+                . "That's " . $statamicBehind . ' ' . \Illuminate\Support\Str::plural('version', $statamicBehind) . ' behind.';
         }
+    } elseif ($statamicCurrent) {
+        $introMessage = 'Hi, your Statamic installation is running the latest version, ' . $statamicCurrent . '.';
     }
 @endphp
 
