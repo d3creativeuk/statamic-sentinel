@@ -116,7 +116,7 @@
                 'badge' => ! empty($history) ? ['text' => count($history), 'bg' => '#e2e8f0', 'fg' => '#475569'] : null],
             ['key' => 'status-report',      'label' => 'Status Report'],
             ['key' => 'update-report',      'label' => 'Update Report'],
-            ['key' => 'maintenance-report', 'label' => 'Plan Summary'],
+            ['key' => 'plan-summary',       'label' => 'Plan Summary'],
             ['key' => 'users',              'label' => 'Users',
                 'badge' => $onlineCount > 0 ? ['text' => $onlineCount, 'bg' => '#dcfce7', 'fg' => '#166534', 'dot' => '#16a34a'] : null],
             // Pushed to the far right of the strip.
@@ -761,7 +761,7 @@
         </div>
 
         {{-- Plan Summary tab --}}
-        <div x-show="tab === 'maintenance-report'" role="tabpanel" id="sentinel-panel-maintenance-report" aria-labelledby="sentinel-tab-maintenance-report" x-cloak>
+        <div x-show="tab === 'plan-summary'" role="tabpanel" id="sentinel-panel-plan-summary" aria-labelledby="sentinel-tab-plan-summary" x-cloak>
 
             {{-- Plan details --}}
             <div x-data="{

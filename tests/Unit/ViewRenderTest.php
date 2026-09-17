@@ -45,7 +45,7 @@ class ViewRenderTest extends TestCase
 
         $html = $this->renderUtility($this->audit());
 
-        foreach (['current', 'history', 'status-report', 'update-report', 'maintenance-report', 'users', 'notify'] as $key) {
+        foreach (['current', 'history', 'status-report', 'update-report', 'plan-summary', 'users', 'notify'] as $key) {
             $this->assertStringContainsString('id="sentinel-tab-' . $key . '"', $html);
             $this->assertStringContainsString('aria-controls="sentinel-panel-' . $key . '"', $html);
             $this->assertMatchesRegularExpression('/id="sentinel-panel-' . $key . '"\s+aria-labelledby="sentinel-tab-' . $key . '"/', $html);
