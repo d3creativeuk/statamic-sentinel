@@ -23,8 +23,18 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
   says what's outstanding and shows any note explaining it, not just the report where the issue
   first appeared.
 
+### Changed
+
+- **The update report's opening counts only unexplained issues as needing attention.** It read
+  "new security issues need attention" even when every issue had a note explaining it. It now
+  counts new and still-open issues without a note ("…but 1 vulnerability needs attention. 1 more
+  has a note below."), and when all of them have notes it says so instead ("…has been updated.
+  2 vulnerabilities have notes below.").
+
 ### Fixed
 
+- **The update report's pills are all the same height.** The Composer and npm summary pills were
+  inline, so they sat shorter than the Statamic, Laravel, PHP and licence pills beside them.
 - **The update report's vulnerability counts match the packages listed.** They were the change in
   each ecosystem's total, so a fixed issue and a new one cancelled out: "2 resolved, 3 new" read as
   "1 new", and a one-for-one swap read as "No changes detected".

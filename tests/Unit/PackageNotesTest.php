@@ -295,6 +295,26 @@ class PackageNotesTest extends TestCase
         $this->assertStringNotContainsString('tailwindcss:</strong>', $html);
     }
 
+    public function test_the_opening_says_only_unexplained_issues_need_attention(): void
+    {
+        // Two still open, plus a fix so the report has a change to describe.
+        $report = UpdateReportBuilder::build(
+            $this->snapshot(['braces' => 1, 'postcss-selector-parser' => 1], ['braces' => 'tailwindcss', 'postcss-selector-parser' => '@tailwindcss/typography']),
+            $this->snapshot(['braces' => 1, 'postcss-selector-parser' => 1, 'source-map-js' => 1])
+        );
+        $opening = fn () => (new SentinelUpdateReport($report))->render();
+
+        $this->assertStringContainsString('Your Statamic website has been updated, but 2 vulnerabilities need attention.</div>', $opening());
+
+        (new PackageNoteService)->set('npm', 'tailwindcss', 'Stuck on Tailwind v3.');
+        $this->assertStringContainsString('Your Statamic website has been updated, but 1 vulnerability needs attention. 1 more has a note below.</div>', $opening());
+
+        (new PackageNoteService)->set('npm', '@tailwindcss/typography', 'Pins the old parser.');
+        $html = $opening();
+        $this->assertStringContainsString('Your Statamic website has been updated. 2 vulnerabilities have notes below.</div>', $html);
+        $this->assertStringNotContainsString('need attention', $html);
+    }
+
     public function test_the_utility_shows_a_saved_note_and_escapes_it(): void
     {
         $this->actingAs(new ViewTestUser(true));

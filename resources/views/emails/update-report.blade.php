@@ -65,10 +65,32 @@
     // red for states that need action, green for active, grey otherwise.
     $licenseColour = fn($s) => in_array($s, ['renewal', 'invalid']) ? '#dc2626' : ($s === 'ok' ? '#047857' : '#64748b');
 
-    if ($vulnsIntro > 0) {
-        $intro = 'Your Statamic website has been updated, but new security issues need attention.';
+    // Outstanding (new or still open) advisories, split by whether a note
+    // explains them. A noted one has been looked at, so it doesn't "need
+    // attention", but the opening still says it's there.
+    $notedVulns   = 0;
+    $unnotedVulns = 0;
+    foreach (array_merge(
+        $vulns['composer_introduced_packages'] ?? [], $vulns['npm_introduced_packages'] ?? [],
+        $vulns['composer_open_packages'] ?? [],       $vulns['npm_open_packages'] ?? []
+    ) as $p) {
+        if (\D3Creative\Sentinel\Services\PackageNoteService::forEntry($notes ?? [], $p)) {
+            $notedVulns += $p['count'] ?? 1;
+        } else {
+            $unnotedVulns += $p['count'] ?? 1;
+        }
+    }
+    $vulnCount   = fn($n) => $n . ' ' . ($n === 1 ? 'vulnerability' : 'vulnerabilities');
+    $notedPhrase = fn($n) => $n === 1 ? 'has a note' : 'have notes';
+
+    if ($unnotedVulns > 0) {
+        $intro = 'Your Statamic website has been updated, but ' . $vulnCount($unnotedVulns)
+            . ($unnotedVulns === 1 ? ' needs' : ' need') . ' attention.'
+            . ($notedVulns > 0 ? ' ' . $notedVulns . ' more ' . $notedPhrase($notedVulns) . ' below.' : '');
     } elseif ($licenseAlert) {
         $intro = 'Your Statamic website has been updated. Your license is now due for renewal.';
+    } elseif ($hasAnyChange && $notedVulns > 0) {
+        $intro = 'Your Statamic website has been updated. ' . $vulnCount($notedVulns) . ' ' . $notedPhrase($notedVulns) . ' below.';
     } elseif ($hasAnyChange) {
         $intro = 'Your Statamic website has been updated.';
     } else {
@@ -170,7 +192,7 @@
                     <div style="font-size:15px; font-weight:600; color:#0f172a;">Composer</div>
                     <div style="font-size:13px; color:#475569; margin-top:3px;">Third-party PHP packages your site uses</div>
                     <div class="sentinel-row-meta" style="margin-top:8px; font-size:12px; color:#475569; font-variant-numeric:tabular-nums; line-height:1.8;">
-                        <span style="font-size:10.5px; font-weight:500; padding:1px 7px; border-radius:4px; color:{{ $cs['colour'] }}; border:1px solid {{ $cs['colour'] }}; background:#fff;">{{ $cs['badge'] }}</span>
+                        <span class="sentinel-pill" style="display:inline-block; margin:2px 6px 2px 0; font-size:10.5px; font-weight:500; padding:1px 7px; border-radius:4px; color:{{ $cs['colour'] }}; border:1px solid {{ $cs['colour'] }}; background:#fff;">{{ $cs['badge'] }}</span>
                     </div>
                 </td>
             </tr>
@@ -209,7 +231,7 @@
                     <div style="font-size:15px; font-weight:600; color:#0f172a;">npm</div>
                     <div style="font-size:13px; color:#475569; margin-top:3px;">Third-party JavaScript packages your site uses</div>
                     <div class="sentinel-row-meta" style="margin-top:8px; font-size:12px; color:#475569; font-variant-numeric:tabular-nums; line-height:1.8;">
-                        <span style="font-size:10.5px; font-weight:500; padding:1px 7px; border-radius:4px; color:{{ $ns['colour'] }}; border:1px solid {{ $ns['colour'] }}; background:#fff;">{{ $ns['badge'] }}</span>
+                        <span class="sentinel-pill" style="display:inline-block; margin:2px 6px 2px 0; font-size:10.5px; font-weight:500; padding:1px 7px; border-radius:4px; color:{{ $ns['colour'] }}; border:1px solid {{ $ns['colour'] }}; background:#fff;">{{ $ns['badge'] }}</span>
                     </div>
                 </td>
             </tr>
