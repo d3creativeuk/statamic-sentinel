@@ -47,6 +47,25 @@ class HistoryService
             }
 
             if (! empty($entries) && $this->matches($snapshot, $entries[0])) {
+                // Snapshots recorded before parents were stored lack them. Fill
+                // them in from this scan of the same state, so the update
+                // report that's already waiting can say "braces via
+                // tailwindcss" and show a note saved on tailwindcss.
+                $backfilled = false;
+
+                foreach (['composer', 'npm'] as $eco) {
+                    $key = "{$eco}_dependency_parents";
+
+                    if (! array_key_exists($key, $entries[0]) && array_key_exists($key, $snapshot)) {
+                        $entries[0][$key] = $snapshot[$key];
+                        $backfilled = true;
+                    }
+                }
+
+                if ($backfilled) {
+                    $this->write($entries);
+                }
+
                 return;
             }
 
@@ -176,6 +195,12 @@ class HistoryService
             // field simply lack it, and consumers handle its absence.
             'composer_vuln_severities'  => self::vulnSeverityMap($audit['composer']['by_package'] ?? []),
             'npm_vuln_severities'       => self::vulnSeverityMap($audit['npm']['by_package']      ?? []),
+            // Vulnerable transitive package => the direct dependency that pulls
+            // it in (`['braces' => 'tailwindcss']`), so the update report can
+            // say "braces via tailwindcss". Payload-only and forward-only, like
+            // the severities above.
+            'composer_dependency_parents' => $audit['composer']['dependency_parents'] ?? [],
+            'npm_dependency_parents'      => $audit['npm']['dependency_parents']      ?? [],
         ];
     }
 
@@ -204,7 +229,7 @@ class HistoryService
             $fields = ["{$eco}_security_updates"];
 
             if ($vulnsFailed) {
-                array_push($fields, "{$eco}_vulns", "{$eco}_vuln_packages", "{$eco}_vuln_severities");
+                array_push($fields, "{$eco}_vulns", "{$eco}_vuln_packages", "{$eco}_vuln_severities", "{$eco}_dependency_parents");
             }
 
             if ($outdatedFailed) {

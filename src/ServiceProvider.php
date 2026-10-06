@@ -24,6 +24,7 @@ use D3Creative\Sentinel\Services\ContentFreezeService;
 use D3Creative\Sentinel\Services\HistoryService;
 use D3Creative\Sentinel\Services\LastActiveService;
 use D3Creative\Sentinel\Services\MaintenancePlanService;
+use D3Creative\Sentinel\Services\PackageNoteService;
 use D3Creative\Sentinel\Services\ScheduleService;
 use D3Creative\Sentinel\Services\SentMailService;
 
@@ -136,6 +137,11 @@ class ServiceProvider extends AddonServiceProvider
                 [SentinelController::class, 'saveMaintenancePlan']
             )->middleware('throttle:30,1,sentinel.save-maintenance-plan')->name('d3-sentinel.save-maintenance-plan');
 
+            \Illuminate\Support\Facades\Route::post(
+                'd3-sentinel/save-package-note',
+                [SentinelController::class, 'savePackageNote']
+            )->middleware('throttle:30,1,sentinel.save-package-note')->name('d3-sentinel.save-package-note');
+
             // Per-resource Action endpoints. Statamic-native contract:
             // POST /actions       runs an action against {action, selections, context}
             // POST /actions/list  returns the bulk-action list for the current selection
@@ -244,6 +250,7 @@ class ServiceProvider extends AddonServiceProvider
                             'last_update_recipients' => $sentMail->lastManualRecipients(SentMailService::KIND_UPDATE),
                             'last_maintenance_recipients' => $sentMail->lastManualRecipients(SentMailService::KIND_MAINTENANCE),
                             'maintenance_plan' => app(MaintenancePlanService::class)->all(),
+                            'package_notes'   => app(PackageNoteService::class)->all(),
                             // Who's-online list - super-only (it exposes every CP
                             // user's activity), so don't even build it otherwise.
                             'users'           => auth()->user()?->isSuper() === true ? $this->buildUserActivity() : [],

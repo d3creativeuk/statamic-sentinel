@@ -146,6 +146,8 @@ class ViewRenderTest extends TestCase
             'last_update_recipients'      => [],
             'last_maintenance_recipients' => [],
             'maintenance_plan'            => ['plan_name' => '', 'start_date' => '', 'expiry_date' => ''],
+            // Quotes in a note must not end the row's double-quoted x-data.
+            'package_notes'               => ['composer' => ['acme/pkg' => ['note' => 'Waiting on a "v3" patch, it\'s fine']], 'npm' => []],
             'users'                       => [['id' => '1', 'name' => '{{ 7*7 }}', 'email' => 'x@y.test', 'is_super' => true, 'last_login' => null, 'last_active' => null]],
             'online_window'               => 5,
             'freeze'                      => $freeze,

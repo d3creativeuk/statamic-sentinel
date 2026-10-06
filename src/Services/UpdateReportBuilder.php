@@ -23,7 +23,7 @@ class UpdateReportBuilder
      *         'composer_resolved','composer_introduced','npm_resolved','npm_introduced',
      *         'composer_resolved_packages','composer_introduced_packages',
      *         'npm_resolved_packages','npm_introduced_packages',
-     *     ],
+     *     ],  // package lists: see diffVulnPackages()
      *   ]
      */
     public static function build(array $latest, array $previous): array
@@ -49,20 +49,14 @@ class UpdateReportBuilder
             $latest['npm_packages']   ?? []
         );
 
-        $composerVulnDiff = self::diffVulnPackages(
-            $previous['composer_vuln_packages'] ?? [],
-            $latest['composer_vuln_packages']   ?? []
-        );
-        $npmVulnDiff = self::diffVulnPackages(
-            $previous['npm_vuln_packages'] ?? [],
-            $latest['npm_vuln_packages']   ?? []
-        );
+        $composerVulnDiff = self::diffVulnPackages('composer', $previous, $latest);
+        $npmVulnDiff      = self::diffVulnPackages('npm', $previous, $latest);
 
         $vulns = [
-            'composer_resolved'   => max(0, ((int) ($previous['composer_vulns'] ?? 0)) - ((int) ($latest['composer_vulns'] ?? 0))),
-            'composer_introduced' => max(0, ((int) ($latest['composer_vulns']   ?? 0)) - ((int) ($previous['composer_vulns'] ?? 0))),
-            'npm_resolved'        => max(0, ((int) ($previous['npm_vulns']      ?? 0)) - ((int) ($latest['npm_vulns']      ?? 0))),
-            'npm_introduced'      => max(0, ((int) ($latest['npm_vulns']        ?? 0)) - ((int) ($previous['npm_vulns']    ?? 0))),
+            'composer_resolved'   => $composerVulnDiff['resolved_count'],
+            'composer_introduced' => $composerVulnDiff['introduced_count'],
+            'npm_resolved'        => $npmVulnDiff['resolved_count'],
+            'npm_introduced'      => $npmVulnDiff['introduced_count'],
             'composer_resolved_packages'   => $composerVulnDiff['resolved'],
             'composer_introduced_packages' => $composerVulnDiff['introduced'],
             'npm_resolved_packages'        => $npmVulnDiff['resolved'],
@@ -130,30 +124,75 @@ class UpdateReportBuilder
     }
 
     /**
-     * Diff two `[name => count]` vuln maps into per-package resolved/introduced
-     * lists of `['name' => string, 'count' => int]`, sorted by name.
+     * Diff one ecosystem's `[name => count]` vuln maps into per-package
+     * resolved/introduced lists of
+     * `['name' => string, 'count' => int, 'parent' => ?string, 'ecosystem' => string]`,
+     * sorted by name, plus the counts the email headline shows.
+     *
+     * `parent` is the direct dependency that pulls a transitive package in
+     * (null for a direct dependency, or a snapshot recorded before parents
+     * were stored). A resolved package has dropped out of the latest map, so
+     * its parent comes from the previous snapshot.
+     *
+     * The counts are the sum of the per-package changes, so they always match
+     * the names listed. Netting the ecosystem totals instead let a fix and a
+     * new issue cancel out: one-for-one read as "no changes". Snapshots too
+     * old to carry per-package maps fall back to the net totals.
      */
-    protected static function diffVulnPackages(array $previous, array $latest): array
+    protected static function diffVulnPackages(string $eco, array $previous, array $latest): array
     {
+        $before  = $previous["{$eco}_vuln_packages"] ?? null;
+        $after   = $latest["{$eco}_vuln_packages"]   ?? null;
+        $parents = [
+            'previous' => $previous["{$eco}_dependency_parents"] ?? [],
+            'latest'   => $latest["{$eco}_dependency_parents"]   ?? [],
+        ];
+
         $resolved   = [];
         $introduced = [];
 
-        $names = array_unique(array_merge(array_keys($previous), array_keys($latest)));
+        $names = array_unique(array_merge(array_keys($before ?? []), array_keys($after ?? [])));
 
         foreach ($names as $name) {
-            $before = (int) ($previous[$name] ?? 0);
-            $after  = (int) ($latest[$name]   ?? 0);
+            $was = (int) ($before[$name] ?? 0);
+            $now = (int) ($after[$name]  ?? 0);
 
-            if ($before > $after) {
-                $resolved[] = ['name' => $name, 'count' => $before - $after];
-            } elseif ($after > $before) {
-                $introduced[] = ['name' => $name, 'count' => $after - $before];
+            if ($was > $now) {
+                $resolved[] = self::vulnEntry($eco, $name, $was - $now, $parents['previous']);
+            } elseif ($now > $was) {
+                $introduced[] = self::vulnEntry($eco, $name, $now - $was, $parents['latest']);
             }
         }
 
         usort($resolved,   fn($a, $b) => strcmp($a['name'], $b['name']));
         usort($introduced, fn($a, $b) => strcmp($a['name'], $b['name']));
 
-        return ['resolved' => $resolved, 'introduced' => $introduced];
+        if (is_array($before) && is_array($after)) {
+            $resolvedCount   = array_sum(array_column($resolved, 'count'));
+            $introducedCount = array_sum(array_column($introduced, 'count'));
+        } else {
+            $delta           = ((int) ($latest["{$eco}_vulns"] ?? 0)) - ((int) ($previous["{$eco}_vulns"] ?? 0));
+            $resolvedCount   = max(0, -$delta);
+            $introducedCount = max(0, $delta);
+        }
+
+        return [
+            'resolved'         => $resolved,
+            'introduced'       => $introduced,
+            'resolved_count'   => $resolvedCount,
+            'introduced_count' => $introducedCount,
+        ];
+    }
+
+    protected static function vulnEntry(string $eco, string $name, int $count, array $parents): array
+    {
+        $parent = $parents[$name] ?? null;
+
+        return [
+            'name'      => $name,
+            'count'     => $count,
+            'parent'    => is_string($parent) && $parent !== $name ? $parent : null,
+            'ecosystem' => $eco,
+        ];
     }
 }

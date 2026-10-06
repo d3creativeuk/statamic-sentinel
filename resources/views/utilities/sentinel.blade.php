@@ -82,6 +82,7 @@
     $maintenanceEmail = ! empty($last_maintenance_recipients ?? []) ? implode(', ', $last_maintenance_recipients) : $userEmail;
 
     $plan = $maintenance_plan ?? [];
+    $packageNotes = $package_notes ?? [];
 
     // Users tab: how many CP users are "online" (active within the window).
     $onlineWindow = (int) ($online_window ?? 5);
@@ -238,10 +239,10 @@
 
     {{-- Package audit sections --}}
     @foreach ([
-        ['label' => 'Composer packages', 'data' => $composer, 'tooltip' => "PHP packages that power your site's backend - including Statamic itself, Laravel (the framework it runs on), and any installed add-ons. Keeping these up to date is important for security and stability."],
-        ['label' => 'npm packages',      'data' => $npm,      'tooltip' => "JavaScript packages used to build your site's frontend - things like scripts and styles that run in your visitors' browsers. Updates often include security fixes and improvements."],
+        ['eco' => 'composer', 'label' => 'Composer packages', 'data' => $composer, 'tooltip' => "PHP packages that power your site's backend - including Statamic itself, Laravel (the framework it runs on), and any installed add-ons. Keeping these up to date is important for security and stability."],
+        ['eco' => 'npm',      'label' => 'npm packages',      'data' => $npm,      'tooltip' => "JavaScript packages used to build your site's frontend - things like scripts and styles that run in your visitors' browsers. Updates often include security fixes and improvements."],
     ] as $row)
-    @php $d = $row['data']; @endphp
+    @php $d = $row['data']; $ecoKey = $row['eco']; @endphp
     <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:14px 16px; margin-bottom:12px;">
 
         <div style="display:flex; align-items:center; gap:6px; margin-bottom:12px;">
@@ -385,30 +386,40 @@
                                     $codeColour = fn($sev) => in_array(strtoupper((string) $sev), ['CRITICAL', 'HIGH']) ? '#dc2626' : '#64748b';
                                     // Fallback pill (pre-CVE snapshots) follows the same red-or-grey rule.
                                     $pillColour = fn($sev) => in_array(strtoupper((string) $sev), ['CRITICAL', 'HIGH']) ? '#dc2626' : '#475569';
+                                    $noteText = $packageNotes[$ecoKey][$pkg['name']]['note'] ?? '';
                                 @endphp
-                                @if($hasVulns)
-                                    <div style="display:flex; align-items:center; flex-wrap:wrap; gap:5px 8px; {{ $pad }} {{ $border }}">
-                                        <span style="display:inline-flex; align-items:center; gap:6px; margin-right:2px; min-width:0;">
-                                            @if($isChild)<span style="color:#94a3b8; font-size:13px; line-height:1; flex-shrink:0;">&#8627;</span>@endif
-                                            <span style="font-size:13px; font-weight:{{ $isChild ? 500 : 600 }}; color:{{ $isChild ? '#334155' : '#0f172a' }};">{{ $pkg['name'] }}</span>
-                                        </span>
-                                        @foreach($vulns as $vi => $v)
-                                            <span style="white-space:nowrap;"><a href="{{ $v['url'] }}" target="_blank" rel="noopener" class="d3-sentinel-cve" style="font-size:11px; font-weight:500; color:{{ $codeColour($v['severity']) }}; text-transform:uppercase; font-variant-numeric:tabular-nums;">{{ $cveLabel($v) }}</a>{{ $vi < count($vulns) - 1 ? ',' : '' }}</span>
-                                        @endforeach
-                                    </div>
-                                @else
-                                    <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; {{ $pad }} {{ $border }}">
-                                        @include('statamic-sentinel::utilities._security_row_label')
-                                        @unless($isHeader)
-                                            <span style="display:inline-flex; align-items:center; gap:8px; flex-shrink:0;">
-                                                @if ($count > 1)
-                                                    <span style="font-size:11px; font-weight:500; color:#64748b;">{{ $count }} issues</span>
-                                                @endif
-                                                <span style="display:inline-flex; align-items:center; font-size:11px; font-weight:500; padding:1px 7px; border-radius:4px; color:{{ $pillColour($pkg['highest']) }}; background:#fff; border:1px solid {{ $pillColour($pkg['highest']) }};">{{ ucfirst(strtolower($pkg['highest'])) }}</span>
+                                <div x-data="{ note: @js($noteText), draft: '', editing: false }" style="{{ $border }}">
+                                    @if($hasVulns)
+                                        <div style="display:flex; align-items:center; flex-wrap:wrap; gap:5px 8px; {{ $pad }}">
+                                            <span style="display:inline-flex; align-items:center; gap:6px; margin-right:2px; min-width:0;">
+                                                @if($isChild)<span style="color:#94a3b8; font-size:13px; line-height:1; flex-shrink:0;">&#8627;</span>@endif
+                                                <span style="font-size:13px; font-weight:{{ $isChild ? 500 : 600 }}; color:{{ $isChild ? '#334155' : '#0f172a' }};">{{ $pkg['name'] }}</span>
                                             </span>
-                                        @endunless
-                                    </div>
-                                @endif
+                                            @foreach($vulns as $vi => $v)
+                                                <span style="white-space:nowrap;"><a href="{{ $v['url'] }}" target="_blank" rel="noopener" class="d3-sentinel-cve" style="font-size:11px; font-weight:500; color:{{ $codeColour($v['severity']) }}; text-transform:uppercase; font-variant-numeric:tabular-nums;">{{ $cveLabel($v) }}</a>{{ $vi < count($vulns) - 1 ? ',' : '' }}</span>
+                                            @endforeach
+                                            @if($isSuper)
+                                                <span style="margin-left:auto;">@include('statamic-sentinel::utilities._package_note_button')</span>
+                                            @endif
+                                        </div>
+                                    @else
+                                        <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; {{ $pad }}">
+                                            @include('statamic-sentinel::utilities._security_row_label')
+                                            <span style="display:inline-flex; align-items:center; gap:8px; flex-shrink:0;">
+                                                @unless($isHeader)
+                                                    @if ($count > 1)
+                                                        <span style="font-size:11px; font-weight:500; color:#64748b;">{{ $count }} issues</span>
+                                                    @endif
+                                                    <span style="display:inline-flex; align-items:center; font-size:11px; font-weight:500; padding:1px 7px; border-radius:4px; color:{{ $pillColour($pkg['highest']) }}; background:#fff; border:1px solid {{ $pillColour($pkg['highest']) }};">{{ ucfirst(strtolower($pkg['highest'])) }}</span>
+                                                @endunless
+                                                @if($isSuper)
+                                                    @include('statamic-sentinel::utilities._package_note_button')
+                                                @endif
+                                            </span>
+                                        </div>
+                                    @endif
+                                    @include('statamic-sentinel::utilities._package_note', ['eco' => $ecoKey, 'package' => $pkg['name']])
+                                </div>
                             @endforeach
                             @foreach($vendorPackages as $vi => $pkg)
                                 <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; padding:6px 12px; {{ $vi < count($vendorPackages) - 1 ? 'border-bottom:1px solid #e2e8f0;' : '' }}">

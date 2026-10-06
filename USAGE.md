@@ -28,6 +28,14 @@ The **Updates available** list, however, only shows your **direct dependencies**
 
 So if you don't see a transitive package in the updates list, it's not being ignored - it's being scanned, just not surfaced as actionable until either it has a known vulnerability or its parent gets an update.
 
+## Package notes
+
+Sometimes a vulnerable package can't be updated straight away, for example `braces`, which comes in through Tailwind v3 and only moves when the site does. To explain that to whoever receives the update report, open **Security issues** in the utility and use **Add note** on the package. Only super admins can add or edit notes.
+
+- A note on a direct dependency (`tailwindcss`) also covers the packages it pulls in (`braces`, `postcss-selector-parser`).
+- The update report shows the note under **Vulnerabilities** whenever that package, or one it pulls in, is listed as new or resolved. Notes don't change any counts, and they don't appear in the status report or Plan Summary.
+- Notes are read when the email is rendered, so a preview or **Send anyway** always shows the current text. Remove a note once it no longer applies.
+
 ## Content Freeze
 
 Content Freeze is a coordinated update-window workflow. The lifecycle has four states, driven by two timestamps the admin sets at schedule time:
@@ -77,6 +85,7 @@ Sentinel writes runtime state to the host app's `storage/app/` directory under `
 - `content-freeze-history.json` - completed freeze history, newest first, capped at 50
 - `content-freeze-last-cancel.json` - when the last freeze was cancelled, so an older completed freeze's banner doesn't come back
 - `maintenance-plan.json` - Plan Summary settings (plan name, start and expiry dates)
+- `package-notes.json` - notes on packages, shown in the update report
 - `last-active.json` - each CP user's last-active time for the Users tab (timestamps only, kept 30 days)
 
 Two things live in the host's cache store rather than on disk: the audit itself (`d3creative_sentinel_audit`, mirrored to `audit.json` above) and a summary of each OSV advisory (`d3creative_sentinel_osv_summaries`), which lets repeat scans skip re-downloading advisories that haven't changed. Losing either to `cache:clear` only costs a slower next scan.

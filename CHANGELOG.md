@@ -6,6 +6,25 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). Releases are git-tag driven
 (`composer.json` carries no `version` field).
 
+## [Unreleased]
+
+### Added
+
+- **Notes on packages.** Super admins can add a note to any package in the Security issues list,
+  for example on `tailwindcss` to explain why `braces` can't be updated until a move to Tailwind v4.
+  The update report shows the note whenever that package, or one it pulls in, is listed under
+  Vulnerabilities, so a client reads the reason rather than just a red count.
+- **The update report names the parent package.** Vulnerable packages that come in through another
+  dependency are grouped under it, e.g. "braces, postcss-selector-parser via tailwindcss", so it's
+  clear which dependency needs the update. After updating Sentinel, hit **Refresh** once so the
+  report that's already waiting picks this up.
+
+### Fixed
+
+- **The update report's vulnerability counts match the packages listed.** They were the change in
+  each ecosystem's total, so a fixed issue and a new one cancelled out: "2 resolved, 3 new" read as
+  "1 new", and a one-for-one swap read as "No changes detected".
+
 ## [2.3.0] - 2026-09-17
 
 ### Added

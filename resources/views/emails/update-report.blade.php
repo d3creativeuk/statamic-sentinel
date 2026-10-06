@@ -248,14 +248,34 @@
                     $vulns['npm_introduced_packages']      ?? []
                 );
 
+                // One line per parent: direct packages first ("league/commonmark (2)"),
+                // then each transitive group ("braces, postcss-selector-parser via
+                // tailwindcss"), so it's clear which dependency needs the update.
                 $formatVulnPkgs = function (array $pkgs) {
-                    return implode(', ', array_map(
-                        fn ($p) => $p['count'] > 1
-                            ? $p['name'] . ' (' . $p['count'] . ')'
-                            : $p['name'],
-                        $pkgs
-                    ));
+                    $direct = [];
+                    $via    = [];
+                    foreach ($pkgs as $p) {
+                        $label = $p['count'] > 1 ? $p['name'] . ' (' . $p['count'] . ')' : $p['name'];
+                        if (! empty($p['parent'])) {
+                            $via[($p['ecosystem'] ?? '') . '|' . $p['parent']][] = $label;
+                        } else {
+                            $direct[] = $label;
+                        }
+                    }
+                    ksort($via);
+                    $lines = $direct ? [implode(', ', $direct)] : [];
+                    foreach ($via as $key => $labels) {
+                        $lines[] = implode(', ', $labels) . ' via ' . substr($key, strpos($key, '|') + 1);
+                    }
+                    return $lines;
                 };
+
+                // Notes saved in the utility on a listed package or the direct
+                // dependency that pulls it in, each shown once.
+                $vulnNotes = [];
+                foreach (array_merge($introPkgs, $resolvedPkgs) as $p) {
+                    $vulnNotes += \D3Creative\Sentinel\Services\PackageNoteService::forEntry($notes ?? [], $p);
+                }
             @endphp
             <div style="border-top:1px solid #e2e8f0; margin:18px 0;"></div>
             <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden; margin-bottom:10px;">
@@ -266,7 +286,9 @@
                             <div>
                                 <span style="color:#10b981; font-weight:600;">{{ $vulnsResolved }} resolved</span>
                                 @if (! empty($resolvedPkgs))
-                                    <div style="font-size:11px; color:#64748b; font-weight:400; margin-top:2px;">{{ $formatVulnPkgs($resolvedPkgs) }}</div>
+                                    @foreach ($formatVulnPkgs($resolvedPkgs) as $line)
+                                        <div style="font-size:11px; color:#64748b; font-weight:400; margin-top:2px;">{{ $line }}</div>
+                                    @endforeach
                                 @endif
                             </div>
                         @endif
@@ -274,12 +296,23 @@
                             <div style="{{ $vulnsResolved > 0 ? 'margin-top:6px;' : '' }}">
                                 <span style="color:#ef4444; font-weight:600;">{{ $vulnsIntro }} new</span>
                                 @if (! empty($introPkgs))
-                                    <div style="font-size:11px; color:#64748b; font-weight:400; margin-top:2px;">{{ $formatVulnPkgs($introPkgs) }}</div>
+                                    @foreach ($formatVulnPkgs($introPkgs) as $line)
+                                        <div style="font-size:11px; color:#64748b; font-weight:400; margin-top:2px;">{{ $line }}</div>
+                                    @endforeach
                                 @endif
                             </div>
                         @endif
                     </td>
                 </tr>
+                @if (! empty($vulnNotes))
+                    <tr style="border-top:1px solid #f1f5f9;">
+                        <td colspan="2" style="padding:10px 16px 12px; font-size:12px; line-height:1.5; color:#475569;">
+                            @foreach ($vulnNotes as $notePackage => $noteText)
+                                <div style="{{ $loop->first ? '' : 'margin-top:6px;' }}"><strong style="color:#0f172a;">{{ $notePackage }}:</strong> {!! nl2br(e($noteText)) !!}</div>
+                            @endforeach
+                        </td>
+                    </tr>
+                @endif
             </table>
         @endif
 

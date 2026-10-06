@@ -5,6 +5,7 @@ namespace D3Creative\Sentinel\Mail;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Queue\SerializesModels;
+use D3Creative\Sentinel\Services\PackageNoteService;
 use D3Creative\Sentinel\Support\ReportHosts;
 
 class SentinelUpdateReport extends Mailable
@@ -33,6 +34,9 @@ class SentinelUpdateReport extends Mailable
                     ->view('statamic-sentinel::emails.update-report')
                     ->with([
                         'report'    => $this->report,
+                        // Read at render time rather than stored in the
+                        // report, so a forced resend shows the current notes.
+                        'notes'     => app(PackageNoteService::class)->all(),
                         'host'      => $label,
                         'hosts'     => $hosts,
                         'preheader' => 'Statamic Package Update Report',

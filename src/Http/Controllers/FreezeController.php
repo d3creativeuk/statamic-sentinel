@@ -4,10 +4,13 @@ namespace D3Creative\Sentinel\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use D3Creative\Sentinel\Http\Controllers\Concerns\IdentifiesActor;
 use D3Creative\Sentinel\Services\ContentFreezeService;
 
 class FreezeController extends Controller
 {
+    use IdentifiesActor;
+
     public function schedule(Request $request, ContentFreezeService $service)
     {
         abort_unless(auth()->user()?->isSuper(), 403);
@@ -70,29 +73,6 @@ class FreezeController extends Controller
             'message' => $message,
             'freeze'  => $result['freeze'],
         ], 200);
-    }
-
-    /**
-     * Statamic user IDs are strings - take whatever the auth user exposes
-     * and stringify it. Falls back to email when the id() helper is absent
-     * on older Statamic versions.
-     */
-    protected function actorId(): ?string
-    {
-        $user = auth()->user();
-
-        if (! $user) {
-            return null;
-        }
-
-        if (method_exists($user, 'id')) {
-            $id = $user->id();
-            if ($id !== null && $id !== '') {
-                return (string) $id;
-            }
-        }
-
-        return $user->email ?? null;
     }
 
     /**

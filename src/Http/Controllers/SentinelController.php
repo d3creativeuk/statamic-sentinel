@@ -11,14 +11,18 @@ use D3Creative\Sentinel\Services\ContentFreezeService;
 use D3Creative\Sentinel\Services\HistoryService;
 use D3Creative\Sentinel\Services\MaintenancePlanService;
 use D3Creative\Sentinel\Services\MaintenanceReportBuilder;
+use D3Creative\Sentinel\Services\PackageNoteService;
 use D3Creative\Sentinel\Services\ReportSender;
 use D3Creative\Sentinel\Services\ScheduleService;
 use D3Creative\Sentinel\Services\SentMailService;
 use D3Creative\Sentinel\Services\UpdateReportBuilder;
+use D3Creative\Sentinel\Http\Controllers\Concerns\IdentifiesActor;
 use D3Creative\Sentinel\Support\ReportHosts;
 
 class SentinelController extends Controller
 {
+    use IdentifiesActor;
+
     private const MAX_RECIPIENTS = 10;
 
     public function sendReport(Request $request)
@@ -108,6 +112,41 @@ class SentinelController extends Controller
         }
 
         return response()->json(['message' => 'Plan details saved.'], 200);
+    }
+
+    /**
+     * Save, replace or (with an empty note) remove the note on one package.
+     * The update report shows it next to that package's vulnerabilities and
+     * any it pulls in.
+     */
+    public function savePackageNote(Request $request)
+    {
+        abort_unless(auth()->user()?->isSuper(), 403);
+
+        $validator = Validator::make($request->all(), [
+            'ecosystem' => ['required', 'string', 'in:' . implode(',', PackageNoteService::ECOSYSTEMS)],
+            // Composer `vendor/name`, npm `name` or `@scope/name`.
+            'package'   => ['required', 'string', 'max:214', 'regex:/^@?[A-Za-z0-9][A-Za-z0-9._~-]*(\/[A-Za-z0-9][A-Za-z0-9._~-]*)?$/'],
+            'note'      => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['message' => $validator->errors()->first()], 422);
+        }
+
+        $input = $validator->validated();
+        $note  = trim((string) ($input['note'] ?? ''));
+
+        $saved = app(PackageNoteService::class)->set($input['ecosystem'], $input['package'], $note, $this->actorId());
+
+        if (! $saved) {
+            return response()->json(['message' => 'Failed to save the note. Check storage permissions.'], 500);
+        }
+
+        return response()->json([
+            'message' => $note === '' ? 'Note removed.' : 'Note saved.',
+            'note'    => $note,
+        ], 200);
     }
 
     /**
@@ -277,6 +316,7 @@ class SentinelController extends Controller
 
         return $this->previewResponse(view('statamic-sentinel::emails.update-report', [
             'report'    => $report,
+            'notes'     => app(PackageNoteService::class)->all(),
             'host'      => ReportHosts::label(),
             'hosts'     => ReportHosts::all(),
             'preheader' => 'Statamic Package Update Report',
