@@ -71,6 +71,72 @@ class PackageNotesTest extends TestCase
 
         $this->assertSame(3, $report['vulns']['npm_introduced']);
         $this->assertSame(0, $report['vulns']['npm_resolved']);
+        $this->assertSame(0, $report['vulns']['npm_open']);
+    }
+
+    public function test_issues_that_carry_over_are_listed_as_still_open(): void
+    {
+        $report = UpdateReportBuilder::build(
+            $this->snapshot(['braces' => 1, 'postcss-selector-parser' => 1], ['braces' => 'tailwindcss', 'postcss-selector-parser' => '@tailwindcss/typography']),
+            $this->snapshot(['braces' => 1, 'postcss-selector-parser' => 1, 'source-map-js' => 1])
+        );
+
+        $this->assertSame(1, $report['vulns']['npm_resolved']);
+        $this->assertSame(0, $report['vulns']['npm_introduced']);
+        $this->assertSame(2, $report['vulns']['npm_open']);
+        $this->assertSame([
+            ['name' => 'braces', 'count' => 1, 'parent' => 'tailwindcss', 'ecosystem' => 'npm'],
+            ['name' => 'postcss-selector-parser', 'count' => 1, 'parent' => '@tailwindcss/typography', 'ecosystem' => 'npm'],
+        ], $report['vulns']['npm_open_packages']);
+    }
+
+    public function test_still_open_issues_alone_are_not_a_change(): void
+    {
+        $report = UpdateReportBuilder::build($this->snapshot(['braces' => 1]), $this->snapshot(['braces' => 1]));
+
+        $this->assertSame(1, $report['vulns']['npm_open']);
+        $this->assertFalse($report['has_changes']);
+    }
+
+    public function test_a_new_advisory_on_a_package_with_an_old_one_is_both_new_and_still_open(): void
+    {
+        $report = UpdateReportBuilder::build($this->snapshot(['braces' => 2]), $this->snapshot(['braces' => 1]));
+
+        $this->assertSame(1, $report['vulns']['npm_introduced']);
+        $this->assertSame(1, $report['vulns']['npm_open']);
+    }
+
+    public function test_the_update_report_shows_notes_for_still_open_issues(): void
+    {
+        (new PackageNoteService)->set('npm', 'tailwindcss', "Braces can't be updated until Tailwind 3 is.");
+
+        $report = UpdateReportBuilder::build(
+            $this->snapshot(['braces' => 1, 'postcss-selector-parser' => 1], ['braces' => 'tailwindcss', 'postcss-selector-parser' => '@tailwindcss/typography']),
+            $this->snapshot(['braces' => 1, 'postcss-selector-parser' => 1, 'source-map-js' => 1])
+        );
+
+        $html = (new SentinelUpdateReport($report))->render();
+
+        $this->assertStringContainsString('1 resolved', $html);
+        $this->assertStringContainsString('2 still open', $html);
+        $this->assertStringContainsString('braces via tailwindcss', $html);
+        $this->assertStringContainsString('postcss-selector-parser via @tailwindcss/typography', $html);
+        $this->assertStringContainsString('tailwindcss:</strong> Braces can&#039;t be updated until Tailwind 3 is.', $html);
+    }
+
+    public function test_a_report_stored_before_parents_and_still_open_existed_renders(): void
+    {
+        (new PackageNoteService)->set('npm', 'braces', 'Build-time only.');
+
+        $report = UpdateReportBuilder::build($this->snapshot(['braces' => 1]), $this->snapshot([]));
+        unset($report['vulns']['composer_open'], $report['vulns']['npm_open'], $report['vulns']['composer_open_packages'], $report['vulns']['npm_open_packages']);
+        $report['vulns']['npm_introduced_packages'] = [['name' => 'braces', 'count' => 1]];
+
+        $html = (new SentinelUpdateReport($report))->render();
+
+        $this->assertStringContainsString('1 new', $html);
+        $this->assertStringContainsString('braces</div>', $html);
+        $this->assertStringNotContainsString('still open', $html);
     }
 
     public function test_history_stores_parents_without_them_driving_a_new_snapshot(): void

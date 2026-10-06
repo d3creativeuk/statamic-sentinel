@@ -20,9 +20,10 @@ class UpdateReportBuilder
      *     'composer'         => ['updated' => [...], 'added' => [...], 'removed' => [...]],
      *     'npm'              => same shape as composer,
      *     'vulns'            => [
-     *         'composer_resolved','composer_introduced','npm_resolved','npm_introduced',
-     *         'composer_resolved_packages','composer_introduced_packages',
-     *         'npm_resolved_packages','npm_introduced_packages',
+     *         'composer_resolved','composer_introduced','composer_open',
+     *         'npm_resolved','npm_introduced','npm_open',
+     *         'composer_resolved_packages','composer_introduced_packages','composer_open_packages',
+     *         'npm_resolved_packages','npm_introduced_packages','npm_open_packages',
      *     ],  // package lists: see diffVulnPackages()
      *   ]
      */
@@ -55,12 +56,16 @@ class UpdateReportBuilder
         $vulns = [
             'composer_resolved'   => $composerVulnDiff['resolved_count'],
             'composer_introduced' => $composerVulnDiff['introduced_count'],
+            'composer_open'       => $composerVulnDiff['open_count'],
             'npm_resolved'        => $npmVulnDiff['resolved_count'],
             'npm_introduced'      => $npmVulnDiff['introduced_count'],
+            'npm_open'            => $npmVulnDiff['open_count'],
             'composer_resolved_packages'   => $composerVulnDiff['resolved'],
             'composer_introduced_packages' => $composerVulnDiff['introduced'],
+            'composer_open_packages'       => $composerVulnDiff['open'],
             'npm_resolved_packages'        => $npmVulnDiff['resolved'],
             'npm_introduced_packages'      => $npmVulnDiff['introduced'],
+            'npm_open_packages'            => $npmVulnDiff['open'],
         ];
 
         $hasChanges = $platform['statamic']['changed']
@@ -125,9 +130,13 @@ class UpdateReportBuilder
 
     /**
      * Diff one ecosystem's `[name => count]` vuln maps into per-package
-     * resolved/introduced lists of
+     * resolved/introduced/open lists of
      * `['name' => string, 'count' => int, 'parent' => ?string, 'ecosystem' => string]`,
      * sorted by name, plus the counts the email headline shows.
+     *
+     * `open` is what carried over unchanged from the previous snapshot. It
+     * isn't a change, but the report lists it so a client sees what's still
+     * outstanding (and any note explaining why), not only what moved.
      *
      * `parent` is the direct dependency that pulls a transitive package in
      * (null for a direct dependency, or a snapshot recorded before parents
@@ -150,6 +159,7 @@ class UpdateReportBuilder
 
         $resolved   = [];
         $introduced = [];
+        $open       = [];
 
         $names = array_unique(array_merge(array_keys($before ?? []), array_keys($after ?? [])));
 
@@ -162,10 +172,15 @@ class UpdateReportBuilder
             } elseif ($now > $was) {
                 $introduced[] = self::vulnEntry($eco, $name, $now - $was, $parents['latest']);
             }
+
+            if (min($was, $now) > 0) {
+                $open[] = self::vulnEntry($eco, $name, min($was, $now), $parents['latest']);
+            }
         }
 
         usort($resolved,   fn($a, $b) => strcmp($a['name'], $b['name']));
         usort($introduced, fn($a, $b) => strcmp($a['name'], $b['name']));
+        usort($open,       fn($a, $b) => strcmp($a['name'], $b['name']));
 
         if (is_array($before) && is_array($after)) {
             $resolvedCount   = array_sum(array_column($resolved, 'count'));
@@ -179,8 +194,10 @@ class UpdateReportBuilder
         return [
             'resolved'         => $resolved,
             'introduced'       => $introduced,
+            'open'             => $open,
             'resolved_count'   => $resolvedCount,
             'introduced_count' => $introducedCount,
+            'open_count'       => array_sum(array_column($open, 'count')),
         ];
     }
 

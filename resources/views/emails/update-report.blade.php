@@ -45,6 +45,9 @@
 
     $vulnsResolved = $vulns['composer_resolved']   + $vulns['npm_resolved'];
     $vulnsIntro    = $vulns['composer_introduced'] + $vulns['npm_introduced'];
+    // Carried over unchanged, so not a change, but listed so the client sees
+    // what's outstanding. Missing from reports stored before it existed.
+    $vulnsOpen     = ($vulns['composer_open'] ?? 0) + ($vulns['npm_open'] ?? 0);
 
     // A licence row is shown whenever licensing exists in either snapshot.
     // A change landing on renewal/invalid is an alert; other changes are neutral.
@@ -237,8 +240,12 @@
         </table>
 
         {{-- Vulnerabilities (only when relevant) --}}
-        @if ($vulnsResolved > 0 || $vulnsIntro > 0)
+        @if ($vulnsResolved > 0 || $vulnsIntro > 0 || $vulnsOpen > 0)
             @php
+                $openPkgs = array_merge(
+                    $vulns['composer_open_packages'] ?? [],
+                    $vulns['npm_open_packages']      ?? []
+                );
                 $resolvedPkgs = array_merge(
                     $vulns['composer_resolved_packages']   ?? [],
                     $vulns['npm_resolved_packages']        ?? []
@@ -273,7 +280,7 @@
                 // Notes saved in the utility on a listed package or the direct
                 // dependency that pulls it in, each shown once.
                 $vulnNotes = [];
-                foreach (array_merge($introPkgs, $resolvedPkgs) as $p) {
+                foreach (array_merge($introPkgs, $openPkgs, $resolvedPkgs) as $p) {
                     $vulnNotes += \D3Creative\Sentinel\Services\PackageNoteService::forEntry($notes ?? [], $p);
                 }
             @endphp
@@ -300,6 +307,14 @@
                                         <div style="font-size:11px; color:#64748b; font-weight:400; margin-top:2px;">{{ $line }}</div>
                                     @endforeach
                                 @endif
+                            </div>
+                        @endif
+                        @if ($vulnsOpen > 0)
+                            <div style="{{ $vulnsResolved > 0 || $vulnsIntro > 0 ? 'margin-top:6px;' : '' }}">
+                                <span style="color:#b45309; font-weight:600;">{{ $vulnsOpen }} still open</span>
+                                @foreach ($formatVulnPkgs($openPkgs) as $line)
+                                    <div style="font-size:11px; color:#64748b; font-weight:400; margin-top:2px;">{{ $line }}</div>
+                                @endforeach
                             </div>
                         @endif
                     </td>

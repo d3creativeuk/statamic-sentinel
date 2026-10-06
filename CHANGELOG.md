@@ -18,6 +18,10 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
   dependency are grouped under it, e.g. "braces, postcss-selector-parser via tailwindcss", so it's
   clear which dependency needs the update. After updating Sentinel, hit **Refresh** once so the
   report that's already waiting picks this up.
+- **The update report lists issues that are still open.** Alongside "resolved" and "new", the
+  Vulnerabilities row shows "N still open" with the packages affected, so every update report
+  says what's outstanding and shows any note explaining it, not just the report where the issue
+  first appeared.
 
 ### Fixed
 

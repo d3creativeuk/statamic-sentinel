@@ -33,7 +33,7 @@ So if you don't see a transitive package in the updates list, it's not being ign
 Sometimes a vulnerable package can't be updated straight away, for example `braces`, which comes in through Tailwind v3 and only moves when the site does. To explain that to whoever receives the update report, open **Security issues** in the utility and use **Add note** on the package. Only super admins can add or edit notes.
 
 - A note on a direct dependency (`tailwindcss`) also covers the packages it pulls in (`braces`, `postcss-selector-parser`).
-- The update report shows the note under **Vulnerabilities** whenever that package, or one it pulls in, is listed as new or resolved. Notes don't change any counts, and they don't appear in the status report or Plan Summary.
+- The update report's **Vulnerabilities** row lists issues that are new, resolved or still open since the previous scan, and shows the note whenever that package, or one it pulls in, is listed. So the note keeps appearing for as long as the issue stays open. Notes don't change any counts, and they don't appear in the status report or Plan Summary.
 - Notes are read when the email is rendered, so a preview or **Send anyway** always shows the current text. Remove a note once it no longer applies.
 
 ## Content Freeze
