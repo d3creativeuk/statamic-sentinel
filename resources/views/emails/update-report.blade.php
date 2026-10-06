@@ -242,88 +242,48 @@
         {{-- Vulnerabilities (only when relevant) --}}
         @if ($vulnsResolved > 0 || $vulnsIntro > 0 || $vulnsOpen > 0)
             @php
-                $openPkgs = array_merge(
-                    $vulns['composer_open_packages'] ?? [],
-                    $vulns['npm_open_packages']      ?? []
-                );
-                $resolvedPkgs = array_merge(
-                    $vulns['composer_resolved_packages']   ?? [],
-                    $vulns['npm_resolved_packages']        ?? []
-                );
-                $introPkgs = array_merge(
-                    $vulns['composer_introduced_packages'] ?? [],
-                    $vulns['npm_introduced_packages']      ?? []
-                );
-
-                // One line per parent: direct packages first ("league/commonmark (2)"),
-                // then each transitive group ("braces, postcss-selector-parser via
-                // tailwindcss"), so it's clear which dependency needs the update.
-                $formatVulnPkgs = function (array $pkgs) {
-                    $direct = [];
-                    $via    = [];
-                    foreach ($pkgs as $p) {
-                        $label = $p['count'] > 1 ? $p['name'] . ' (' . $p['count'] . ')' : $p['name'];
-                        if (! empty($p['parent'])) {
-                            $via[($p['ecosystem'] ?? '') . '|' . $p['parent']][] = $label;
-                        } else {
-                            $direct[] = $label;
-                        }
-                    }
-                    ksort($via);
-                    $lines = $direct ? [implode(', ', $direct)] : [];
-                    foreach ($via as $key => $labels) {
-                        $lines[] = implode(', ', $labels) . ' via ' . substr($key, strpos($key, '|') + 1);
-                    }
-                    return $lines;
-                };
-
-                // Notes saved in the utility on a listed package or the direct
-                // dependency that pulls it in, each shown once.
-                $vulnNotes = [];
-                foreach (array_merge($introPkgs, $openPkgs, $resolvedPkgs) as $p) {
-                    $vulnNotes += \D3Creative\Sentinel\Services\PackageNoteService::forEntry($notes ?? [], $p);
-                }
+                // Each package (or group under the dependency that pulls it in)
+                // as a heading with its notes underneath, kept apart from the
+                // counts. A status label is only needed when several are listed.
+                $vulnSections = \D3Creative\Sentinel\Support\VulnerabilityGroups::build($vulns, $notes ?? []);
+                $vulnStatus   = [
+                    'resolved' => ['label' => 'Resolved',   'colour' => '#10b981'],
+                    'new'      => ['label' => 'New',        'colour' => '#ef4444'],
+                    'open'     => ['label' => 'Still open', 'colour' => '#b45309'],
+                ];
+                $vulnLabels = count($vulnSections) > 1;
             @endphp
             <div style="border-top:1px solid #e2e8f0; margin:18px 0;"></div>
             <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden; margin-bottom:10px;">
-                <tr style="{{ $vulnsResolved > 0 && $vulnsIntro > 0 ? 'border-bottom:1px solid #f1f5f9;' : '' }}">
+                <tr>
                     <td class="sentinel-row-cell" style="padding:12px 16px; font-size:13px; font-weight:600; color:#0f172a;">Vulnerabilities</td>
                     <td align="right" class="sentinel-row-cell sentinel-row-meta" style="padding:12px 16px; font-size:12px; color:#475569;">
                         @if ($vulnsResolved > 0)
-                            <div>
-                                <span style="color:#10b981; font-weight:600;">{{ $vulnsResolved }} resolved</span>
-                                @if (! empty($resolvedPkgs))
-                                    @foreach ($formatVulnPkgs($resolvedPkgs) as $line)
-                                        <div style="font-size:11px; color:#64748b; font-weight:400; margin-top:2px;">{{ $line }}</div>
-                                    @endforeach
-                                @endif
-                            </div>
+                            <div style="color:#10b981; font-weight:600;">{{ $vulnsResolved }} resolved</div>
                         @endif
                         @if ($vulnsIntro > 0)
-                            <div style="{{ $vulnsResolved > 0 ? 'margin-top:6px;' : '' }}">
-                                <span style="color:#ef4444; font-weight:600;">{{ $vulnsIntro }} new</span>
-                                @if (! empty($introPkgs))
-                                    @foreach ($formatVulnPkgs($introPkgs) as $line)
-                                        <div style="font-size:11px; color:#64748b; font-weight:400; margin-top:2px;">{{ $line }}</div>
-                                    @endforeach
-                                @endif
-                            </div>
+                            <div style="color:#ef4444; font-weight:600; {{ $vulnsResolved > 0 ? 'margin-top:4px;' : '' }}">{{ $vulnsIntro }} new</div>
                         @endif
                         @if ($vulnsOpen > 0)
-                            <div style="{{ $vulnsResolved > 0 || $vulnsIntro > 0 ? 'margin-top:6px;' : '' }}">
-                                <span style="color:#b45309; font-weight:600;">{{ $vulnsOpen }} still open</span>
-                                @foreach ($formatVulnPkgs($openPkgs) as $line)
-                                    <div style="font-size:11px; color:#64748b; font-weight:400; margin-top:2px;">{{ $line }}</div>
-                                @endforeach
-                            </div>
+                            <div style="color:#b45309; font-weight:600; {{ $vulnsResolved > 0 || $vulnsIntro > 0 ? 'margin-top:4px;' : '' }}">{{ $vulnsOpen }} still open</div>
                         @endif
                     </td>
                 </tr>
-                @if (! empty($vulnNotes))
+                @if (! empty($vulnSections))
                     <tr style="border-top:1px solid #f1f5f9;">
-                        <td colspan="2" style="padding:10px 16px 12px; font-size:12px; line-height:1.5; color:#475569;">
-                            @foreach ($vulnNotes as $notePackage => $noteText)
-                                <div style="{{ $loop->first ? '' : 'margin-top:6px;' }}"><strong style="color:#0f172a;">{{ $notePackage }}:</strong> {!! nl2br(e($noteText)) !!}</div>
+                        <td colspan="2" style="padding:12px 16px;">
+                            @foreach ($vulnSections as $section)
+                                @if ($vulnLabels)
+                                    <div style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; color:{{ $vulnStatus[$section['status']]['colour'] }}; {{ $loop->first ? '' : 'margin-top:14px;' }}">{{ $vulnStatus[$section['status']]['label'] }}</div>
+                                @endif
+                                @foreach ($section['groups'] as $group)
+                                    <div style="{{ $vulnLabels ? 'margin-top:6px;' : ($loop->first ? '' : 'margin-top:12px;') }}">
+                                        <div style="font-size:13px; font-weight:600; color:#0f172a;">{{ $group['title'] }}</div>
+                                        @foreach ($group['notes'] as $note)
+                                            <div style="font-size:12px; line-height:1.5; color:#475569; margin-top:3px;">@if ($note['label'])<strong style="color:#0f172a;">{{ $note['label'] }}:</strong> @endif{!! nl2br(e($note['text'])) !!}</div>
+                                        @endforeach
+                                    </div>
+                                @endforeach
                             @endforeach
                         </td>
                     </tr>

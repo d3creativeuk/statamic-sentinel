@@ -12,8 +12,8 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 - **Notes on packages.** Super admins can add a note to any package in the Security issues list,
   for example on `tailwindcss` to explain why `braces` can't be updated until a move to Tailwind v4.
-  The update report shows the note whenever that package, or one it pulls in, is listed under
-  Vulnerabilities, so a client reads the reason rather than just a red count.
+  The update report lists each vulnerable package under the counts with its note underneath, while
+  the issue is new or still open, so a client reads the reason rather than just a red count.
 - **The update report names the parent package.** Vulnerable packages that come in through another
   dependency are grouped under it, e.g. "braces, postcss-selector-parser via tailwindcss", so it's
   clear which dependency needs the update. After updating Sentinel, hit **Refresh** once so the

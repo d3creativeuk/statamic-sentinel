@@ -48,7 +48,7 @@
                       aria-label="Note on {{ $package }}"
                       placeholder="e.g. Stuck on this version for now. We'll update once a patch is released."
                       style="width:100%; box-sizing:border-box; font-size:13px; padding:7px 12px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#1e293b; font-family:inherit; resize:vertical;"></textarea>
-            <div style="font-size:11px; color:#64748b; margin-top:4px;">Shown in the update report whenever {{ $package }}, or a package it pulls in, is listed under Vulnerabilities.</div>
+            <div style="font-size:11px; color:#64748b; margin-top:4px;">Shown in the update report under {{ $package }} and anything it pulls in, while the issue is new or still open.</div>
             <div style="display:flex; align-items:center; gap:8px; margin-top:8px;">
                 <button type="button" x-on:click="save(draft)" x-bind:disabled="saving"
                         style="font-size:12px; font-weight:600; color:#fff; background:#0f172a; border:none; padding:5px 12px; border-radius:6px; cursor:pointer; font-family:inherit;">

@@ -7,6 +7,7 @@ use D3Creative\Sentinel\Mail\SentinelUpdateReport;
 use D3Creative\Sentinel\Services\HistoryService;
 use D3Creative\Sentinel\Services\PackageNoteService;
 use D3Creative\Sentinel\Services\UpdateReportBuilder;
+use D3Creative\Sentinel\Support\VulnerabilityGroups;
 use D3Creative\Sentinel\Tests\Support\RegistersViews;
 use D3Creative\Sentinel\Tests\Support\ViewTestUser;
 use D3Creative\Sentinel\Tests\TestCase;
@@ -117,11 +118,13 @@ class PackageNotesTest extends TestCase
 
         $html = (new SentinelUpdateReport($report))->render();
 
-        $this->assertStringContainsString('1 resolved', $html);
-        $this->assertStringContainsString('2 still open', $html);
-        $this->assertStringContainsString('braces via tailwindcss', $html);
-        $this->assertStringContainsString('postcss-selector-parser via @tailwindcss/typography', $html);
-        $this->assertStringContainsString('tailwindcss:</strong> Braces can&#039;t be updated until Tailwind 3 is.', $html);
+        $this->assertStringContainsString('1 resolved</div>', $html);
+        $this->assertStringContainsString('2 still open</div>', $html);
+        $this->assertStringContainsString('postcss-selector-parser via @tailwindcss/typography</div>', $html);
+        $this->assertMatchesRegularExpression('#braces via tailwindcss</div>\s*<div[^>]*>Braces can&\#039;t be updated until Tailwind 3 is.</div>#', $html);
+        // Two statuses listed, so each gets a label.
+        $this->assertStringContainsString('>Resolved</div>', $html);
+        $this->assertStringContainsString('>Still open</div>', $html);
     }
 
     public function test_a_report_stored_before_parents_and_still_open_existed_renders(): void
@@ -137,6 +140,54 @@ class PackageNotesTest extends TestCase
         $this->assertStringContainsString('1 new', $html);
         $this->assertStringContainsString('braces</div>', $html);
         $this->assertStringNotContainsString('still open', $html);
+    }
+
+    public function test_one_status_has_no_label(): void
+    {
+        $report = UpdateReportBuilder::build($this->snapshot(['braces' => 1]), $this->snapshot([]));
+
+        $html = (new SentinelUpdateReport($report))->render();
+
+        $this->assertStringContainsString('1 new</div>', $html);
+        $this->assertStringNotContainsString('>New</div>', $html);
+    }
+
+    public function test_groups_put_each_note_under_its_heading_once(): void
+    {
+        $notes = ['npm' => [
+            'tailwindcss'             => ['note' => 'Tailwind 3 holds these back.'],
+            'postcss-selector-parser' => ['note' => 'Pinned by the typography plugin.'],
+            'vite'                    => ['note' => 'Fixed by the Vite update.'],
+            'axios'                   => ['note' => 'Direct dependency note.'],
+        ]];
+
+        $sections = VulnerabilityGroups::build([
+            'npm_resolved_packages'   => [['name' => 'esbuild', 'count' => 1, 'parent' => 'vite', 'ecosystem' => 'npm']],
+            'npm_introduced_packages' => [
+                ['name' => 'axios', 'count' => 2, 'parent' => null, 'ecosystem' => 'npm'],
+                ['name' => 'braces', 'count' => 1, 'parent' => 'tailwindcss', 'ecosystem' => 'npm'],
+                ['name' => 'postcss-selector-parser', 'count' => 1, 'parent' => 'tailwindcss', 'ecosystem' => 'npm'],
+            ],
+            'npm_open_packages'       => [['name' => 'micromatch', 'count' => 1, 'parent' => 'tailwindcss', 'ecosystem' => 'npm']],
+        ], $notes);
+
+        $this->assertSame(['resolved', 'new', 'open'], array_column($sections, 'status'));
+
+        // Resolved packages never show a note.
+        $this->assertSame([['title' => 'esbuild via vite', 'notes' => []]], $sections[0]['groups']);
+
+        // Direct dependencies stand alone; a child's own note is labelled when
+        // the heading lists several packages.
+        $this->assertSame([
+            ['title' => 'axios (2)', 'notes' => [['label' => null, 'text' => 'Direct dependency note.']]],
+            ['title' => 'braces, postcss-selector-parser via tailwindcss', 'notes' => [
+                ['label' => null, 'text' => 'Tailwind 3 holds these back.'],
+                ['label' => 'postcss-selector-parser', 'text' => 'Pinned by the typography plugin.'],
+            ]],
+        ], $sections[1]['groups']);
+
+        // The tailwindcss note already showed above.
+        $this->assertSame([['title' => 'micromatch via tailwindcss', 'notes' => []]], $sections[2]['groups']);
     }
 
     public function test_history_stores_parents_without_them_driving_a_new_snapshot(): void
@@ -238,9 +289,10 @@ class PackageNotesTest extends TestCase
         $html = (new SentinelUpdateReport($report))->render();
 
         $this->assertStringContainsString('source-map-js</div>', $html);
-        $this->assertStringContainsString('braces, postcss-selector-parser via tailwindcss', $html);
-        $this->assertStringContainsString('tailwindcss:</strong> Stuck on Tailwind v3.<br />', $html);
+        // The heading, then the parent's note under it with no name prefix.
+        $this->assertMatchesRegularExpression('#braces, postcss-selector-parser via tailwindcss</div>\s*<div[^>]*>Stuck on Tailwind v3.<br />#', $html);
         $this->assertStringContainsString('Waiting for a patch &lt;b&gt;', $html);
+        $this->assertStringNotContainsString('tailwindcss:</strong>', $html);
     }
 
     public function test_the_utility_shows_a_saved_note_and_escapes_it(): void
