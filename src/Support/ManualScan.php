@@ -117,6 +117,10 @@ class ManualScan
             }
 
             $audit->refresh();
+        } catch (\Throwable $e) {
+            // A failed scan keeps the previous audit; log it and still
+            // redirect rather than turning the page into an error.
+            report($e);
         } finally {
             optional($lock)->release();
         }

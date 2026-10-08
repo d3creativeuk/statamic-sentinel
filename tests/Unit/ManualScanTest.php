@@ -77,6 +77,16 @@ class ManualScanTest extends TestCase
         $lock->release();
     }
 
+    public function test_a_failing_scan_still_redirects_and_releases_the_lock(): void
+    {
+        $audit = Mockery::mock(AuditService::class);
+        $audit->shouldReceive('refresh')->once()->andThrow(new \RuntimeException('upstream broke'));
+
+        $this->handle('/cp/dashboard?d3_refresh=good-token', $audit);
+
+        $this->assertTrue(Cache::lock(ManualScan::LOCK, 60)->get());
+    }
+
     protected function audit(int $scans): AuditService
     {
         $audit = Mockery::mock(AuditService::class);

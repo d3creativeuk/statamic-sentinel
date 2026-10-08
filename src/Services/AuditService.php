@@ -2147,13 +2147,32 @@ class AuditService
      */
     protected function npmMinReleaseAgeDays(): int
     {
-        $candidates = [
-            base_path('.npmrc'),
-            rtrim((string) getenv('HOME'), '/') . '/.npmrc',
-        ];
+        // The home .npmrc can sit outside open_basedir (e.g. HestiaCP's
+        // default pool), where is_file() raises a warning that Laravel turns
+        // into an exception and the whole scan fails. Probe quietly, skip an
+        // empty HOME, and fall back to "no guard" on any error.
+        try {
+            $candidates = [base_path('.npmrc')];
 
+            $home = getenv('HOME');
+
+            if (is_string($home) && $home !== '') {
+                $candidates[] = rtrim($home, '/') . '/.npmrc';
+            }
+
+            return $this->readMinReleaseAge($candidates);
+        } catch (\Throwable $e) {
+            return 0;
+        }
+    }
+
+    /**
+     * @param array<int, string> $candidates
+     */
+    protected function readMinReleaseAge(array $candidates): int
+    {
         foreach ($candidates as $path) {
-            if (! is_file($path) || ! is_readable($path)) {
+            if (! @is_file($path) || ! @is_readable($path)) {
                 continue;
             }
 

@@ -25,6 +25,11 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
   replacement character.
 - **Cancel and Mark complete reported success when the update record couldn't be removed.** The
   freeze then carried on (banner, heads-up email, activation). They now report the failure.
+- **Scan now and Refresh failed on hosts that restrict PHP's file access (`open_basedir`).**
+  Looking for npm settings in the server user's home folder raised an error there, so every scan
+  started from the Control Panel failed. That check is now skipped when the folder can't be
+  read, and any scan that does fail keeps the previous report and returns to the page instead of
+  showing an error.
 
 ### Removed
 
