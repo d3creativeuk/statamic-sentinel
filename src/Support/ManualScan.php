@@ -112,6 +112,27 @@ class ManualScan
             $lock = null;
         }
 
+        // A fatal error (memory or time limit) skips `finally`, which left
+        // Scan now silently doing nothing until the lock expired five minutes
+        // later. Release from a shutdown function too; releasing is
+        // owner-checked, and the flag makes the second call a no-op.
+        $released = false;
+        $release  = function () use (&$released, $lock) {
+            if ($released || ! $lock) {
+                return;
+            }
+
+            $released = true;
+
+            try {
+                $lock->release();
+            } catch (\Throwable $e) {
+                // It expires on its own.
+            }
+        };
+
+        register_shutdown_function($release);
+
         try {
             try {
                 Cache::put(self::LAST_SCAN_KEY, time(), self::COOLDOWN_SECONDS);
@@ -125,7 +146,7 @@ class ManualScan
             // redirect rather than turning the page into an error.
             report($e);
         } finally {
-            optional($lock)->release();
+            $release();
         }
     }
 }

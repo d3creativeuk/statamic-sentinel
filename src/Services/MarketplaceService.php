@@ -105,9 +105,7 @@ class MarketplaceService
             // perPage=50 keeps us under a single page for ~all real-world
             // upgrade ranges (Statamic 6.x has shipped ~30 releases in a
             // year), without paying for full history we'll never read.
-            $response = Http::timeout(5)
-                ->withHeaders(AuditService::ACCEPT_GZIP)
-                ->acceptJson()
+            $response = AuditService::prepare(Http::acceptJson(), 5)
                 ->get($url, ['perPage' => 50, 'page' => 1]);
         } catch (\Throwable $e) {
             return $this->releaseCache[$package] = [];

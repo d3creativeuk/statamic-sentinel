@@ -105,6 +105,12 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Changed
 
+- **Scans give up faster on a service that's down.** Each request now waits at most 4 seconds to
+  connect, and once a service has refused a connection during a scan, Sentinel doesn't wait on it
+  again. With every service unreachable, a scan that took about 40 seconds now takes about 12.
+  Sentinel also no longer follows redirects from the services it checks (none of them use them).
+  If a scan is cut off by a server time limit, Scan now works again straight away instead of
+  after five minutes.
 - **Fewer background processes.** The two every-minute Content Freeze checks used to start a
   full `artisan` process each, every minute, even with no update scheduled. They now only run
   when a freeze is actually due to change.

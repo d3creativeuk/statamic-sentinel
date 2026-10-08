@@ -47,6 +47,14 @@ class AuditService
     const ACCEPT_GZIP = ['Accept-Encoding' => 'gzip'];
 
     /**
+     * Seconds to wait for a connection (DNS, TCP and TLS) before giving up,
+     * well under the 5-10 s total timeouts: a host that's down or behind a
+     * firewall that drops packets fails fast instead of holding the scan,
+     * which runs inside the page request for Scan now.
+     */
+    const CONNECT_TIMEOUT = 4;
+
+    /**
      * Per-instance lockfile cache. Each scan reads composer.lock /
      * package-lock.json from several methods (audit + installed-direct +
      * outdated); decoding once and reusing keeps a multi-MB JSON parse from
@@ -61,6 +69,13 @@ class AuditService
      * site has no npm" and recorded every vulnerability as resolved).
      */
     protected array $unreadableFiles = [];
+
+    /**
+     * Hosts that refused or dropped a connection this scan. Later calls to
+     * them fail straight away as a failed check, instead of each waiting
+     * out its own timeout against a host already known to be down.
+     */
+    protected array $downHosts = [];
 
     /**
      * Packagist p2 responses already fetched this scan, keyed by package
@@ -672,6 +687,7 @@ class AuditService
         $this->marketplace        = null;
         $this->lockfileCache      = [];
         $this->unreadableFiles    = [];
+        $this->downHosts          = [];
         $this->vulnSummaryCache   = null;
         $this->vulnIdsSeen        = [];
 
@@ -735,12 +751,19 @@ class AuditService
     {
         try {
             $responses = Http::pool(fn ($pool) => [
-                $pool->as('statamic')->withHeaders(self::ACCEPT_GZIP)->timeout(5)->get(self::PACKAGIST_STATAMIC_API),
-                $pool->as('laravel')->withHeaders(self::ACCEPT_GZIP)->timeout(5)->get(self::PACKAGIST_LARAVEL_API),
-                $pool->as('php')->withHeaders(self::ACCEPT_GZIP)->timeout(5)->get(self::EOL_DATE_PHP_API),
+                self::prepare($pool->as('statamic'), 5)->get(self::PACKAGIST_STATAMIC_API),
+                self::prepare($pool->as('laravel'), 5)->get(self::PACKAGIST_LARAVEL_API),
+                self::prepare($pool->as('php'), 5)->get(self::EOL_DATE_PHP_API),
             ]);
         } catch (\Throwable $e) {
             return ['statamic' => null, 'laravel' => null, 'php' => null];
+        }
+
+        // Both Packagist slots failing to connect means Packagist is down for
+        // this scan; composerOutdated() then reports a failed check at once.
+        if (! ($responses['statamic'] ?? null) instanceof \Illuminate\Http\Client\Response
+            && ! ($responses['laravel'] ?? null) instanceof \Illuminate\Http\Client\Response) {
+            $this->downHosts['repo.packagist.org'] = true;
         }
 
         // Hand the two Packagist feeds on to composerOutdated().
@@ -784,6 +807,22 @@ class AuditService
         return ! str_starts_with($version, 'dev-')
             && ! str_ends_with($version, '-dev')
             && (bool) preg_match('/^\d+(\.\d+)*/', $version);
+    }
+
+    /**
+     * Every outbound request goes through here: gzip, a total timeout, a
+     * short connect timeout, and no redirects. Guzzle follows up to five
+     * redirects to any host by default, so a compromised upstream could send
+     * the scan to internal addresses; none of these APIs redirect, so a 3xx
+     * just reads as a failed lookup.
+     */
+    public static function prepare(\Illuminate\Http\Client\PendingRequest $request, int $timeout): \Illuminate\Http\Client\PendingRequest
+    {
+        return $request
+            ->withHeaders(self::ACCEPT_GZIP)
+            ->timeout($timeout)
+            ->connectTimeout(self::CONNECT_TIMEOUT)
+            ->withoutRedirecting();
     }
 
     protected function isOkResponse($response): bool
@@ -1688,13 +1727,28 @@ class AuditService
             'UNKNOWN'  => ['count' => 0, 'packages' => [], 'vulns' => []],
         ];
 
+        $failed = fn () => [
+            'status'         => 'error',
+            'message'        => 'Could not reach vulnerability database.',
+            'severities'     => $severities,
+            'counts'         => array_map(fn($s) => $s['count'], $severities),
+            'total_packages' => $totalPackages,
+            'total_vulns'    => 0,
+        ];
+
+        // Composer's lookup already couldn't connect: don't make npm's wait
+        // out the same timeout.
+        if (isset($this->downHosts['api.osv.dev'])) {
+            return $failed();
+        }
+
         // querybatch returns only vuln IDs + modified timestamps (no severity,
         // summary, or affected ranges). Collect pairs here, then hydrate below.
         $pairs = [];
 
         foreach (array_chunk($queries, 500) as $chunk) {
             try {
-                $response = Http::withHeaders(self::ACCEPT_GZIP)->timeout(10)->post(self::OSV_BATCH_API, ['queries' => $chunk]);
+                $response = self::prepare(Http::withOptions([]), 10)->post(self::OSV_BATCH_API, ['queries' => $chunk]);
 
                 // A 429 / 5xx must read as a failed check, not as a chunk with
                 // no advisories - otherwise an outage caches "0 vulnerabilities".
@@ -1731,14 +1785,11 @@ class AuditService
                     }
                 }
             } catch (\Throwable $e) {
-                return [
-                    'status'         => 'error',
-                    'message'        => 'Could not reach vulnerability database.',
-                    'severities'     => $severities,
-                    'counts'         => array_map(fn($s) => $s['count'], $severities),
-                    'total_packages' => $totalPackages,
-                    'total_vulns'    => 0,
-                ];
+                if ($e instanceof \Illuminate\Http\Client\ConnectionException) {
+                    $this->downHosts['api.osv.dev'] = true;
+                }
+
+                return $failed();
             }
         }
 
@@ -1983,7 +2034,7 @@ class AuditService
             try {
                 $responses = Http::pool(function ($pool) use ($chunk) {
                     return array_map(
-                        fn($id) => $pool->as($id)->withHeaders(self::ACCEPT_GZIP)->timeout(10)->get('https://api.osv.dev/v1/vulns/' . $id),
+                        fn($id) => self::prepare($pool->as($id), 10)->get('https://api.osv.dev/v1/vulns/' . $id),
                         $chunk
                     );
                 });
@@ -2114,12 +2165,16 @@ class AuditService
         $toCheck = array_keys($installed);
         $toFetch = array_values(array_diff($toCheck, array_keys($this->packagistResponses)));
 
+        if (! empty($toFetch) && isset($this->downHosts['repo.packagist.org'])) {
+            return $this->outdatedResult([], $toCheck);
+        }
+
         // Fetch latest versions from Packagist concurrently, skipping any feed
         // fetchPlatformLatestVersions() already downloaded this scan.
         try {
             $responses = empty($toFetch) ? [] : Http::pool(function ($pool) use ($toFetch) {
                 return array_map(
-                    fn($name) => $pool->as($name)->withHeaders(self::ACCEPT_GZIP)->timeout(5)->get("https://repo.packagist.org/p2/{$name}.json"),
+                    fn($name) => self::prepare($pool->as($name), 5)->get("https://repo.packagist.org/p2/{$name}.json"),
                     $toFetch
                 );
             });
@@ -2295,7 +2350,7 @@ class AuditService
         try {
             $responses = Http::pool(function ($pool) use ($toCheck, $registryNames) {
                 return array_map(
-                    fn($name) => $pool->as($name)->withHeaders(self::ACCEPT_GZIP)->timeout(5)->get("https://registry.npmjs.org/{$registryNames[$name]}/latest"),
+                    fn($name) => self::prepare($pool->as($name), 5)->get("https://registry.npmjs.org/{$registryNames[$name]}/latest"),
                     $toCheck
                 );
             });
@@ -2481,7 +2536,7 @@ class AuditService
         if (! empty($needDoc)) {
             try {
                 $docs = Http::pool(fn ($pool) => array_map(
-                    fn ($pkg) => $pool->as($pkg['name'])->withHeaders(self::ACCEPT_GZIP)->timeout(5)->get('https://registry.npmjs.org/' . ($pkg['registry_name'] ?? $pkg['name'])),
+                    fn ($pkg) => self::prepare($pool->as($pkg['name']), 5)->get('https://registry.npmjs.org/' . ($pkg['registry_name'] ?? $pkg['name'])),
                     $needDoc
                 ));
             } catch (\Throwable $e) {
