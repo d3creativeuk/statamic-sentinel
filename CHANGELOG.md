@@ -130,6 +130,9 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 - **A lighter dashboard.** Each time the dashboard or the Sentinel page loaded, Sentinel re-read
   `composer.lock` (twice) and all of `package-lock.json` to check whether anything had been updated
   since the last scan. It now skips that when neither file has changed since the scan.
+- **Scan history is capped at 500 entries** as well as a year, and a failed Statamic licence check
+  no longer adds an entry of its own. Users without super admin access no longer load the
+  history, sent emails and schedules behind the scenes, since they can't see those tabs.
 - **Fewer background processes.** The two every-minute Content Freeze checks used to start a
   full `artisan` process each, every minute, even with no update scheduled. They now only run
   when a freeze is actually due to change.

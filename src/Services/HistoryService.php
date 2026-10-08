@@ -14,6 +14,11 @@ class HistoryService
     const LAST_REPORT_PATH    = 'statamic-sentinel/last-update-report.json';
     const RETENTION_DAYS      = 365;
 
+    // Also capped by count: frequent scans on a flaky network could add
+    // thousands of entries within the year, and the file is decoded whole
+    // on every utility load and scan.
+    const MAX_ENTRIES         = 500;
+
     /**
      * The non-timestamp fields used both for change detection and as the
      * snapshot's data payload.
@@ -224,6 +229,12 @@ class HistoryService
      */
     protected function carryForwardFailedChecks(array $snapshot, array $audit, ?array $previous): ?array
     {
+        // A failed statamic.com licence check reads 'unknown'. Recording it
+        // would add an entry for every outage and another when it recovers.
+        if (($snapshot['license_status'] ?? null) === 'unknown' && $previous !== null && array_key_exists('license_status', $previous)) {
+            $snapshot['license_status'] = $previous['license_status'];
+        }
+
         foreach (['composer', 'npm'] as $eco) {
             $vulnsFailed    = ($audit[$eco]['status'] ?? null) === 'error';
             $outdatedFailed = ! empty($audit[$eco]['outdated']['error']);
@@ -324,13 +335,16 @@ class HistoryService
     {
         $cutoff = Carbon::now()->subDays(self::RETENTION_DAYS);
 
-        return array_values(array_filter($entries, function ($entry) use ($cutoff) {
+        $kept = array_values(array_filter($entries, function ($entry) use ($cutoff) {
             try {
                 return Carbon::parse($entry['recorded_at'])->greaterThanOrEqualTo($cutoff);
             } catch (\Throwable $e) {
                 return false;
             }
         }));
+
+        // Newest first, so this keeps the most recent.
+        return array_slice($kept, 0, self::MAX_ENTRIES);
     }
 
     /**

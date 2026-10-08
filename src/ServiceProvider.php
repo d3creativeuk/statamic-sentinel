@@ -215,41 +215,7 @@ class ServiceProvider extends AddonServiceProvider
                     ->navTitle('Sentinel')
                     ->icon('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z"/></svg>')
                     ->description('Full vulnerability and outdated-package report.')
-                    ->view('statamic-sentinel::utilities.sentinel', function () {
-                        $service = new AuditService();
-
-                        // Run the refresh then redirect to the same URL with
-                        // `d3_refresh` stripped, so a manual F5 doesn't
-                        // re-trigger the audit. The exception bubbles out of
-                        // the utility render pipeline; Laravel turns it back
-                        // into the redirect response.
-                        (new \D3Creative\Sentinel\Support\ManualScan)->handle(request(), $service);
-
-                        $data     = $service->cached();
-                        $sentMail = app(SentMailService::class);
-                        $freeze   = app(ContentFreezeService::class);
-
-                        return [
-                            'audit'           => $data,
-                            'history'         => app(HistoryService::class)->all(),
-                            'schedule'        => app(ScheduleService::class)->all(),
-                            'sent_status'     => $sentMail->forKind(SentMailService::KIND_STATUS),
-                            'sent_update'     => $sentMail->forKind(SentMailService::KIND_UPDATE),
-                            'sent_maintenance' => $sentMail->forKind(SentMailService::KIND_MAINTENANCE),
-                            'last_status_recipients' => $sentMail->lastManualRecipients(SentMailService::KIND_STATUS),
-                            'last_update_recipients' => $sentMail->lastManualRecipients(SentMailService::KIND_UPDATE),
-                            'last_maintenance_recipients' => $sentMail->lastManualRecipients(SentMailService::KIND_MAINTENANCE),
-                            'maintenance_plan' => app(MaintenancePlanService::class)->all(),
-                            'package_notes'   => app(PackageNoteService::class)->all(),
-                            // Who's-online list - super-only (it exposes every CP
-                            // user's activity), so don't even build it otherwise.
-                            'users'           => \D3Creative\Sentinel\Support\CurrentUser::isSuper() ? $this->buildUserActivity() : [],
-                            'online_window'   => (int) config('statamic-sentinel.users.online_window', 5),
-                            'freeze'          => $freeze,
-                            'freeze_current'  => $freeze->current(),
-                            'freeze_history'  => $freeze->history(),
-                        ];
-                    })
+                    ->view('statamic-sentinel::utilities.sentinel', fn () => $this->utilityData())
             );
         });
 
@@ -263,6 +229,54 @@ class ServiceProvider extends AddonServiceProvider
                 FreezeTickActivationsCommand::class,
             ]);
         }
+    }
+
+    /**
+     * View data for the Sentinel utility. Runs a manual scan first when the
+     * request asks for one (that redirects), then reads the stores; the
+     * super-only ones are left empty for everyone else.
+     */
+    public function utilityData(): array
+    {
+        $service = new AuditService();
+
+        // Run the refresh then redirect to the same URL with
+        // `d3_refresh` stripped, so a manual F5 doesn't
+        // re-trigger the audit. The exception bubbles out of
+        // the utility render pipeline; Laravel turns it back
+        // into the redirect response.
+        (new \D3Creative\Sentinel\Support\ManualScan)->handle(request(), $service);
+
+        $data     = $service->cached();
+        $sentMail = app(SentMailService::class);
+        $freeze   = app(ContentFreezeService::class);
+
+        // Everything but the Current tab is super-only, so
+        // don't read those stores (history can run to MBs)
+        // for anyone else.
+        $isSuper = \D3Creative\Sentinel\Support\CurrentUser::isSuper();
+
+        return [
+            'audit'           => $data,
+            'history'         => $isSuper ? app(HistoryService::class)->all() : [],
+            'schedule'        => $isSuper ? app(ScheduleService::class)->all() : [],
+            'sent_status'     => $isSuper ? $sentMail->forKind(SentMailService::KIND_STATUS) : [],
+            'sent_update'     => $isSuper ? $sentMail->forKind(SentMailService::KIND_UPDATE) : [],
+            'sent_maintenance' => $isSuper ? $sentMail->forKind(SentMailService::KIND_MAINTENANCE) : [],
+            'last_status_recipients' => $isSuper ? $sentMail->lastManualRecipients(SentMailService::KIND_STATUS) : [],
+            'last_update_recipients' => $isSuper ? $sentMail->lastManualRecipients(SentMailService::KIND_UPDATE) : [],
+            'last_maintenance_recipients' => $isSuper ? $sentMail->lastManualRecipients(SentMailService::KIND_MAINTENANCE) : [],
+            'maintenance_plan' => $isSuper ? app(MaintenancePlanService::class)->all() : [],
+            // The Current tab shows notes to everyone.
+            'package_notes'   => app(PackageNoteService::class)->all(),
+            // Who's-online list - super-only (it exposes every CP
+            // user's activity), so don't even build it otherwise.
+            'users'           => $isSuper ? $this->buildUserActivity() : [],
+            'online_window'   => (int) config('statamic-sentinel.users.online_window', 5),
+            'freeze'          => $freeze,
+            'freeze_current'  => $freeze->current(),
+            'freeze_history'  => $isSuper ? $freeze->history() : [],
+        ];
     }
 
     /**
