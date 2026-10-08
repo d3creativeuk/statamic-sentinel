@@ -114,7 +114,11 @@ class ScheduleService
             return null;
         }
 
-        if (! preg_match('/^(\d{1,2}):(\d{2})$/', $cfg['time'] ?? '', $m)) {
+        // A hand-edited schedule.json can hold any type here; preg_match()
+        // on an array throws, and this runs while the console boots.
+        $time = $cfg['time'] ?? '';
+
+        if (! is_string($time) || ! preg_match('/^(\d{1,2}):(\d{2})$/', $time, $m)) {
             return null;
         }
 

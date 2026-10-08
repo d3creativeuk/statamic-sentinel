@@ -57,6 +57,20 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
   cut-off advisory was stored as "unknown severity, no fix" until the advisory next changed, and a
   very long result was counted only up to its first page. These now count as a failed check, or
   are fetched again on the next scan.
+- **A damaged schedule file could stop every `artisan` command.** Sentinel registers its
+  scheduled tasks while the console starts up, and an unexpected value in its saved schedule threw
+  an error there, which stopped `schedule:run`, queue workers and migrations along with it. Bad
+  values are now ignored, and nothing Sentinel registers can stop the console.
+- **A crash mid-task could pause Sentinel's scheduled tasks for a day.** If `schedule:run` was
+  killed while one was running (a deploy or server restart), Laravel's default overlap lock kept
+  the task from running again for 24 hours. Freeze checks now recover after 10 minutes, scans and
+  status reports after 2 hours.
+
+### Changed
+
+- **Fewer background processes.** The two every-minute Content Freeze checks used to start a
+  full `artisan` process each, every minute, even with no update scheduled. They now only run
+  when a freeze is actually due to change.
 - **The Statamic licence key was visible to Sentinel users who aren't super admins.** When the
   licence needed renewing, the "View renewal date" link (whose address contains the licence key)
   showed to anyone with Sentinel access. It now shows only to super admins and users who can open

@@ -205,24 +205,7 @@ class ServiceProvider extends AddonServiceProvider
         // `* * * * * php artisan schedule:run` cron entry. Console-only so
         // web requests never resolve the Schedule singleton on our behalf.
         if ($this->app->runningInConsole()) {
-            $this->callAfterResolving(\Illuminate\Console\Scheduling\Schedule::class, function ($schedule) {
-                if ($cron = app(ScheduleService::class)->cronExpression('status_report')) {
-                    // One send per slot even when several servers run schedule:run.
-                    $schedule->command('sentinel:send-status-report')->cron($cron)->onOneServer()->withoutOverlapping();
-                }
-
-                // Opt-in unattended scans (SENTINEL_SCAN_SCHEDULE).
-                if ($scanCron = app(ScheduleService::class)->scanCronExpression()) {
-                    $schedule->command('sentinel:scan')->cron($scanCron)->onOneServer()->withoutOverlapping();
-                }
-
-                // Drive the freeze state machine. Every-minute ticks are
-                // cheap (no-op when there's no scheduled / notified freeze)
-                // and give us at-most-one-minute lag between the configured
-                // time and the user-visible effect.
-                $schedule->command('sentinel:freeze:tick-notifications')->everyMinute()->withoutOverlapping();
-                $schedule->command('sentinel:freeze:tick-activations')->everyMinute()->withoutOverlapping();
-            });
+            $this->callAfterResolving(\Illuminate\Console\Scheduling\Schedule::class, fn ($schedule) => $this->registerSchedule($schedule));
         }
 
         Utility::extend(function () {
@@ -279,6 +262,44 @@ class ServiceProvider extends AddonServiceProvider
                 FreezeTickNotificationsCommand::class,
                 FreezeTickActivationsCommand::class,
             ]);
+        }
+    }
+
+    /**
+     * Sentinel's scheduled tasks. Statamic resolves the Schedule while the
+     * app boots in the console, so anything thrown here would stop every
+     * artisan command (schedule:run, queue:work, migrate) on the host, not
+     * just Sentinel's: report it and carry on.
+     *
+     * withoutOverlapping() gets explicit expiries. Laravel's default is 24
+     * hours, so a schedule:run killed mid-task (deploy, OOM, reboot) left a
+     * mutex that skipped the task for a day.
+     */
+    public function registerSchedule($schedule): void
+    {
+        try {
+            $schedules = app(ScheduleService::class);
+
+            if ($cron = $schedules->cronExpression('status_report')) {
+                // One send per slot even when several servers run schedule:run.
+                $schedule->command('sentinel:send-status-report')->cron($cron)->onOneServer()->withoutOverlapping(120);
+            }
+
+            // Opt-in unattended scans (SENTINEL_SCAN_SCHEDULE).
+            if ($scanCron = $schedules->scanCronExpression()) {
+                $schedule->command('sentinel:scan')->cron($scanCron)->onOneServer()->withoutOverlapping(120);
+            }
+
+            // Drive the freeze state machine, at most a minute behind the
+            // configured times. Each tick is a separate artisan process, so
+            // only start one when a transition is actually due (a cheap file
+            // read) rather than booting the app twice a minute for nothing.
+            $due = fn () => app(ContentFreezeService::class)->hasDueTransition();
+
+            $schedule->command('sentinel:freeze:tick-notifications')->everyMinute()->when($due)->withoutOverlapping(10);
+            $schedule->command('sentinel:freeze:tick-activations')->everyMinute()->when($due)->withoutOverlapping(10);
+        } catch (\Throwable $e) {
+            report($e);
         }
     }
 
