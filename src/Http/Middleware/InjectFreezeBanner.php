@@ -3,6 +3,8 @@
 namespace D3Creative\Sentinel\Http\Middleware;
 
 use Closure;
+use D3Creative\Sentinel\Services\ContentFreezeService;
+use D3Creative\Sentinel\Support\CpAccess;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -15,17 +17,20 @@ use Symfony\Component\HttpFoundation\Response;
  *  1. Statamic 5: the layout is Blade-rendered, so the
  *     `<div class="workspace">` is present in the response. Banner is
  *     injected as its first child - normal document flow, sits below
- *     the fixed `.global-header`.
+ *     the fixed `.global-header`. Every navigation is a full page load,
+ *     so the banner is always current.
  *
  *  2. Statamic 6: the CP is rendered client-side via Inertia/Vue, so the
  *     initial HTML response only contains `<div id="statamic" data-page="...">`
  *     with no workspace / header / main in the markup. Banner is appended
  *     before `</body>` wrapped in a `position:fixed; top:0` overlay, and a
  *     small inline script shifts the Vue-rendered header and `#main` down
- *     by the banner's height (re-applied on Inertia navigations via a
- *     MutationObserver). Without the shift the overlay would sit on top
- *     of the global header; without the overlay the banner ends up below
- *     the full-viewport `#statamic` and is invisible.
+ *     by the banner's height. Navigations after the first load are Inertia
+ *     JSON responses that never pass through here, so the overlay is added
+ *     on every full load (empty when there's no freeze) and the script keeps
+ *     it current: each Inertia response carries the banner key (shared below
+ *     as `sentinelFreeze`), and when it differs from the one on screen the
+ *     script fetches the new markup from the freeze-banner route.
  *
  * Silent on any failure - the CP render must never break because the
  * banner couldn't be assembled.
@@ -34,6 +39,8 @@ class InjectFreezeBanner
 {
     public function handle(Request $request, Closure $next): Response
     {
+        $this->shareBannerKey();
+
         $response = $next($request);
 
         if (! $this->shouldInject($request, $response)) {
@@ -41,16 +48,6 @@ class InjectFreezeBanner
         }
 
         try {
-            // State machine advancement is handled by the AdvanceFreezeState
-            // middleware which runs on every CP request (HTML or Inertia
-            // JSON). This middleware only renders the banner markup, which
-            // requires an HTML response.
-            $markup = view('statamic-sentinel::cp.freeze-injector')->render();
-
-            if (trim($markup) === '') {
-                return $response;
-            }
-
             $content = $response->getContent();
 
             if (! is_string($content) || $content === '') {
@@ -77,12 +74,21 @@ class InjectFreezeBanner
                 return $response;
             }
 
-            // Preferred injection point: first child of <div class="workspace">,
-            // which Statamic 5 renders inside #main, below the .global-header.
-            // Anchored on class as the tag's first attribute (as Statamic 5
-            // renders it) so it can't backtrack across the shell's large
-            // attributes; extra classes are tolerated.
+            // State machine advancement is handled by the AdvanceFreezeState
+            // middleware which runs on every CP request (HTML or Inertia
+            // JSON). This middleware only renders the banner markup.
+            $markup = view('statamic-sentinel::cp.freeze-injector')->render();
+
+            // Statamic 5: first child of <div class="workspace">, which it
+            // renders inside #main, below the .global-header. Anchored on
+            // class as the tag's first attribute (as Statamic 5 renders it)
+            // so it can't backtrack across the shell's large attributes;
+            // extra classes are tolerated.
             if (preg_match('/<div\s+class\s*=\s*"[^"<>]*\bworkspace\b[^"<>]*"[^>]*>/i', $content, $matches, PREG_OFFSET_CAPTURE)) {
+                if (trim($markup) === '') {
+                    return $response;
+                }
+
                 $insertAt = $matches[0][1] + strlen($matches[0][0]);
                 $response->setContent(
                     substr($content, 0, $insertAt) . $markup . substr($content, $insertAt)
@@ -91,21 +97,22 @@ class InjectFreezeBanner
                 return $response;
             }
 
-            // Fallback: inject before the last </body>. Used on Statamic 6
-            // where the CP is rendered client-side by Vue/Inertia and the
-            // initial HTML response has no `.workspace` for us to target.
+            // Statamic 6: inject before the last </body>, even with no
+            // banner, so the script is there to show one that appears later
+            // in this session.
             //
             // Without a wrapper the banner ends up after the full-viewport
             // `#statamic` and is off-screen, so wrap it in a fixed overlay
             // at top:0 and ship an inline script that shifts the Vue-rendered
-            // global header + `#main` down by the overlay's height. The
-            // script keeps reapplying on Inertia navigations so the shift
-            // survives page transitions.
+            // global header + `#main` down by the overlay's height.
             $pos = strripos($content, '</body>');
 
             if ($pos === false) {
                 return $response;
             }
+
+            $state    = app(ContentFreezeService::class)->bannerState();
+            $endpoint = $this->bannerEndpoint();
 
             // Override the global `[x-cloak]{display:none}` rule inside the
             // overlay so the banner stays visible even if Alpine never
@@ -115,10 +122,14 @@ class InjectFreezeBanner
             // green completed-freeze banner, and without Alpine its absence
             // of inline `display:none` leaves the banner visible anyway.
             $overlay = '<style>#d3-sentinel-freeze-overlay [x-cloak]{display:block !important;}</style>'
-                . '<div id="d3-sentinel-freeze-overlay" style="position:fixed; top:0; left:0; right:0; z-index:9999;">'
+                . '<div id="d3-sentinel-freeze-overlay"'
+                . ' data-key="' . e($state['key']) . '"'
+                . ' data-transition-at="' . e((string) ($state['transition_at'] ?? '')) . '"'
+                . ' data-endpoint="' . e($endpoint) . '"'
+                . ' style="position:fixed; top:0; left:0; right:0; z-index:9999;">'
                 . $markup
                 . '</div>'
-                . $this->shiftScript();
+                . $this->overlayScript();
 
             $response->setContent(
                 substr($content, 0, $pos) . $overlay . substr($content, $pos)
@@ -131,12 +142,58 @@ class InjectFreezeBanner
     }
 
     /**
-     * Inline script that pushes the Statamic 6 Vue-rendered global header
-     * and `#main` down by the freeze overlay's height. Re-runs on Inertia
-     * navigation because Vue re-creates those nodes; the parent check on
-     * the banner makes apply() idempotent.
+     * Add the banner key to every Inertia response in the CP (Statamic 6),
+     * so the overlay script can tell after each navigation whether the
+     * banner has changed without making a request of its own. Resolved
+     * lazily, only when an Inertia page is actually rendered.
      */
-    protected function shiftScript(): string
+    protected function shareBannerKey(): void
+    {
+        try {
+            if (! class_exists(\Inertia\Inertia::class)) {
+                return;
+            }
+
+            \Inertia\Inertia::share('sentinelFreeze', function () {
+                try {
+                    return app(CpAccess::class)->allows()
+                        ? app(ContentFreezeService::class)->bannerState()['key']
+                        : null;
+                } catch (\Throwable $e) {
+                    return null;
+                }
+            });
+        } catch (\Throwable $e) {
+            // No Inertia, no shared key: the banner just won't update.
+        }
+    }
+
+    protected function bannerEndpoint(): string
+    {
+        try {
+            return (string) cp_route('d3-sentinel.freeze.banner');
+        } catch (\Throwable $e) {
+            return '';
+        }
+    }
+
+    /**
+     * Inline script for the Statamic 6 overlay. Two jobs:
+     *
+     * - Push the Vue-rendered global header, `#main` and the nav down by the
+     *   overlay's height, re-applying as Inertia re-renders them. With no
+     *   banner it leaves the layout alone.
+     * - Keep the banner current. After each Inertia navigation it compares
+     *   the shared `sentinelFreeze` key with the overlay's and, when they
+     *   differ, fetches the new markup and swaps it in (Alpine's own
+     *   mutation observer starts the new x-data). For an upcoming freeze it
+     *   also checks once at freeze_at, so an editor who stays on one page
+     *   still sees the amber banner. It never polls on a timer: every CP
+     *   request refreshes the session (Statamic exempts only its own
+     *   session-timeout check), so polling would stop idle tabs timing out.
+     *   It never reloads the page either, which would lose unsaved edits.
+     */
+    protected function overlayScript(): string
     {
         return <<<'HTML'
 <script>
@@ -159,8 +216,15 @@ class InjectFreezeBanner
             });
         };
 
+        var shifted = false;
+        var observer = null;
+
         var apply = function () {
             var h = overlay.offsetHeight || 0;
+
+            // No banner and nothing to undo: leave Statamic's layout alone.
+            if (! h && ! shifted) return;
+
             var hdr = document.querySelector('#statamic header.fixed.top-0')
                 || document.querySelector('header.fixed.top-0');
             if (hdr) hdr.style.top = h ? h + 'px' : '';
@@ -186,17 +250,104 @@ class InjectFreezeBanner
                 void nav.offsetHeight;
                 nav.style.transition = prevTransition;
             }
+
+            shifted = h > 0;
+
+            // Inertia re-creates the header and #main, so watch for that
+            // only while there's a shift to keep.
+            if (shifted && ! observer && window.MutationObserver) {
+                observer = new MutationObserver(schedule);
+                observer.observe(document.body, { childList: true, subtree: true });
+            } else if (! shifted && observer) {
+                observer.disconnect();
+                observer = null;
+            }
         };
 
         apply();
         if (window.ResizeObserver) new ResizeObserver(schedule).observe(overlay);
-        if (window.MutationObserver) {
-            new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true });
-        }
         // Vue may not have mounted yet on first paint; nudge a few times.
         setTimeout(apply, 100);
         setTimeout(apply, 500);
         setTimeout(apply, 1500);
+
+        var endpoint = overlay.getAttribute('data-endpoint');
+        var busy = false;
+        var timer = null;
+        var waitingForTab = false;
+        var attempts = 0;
+        var maxWait = 6 * 60 * 60 * 1000;
+
+        var refresh = function () {
+            if (busy || ! endpoint || ! window.fetch) return;
+            busy = true;
+            fetch(endpoint, {
+                credentials: 'same-origin',
+                headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+            })
+                .then(function (res) { return res.ok ? res.json() : null; })
+                .then(function (data) {
+                    if (data && typeof data.key === 'string') render(data);
+                })
+                .catch(function () {})
+                .then(function () { busy = false; });
+        };
+
+        var render = function (data) {
+            if (data.key !== overlay.getAttribute('data-key')) {
+                overlay.setAttribute('data-key', data.key);
+                overlay.innerHTML = typeof data.html === 'string' ? data.html : '';
+                attempts = 0;
+                schedule();
+            }
+            arm(typeof data.transition_at === 'string' ? data.transition_at : '');
+        };
+
+        // One check at an upcoming freeze's start time. If the server hasn't
+        // switched it on yet (the scheduler can lag a minute), retry every
+        // 30 seconds, a few times at most. A hidden tab waits until it's
+        // looked at again.
+        var arm = function (iso) {
+            clearTimeout(timer);
+            timer = null;
+            waitingForTab = false;
+
+            var at = iso ? Date.parse(iso) : NaN;
+            if (isNaN(at) || attempts >= 4) return;
+
+            var wait = at - Date.now();
+            wait = wait > 0 ? wait + 3000 : 30000;
+
+            // setTimeout can't wait weeks; re-arm without asking the server.
+            if (wait > maxWait) {
+                timer = setTimeout(function () { arm(iso); }, maxWait);
+                return;
+            }
+
+            timer = setTimeout(function () {
+                attempts++;
+                if (document.visibilityState === 'hidden') {
+                    waitingForTab = true;
+                    return;
+                }
+                refresh();
+            }, wait);
+        };
+
+        document.addEventListener('inertia:navigate', function (e) {
+            var page = e && e.detail ? e.detail.page : null;
+            var key = page && page.props ? page.props.sentinelFreeze : null;
+            if (typeof key === 'string' && key !== overlay.getAttribute('data-key')) refresh();
+        });
+
+        document.addEventListener('visibilitychange', function () {
+            if (waitingForTab && document.visibilityState === 'visible') {
+                waitingForTab = false;
+                refresh();
+            }
+        });
+
+        arm(overlay.getAttribute('data-transition-at') || '');
     } catch (e) {}
 })();
 </script>
@@ -215,7 +366,7 @@ HTML;
             return false;
         }
 
-        if (! app(\D3Creative\Sentinel\Support\CpAccess::class)->allows()) {
+        if (! app(CpAccess::class)->allows()) {
             return false;
         }
 

@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use D3Creative\Sentinel\Http\Controllers\Concerns\IdentifiesActor;
 use D3Creative\Sentinel\Services\ContentFreezeService;
+use D3Creative\Sentinel\Support\CpAccess;
 
 class FreezeController extends Controller
 {
@@ -73,6 +74,34 @@ class FreezeController extends Controller
             'message' => $message,
             'freeze'  => $result['freeze'],
         ], 200);
+    }
+
+    /**
+     * The current freeze banner for the Statamic 6 CP, which navigates
+     * without reloading the page. Fetched only when the banner key shared on
+     * a navigation differs from the one on screen, or at an upcoming
+     * freeze's start time, never on a timer: every CP request refreshes the
+     * session, so polling would keep an idle tab signed in indefinitely.
+     *
+     * For any CP user, like the banner itself.
+     */
+    public function banner(ContentFreezeService $service)
+    {
+        abort_unless(app(CpAccess::class)->allows(), 403);
+
+        // At freeze_at the scheduler may not have ticked yet. Activating is
+        // due anyway and sends no email, so do it before answering.
+        try {
+            if ($service->hasDueTransition()) {
+                $service->tickActivations();
+            }
+        } catch (\Throwable $e) {
+            // The banner below still reflects the stored state.
+        }
+
+        return response()
+            ->json($service->bannerState() + ['html' => view('statamic-sentinel::cp.freeze-injector')->render()])
+            ->header('Cache-Control', 'no-store');
     }
 
     /**

@@ -46,6 +46,12 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
   happened to send it. Someone browsing through another address (or deliberately faking one)
   could have that address appear in the email to your client. Emails now always use the site's
   configured address (`APP_URL`).
+- **On Statamic 6 the freeze banner only changed when the page was reloaded.** Statamic 6 moves
+  between Control Panel pages without reloading, so editors who already had it open never saw the
+  amber "update in progress" banner when the freeze started, or the green one when it finished.
+  The banner now updates as they move between pages, and turns amber at the start time even if
+  they stay on one page. It never reloads the page or polls in the background, so unsaved edits
+  are safe and idle sessions still time out as before.
 - **The Statamic licence key was visible to Sentinel users who aren't super admins.** When the
   licence needed renewing, the "View renewal date" link (whose address contains the licence key)
   showed to anyone with Sentinel access. It now shows only to super admins and users who can open

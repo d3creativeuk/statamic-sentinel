@@ -141,6 +141,49 @@ class ContentFreezeService
     }
 
     /**
+     * Which banner the CP should show, as a short key that changes only when
+     * the banner does, plus the time of the next change when it's known.
+     * Mirrors the branches in cp/freeze-injector.blade.php.
+     *
+     *   key: 'upcoming:<id>' | 'active:<id>' | 'complete:<id>' | 'none'
+     *   transition_at: freeze_at for an upcoming freeze, otherwise null
+     *
+     * Statamic 6 navigates without reloading the page, so the banner drawn on
+     * the first load would otherwise never change; the CP compares this key
+     * after each navigation and fetches new markup when it differs.
+     */
+    public function bannerState(): array
+    {
+        try {
+            $current = $this->current();
+
+            if ($current) {
+                $id     = (string) ($current['id'] ?? 'unknown');
+                $status = $current['status'] ?? null;
+
+                if ($status === self::STATUS_ACTIVE) {
+                    return ['key' => "active:{$id}", 'transition_at' => null];
+                }
+
+                if ($status === self::STATUS_SCHEDULED || $status === self::STATUS_NOTIFIED) {
+                    return ['key' => "upcoming:{$id}", 'transition_at' => $current['freeze_at'] ?? null];
+                }
+
+                // Any other status renders no banner (and hides the green one).
+                return ['key' => 'none', 'transition_at' => null];
+            }
+
+            if ($recent = $this->lastCompleted()) {
+                return ['key' => 'complete:' . ($recent['id'] ?? 'unknown'), 'transition_at' => null];
+            }
+        } catch (\Throwable $e) {
+            // Fall through: no banner.
+        }
+
+        return ['key' => 'none', 'transition_at' => null];
+    }
+
+    /**
      * ISO timestamp of the most recent freeze cancellation, or null if none
      * has been recorded. Used to suppress the green completion banner from
      * older history when the user has just cancelled a different freeze.

@@ -177,6 +177,13 @@ class ServiceProvider extends AddonServiceProvider
                 [FreezeHistoryActionController::class, 'bulkActions']
             )->middleware('throttle:30,1,sentinel.freezes.actions.bulk')->name('d3-sentinel.freezes.actions.bulk');
 
+            // Read by the Statamic 6 CP to keep the freeze banner current
+            // between full page loads; any CP user (see FreezeController).
+            \Illuminate\Support\Facades\Route::get(
+                'd3-sentinel/freeze/banner',
+                [FreezeController::class, 'banner']
+            )->middleware('throttle:30,1,sentinel.freeze.banner')->name('d3-sentinel.freeze.banner');
+
             \Illuminate\Support\Facades\Route::post(
                 'd3-sentinel/freeze/schedule',
                 [FreezeController::class, 'schedule']

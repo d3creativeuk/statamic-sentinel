@@ -45,7 +45,7 @@ Coordinate update windows with CP users. Schedule a heads-up email, show banners
 
 - **Scheduling** - super admins set two times on the utility's **Content Freeze** tab: when the heads-up email goes out, and when the freeze starts. Recipients are a comma-separated list (max 10).
 - **Heads-up email** - sent automatically at the notification time. Tells recipients when the window starts and what to expect.
-- **CP banners** - injected below the global header on every authenticated CP page, in normal document flow (no fixed overlay). Three states:
+- **CP banners** - shown at the top of every authenticated CP page: below the global header on Statamic 5, and as a fixed bar above it on Statamic 6, which pushes the header and sidebar down. On Statamic 6 the banner also updates as editors move between pages, and switches to amber at the start time even if they stay on one page, without reloading or interrupting their work. Three states:
   - **Upcoming** (blue, non-dismissible) - shows from schedule through to freeze start. Includes a **Learn more** button that opens a modal mirroring the heads-up email. The modal opens once per browser session, so it reappears the next time a user signs in.
   - **Active** (amber, non-dismissible) - shows once the freeze starts. Paired with a first-load modal, again once per browser session per freeze.
   - **Complete** (green, dismissable) - shown for 7 days after the freeze ends, or until the user dismisses it.

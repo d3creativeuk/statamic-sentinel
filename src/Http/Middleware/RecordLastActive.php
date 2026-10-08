@@ -27,7 +27,10 @@ class RecordLastActive
         $response = $next($request);
 
         try {
-            if (config('statamic-sentinel.users.track_activity', true) && app(\D3Creative\Sentinel\Support\CpAccess::class)->allows()) {
+            // The freeze banner refresh is the CP checking in, not the user.
+            if (config('statamic-sentinel.users.track_activity', true)
+                && ! $request->routeIs('*d3-sentinel.freeze.banner')
+                && app(\D3Creative\Sentinel\Support\CpAccess::class)->allows()) {
                 $id = \Statamic\Facades\User::current()?->id();
 
                 if ($id !== null

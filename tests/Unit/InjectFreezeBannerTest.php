@@ -28,6 +28,7 @@ class InjectFreezeBannerTest extends TestCase
 
         Storage::fake('local');
         $this->registerViews();
+        config(['statamic.cp.enabled' => true]);
 
         $this->app->instance(CpAccess::class, new class extends CpAccess {
             public function allows(): bool
@@ -79,11 +80,56 @@ class InjectFreezeBannerTest extends TestCase
         $this->assertSame($escaped, $this->inject($escaped));
     }
 
-    public function test_nothing_is_injected_without_a_freeze(): void
+    public function test_a_statamic_5_page_is_left_alone_without_a_freeze(): void
     {
-        $shell = $this->statamic6Shell(1_000);
+        $shell = '<!DOCTYPE html><html><head></head><body><div id="statamic"><div id="main"><div class="workspace"><p>Page</p></div></div></div></body></html>';
 
         $this->assertSame($shell, $this->inject($shell));
+    }
+
+    /**
+     * Statamic 6 never reloads the page between navigations, so the overlay
+     * and its script go in on every full load, empty when there's no freeze,
+     * ready to show a banner that appears later in the session.
+     */
+    public function test_a_statamic_6_page_gets_an_empty_overlay_without_a_freeze(): void
+    {
+        $html = $this->inject($this->statamic6Shell(1_000));
+
+        $this->assertMatchesRegularExpression('/<div id="d3-sentinel-freeze-overlay" data-key="none" data-transition-at="" data-endpoint="http[^"]+"[^>]*><\/div>/', $html);
+        $this->assertStringContainsString("addEventListener('inertia:navigate'", $html);
+    }
+
+    public function test_the_overlay_carries_the_banner_key_and_start_time(): void
+    {
+        $freezeAt = Carbon::now()->addHour()->utc()->toIso8601String();
+
+        Storage::disk('local')->put(ContentFreezeService::CURRENT_PATH, json_encode([
+            'id'         => 'freeze_soon',
+            'status'     => ContentFreezeService::STATUS_NOTIFIED,
+            'notify_at'  => Carbon::now()->subHour()->toIso8601String(),
+            'freeze_at'  => $freezeAt,
+            'recipients' => [],
+        ]));
+
+        $html = $this->inject($this->statamic6Shell(1_000));
+
+        $this->assertStringContainsString('data-key="upcoming:freeze_soon"', $html);
+        $this->assertStringContainsString('data-transition-at="' . e($freezeAt) . '"', $html);
+    }
+
+    /**
+     * Inertia responses carry the key, so the script can spot a change after
+     * any navigation without a request of its own.
+     */
+    public function test_the_banner_key_is_shared_with_inertia_pages(): void
+    {
+        $this->activeFreeze();
+
+        $this->inject($this->statamic6Shell(1_000));
+
+        $shared = \Inertia\Inertia::getShared('sentinelFreeze');
+        $this->assertSame('active:freeze_test', is_callable($shared) ? $shared() : $shared);
     }
 
     protected function activeFreeze(): void
