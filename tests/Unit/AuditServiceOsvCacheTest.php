@@ -21,6 +21,10 @@ class AuditServiceOsvCacheTest extends TestCase
 
     protected int $detailStatus = 200;
 
+    /** Raw 200 body to send instead of a real detail record / querybatch answer. */
+    protected $detailBody = null;
+    protected $batchBody = null;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -28,7 +32,7 @@ class AuditServiceOsvCacheTest extends TestCase
         config(['cache.default' => 'array']);
 
         Http::fake([
-            'api.osv.dev/v1/querybatch' => fn () => Http::response(['results' => [[
+            'api.osv.dev/v1/querybatch' => fn () => $this->batchBody !== null ? Http::response($this->batchBody) : Http::response(['results' => [[
                 'vulns' => array_map(
                     fn ($id, $modified) => ['id' => $id, 'modified' => $modified],
                     array_keys($this->reported),
@@ -37,6 +41,10 @@ class AuditServiceOsvCacheTest extends TestCase
             ]]]),
             'api.osv.dev/v1/vulns/*' => function ($request) {
                 $id = basename($request->url());
+
+                if ($this->detailBody !== null) {
+                    return Http::response($this->detailBody);
+                }
 
                 return $this->detailStatus === 200
                     ? Http::response([
@@ -93,6 +101,46 @@ class AuditServiceOsvCacheTest extends TestCase
 
         $this->assertSame(2, $this->detailRequests());
         $this->assertSame(1, $recovered['counts']['HIGH']);
+    }
+
+    /**
+     * A 200 that isn't the record asked for (cut off mid-transfer, a proxy
+     * page, another advisory) used to be cached as UNKNOWN with no fix until
+     * OSV next changed the advisory.
+     */
+    public function test_a_detail_body_that_isnt_the_requested_record_is_not_cached(): void
+    {
+        $this->reported = ['GHSA-aaaa' => '2026-09-01T00:00:00Z'];
+
+        foreach (['<html>Gateway</html>', '{"id":"GHSA-aaaa","summ', ['id' => 'GHSA-other'], 'oops'] as $body) {
+            $this->detailBody = $body;
+            $this->assertSame(1, $this->scan()['counts']['UNKNOWN']);
+        }
+
+        $this->detailBody = null;
+        $recovered = $this->scan();
+
+        $this->assertSame(1, $recovered['counts']['HIGH']);
+        $this->assertTrue($recovered['severities']['HIGH']['vulns'][0]['fix_available']);
+    }
+
+    public function test_a_querybatch_body_without_results_fails_the_check(): void
+    {
+        $this->reported = ['GHSA-aaaa' => '2026-09-01T00:00:00Z'];
+
+        $this->batchBody = '<html>Please wait while we check your browser</html>';
+        $this->assertSame('error', $this->scan()['status']);
+
+        $this->batchBody = ['message' => 'ok'];
+        $this->assertSame('error', $this->scan()['status']);
+    }
+
+    public function test_paged_results_fail_the_check_rather_than_undercount(): void
+    {
+        $this->batchBody = ['results' => [['vulns' => [['id' => 'GHSA-aaaa', 'modified' => '2026-09-01T00:00:00Z']], 'next_page_token' => 'abc']]];
+        $this->reported  = ['GHSA-aaaa' => '2026-09-01T00:00:00Z'];
+
+        $this->assertSame('error', $this->scan()['status']);
     }
 
     public function test_advisories_no_longer_reported_are_pruned(): void

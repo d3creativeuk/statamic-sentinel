@@ -1639,7 +1639,22 @@ class AuditService
                     throw new \RuntimeException('OSV querybatch returned HTTP ' . $response->status());
                 }
 
-                foreach ($response->json('results', []) as $index => $result) {
+                // A 200 that isn't a querybatch answer (a proxy's HTML page,
+                // truncated JSON) would otherwise read as "no advisories".
+                $results = $response->json('results');
+
+                if (! is_array($results)) {
+                    throw new \RuntimeException('OSV querybatch returned no results list');
+                }
+
+                foreach ($results as $index => $result) {
+                    // OSV pages a result with more matches than fit in one
+                    // response. Counting only the first page would understate
+                    // the vulnerabilities, so treat it as a failed check.
+                    if (! empty($result['next_page_token'])) {
+                        throw new \RuntimeException('OSV returned partial results');
+                    }
+
                     if (empty($result['vulns'])) continue;
 
                     $pkg = $chunk[$index]['package']['name'];
@@ -1917,7 +1932,16 @@ class AuditService
                 $response = $responses[$id] ?? null;
                 if (! $this->isOkResponse($response)) continue;
 
-                $details[$id] = $response->json() ?? [];
+                // Only the record asked for counts. A 200 whose body was cut
+                // off mid-transfer, or isn't an OSV record at all, would
+                // otherwise be summarised as UNKNOWN with no fix and cached
+                // until OSV next changes the advisory. Left out, it's simply
+                // retried on the next scan.
+                $json = $response->json();
+
+                if (is_array($json) && ($json['id'] ?? null) === $id) {
+                    $details[$id] = $json;
+                }
             }
         }
 

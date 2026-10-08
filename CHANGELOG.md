@@ -52,6 +52,11 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
   The banner now updates as they move between pages, and turns amber at the start time even if
   they stay on one page. It never reloads the page or polls in the background, so unsaved edits
   are safe and idle sessions still time out as before.
+- **A bad answer from the vulnerability database could hide or downgrade issues.** A response that
+  wasn't a real answer (for example a network page in its place) read as "no vulnerabilities", a
+  cut-off advisory was stored as "unknown severity, no fix" until the advisory next changed, and a
+  very long result was counted only up to its first page. These now count as a failed check, or
+  are fetched again on the next scan.
 - **The Statamic licence key was visible to Sentinel users who aren't super admins.** When the
   licence needed renewing, the "View renewal date" link (whose address contains the licence key)
   showed to anyone with Sentinel access. It now shows only to super admins and users who can open
