@@ -1137,7 +1137,11 @@
             </div>
             <div x-bind:style="{ background: device === 'phone' ? '#e2e8f0' : '#fff' }"
                  style="flex:1; min-height:0; overflow:auto; background:#fff;">
+                {{-- sandbox: the previews are same-origin CP pages, and stored
+                     sent-email snapshots are re-served as-is, so a slip in an
+                     email template must not run script with the CP's origin. --}}
                 <iframe x-bind:src="src"
+                        sandbox
                         title="Email preview"
                         x-bind:style="{ width: device === 'phone' ? '375px' : '100%', borderLeft: device === 'phone' ? '1px solid #cbd5e1' : 'none', borderRight: device === 'phone' ? '1px solid #cbd5e1' : 'none' }"
                         style="display:block; width:100%; height:100%; margin:0 auto; border:none; background:#fff;"></iframe>

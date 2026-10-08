@@ -165,6 +165,7 @@ class ViewRenderTest extends TestCase
 
         $html = $this->renderUtility($this->audit(), $history);
 
+        $this->assertMatchesRegularExpression('/<iframe x-bind:src="src"\s+sandbox\s/', $html);
         $this->assertSame(50, substr_count($html, 'data-handle="delete_history_entry"'));
         $this->assertStringContainsString('Showing the 50 most recent of 120 changes', $html);
         $this->assertSame(1, substr_count($html, "fd.append('selections[]'"));

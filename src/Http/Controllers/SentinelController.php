@@ -458,6 +458,10 @@ class SentinelController extends Controller
         return response($html, 200, [
             'Content-Type'    => 'text/html; charset=utf-8',
             'X-Frame-Options' => 'SAMEORIGIN',
+            // Scriptless even when a preview URL is opened directly (a GET a
+            // link elsewhere can reach): emails need only inline styles and
+            // https images. No frame-ancestors, so the CP can still frame it.
+            'Content-Security-Policy' => "sandbox; default-src 'none'; style-src 'unsafe-inline'; img-src https: data:",
         ]);
     }
 

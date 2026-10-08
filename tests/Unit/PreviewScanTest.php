@@ -51,6 +51,18 @@ class PreviewScanTest extends TestCase
         $this->assertNull(Cache::get(AuditService::CACHE_KEY));
     }
 
+    /**
+     * Stored sent-email snapshots are served as-is from the CP's origin, so
+     * every preview is sandboxed: no script runs even if a template slips.
+     */
+    public function test_previews_are_served_sandboxed(): void
+    {
+        $csp = (new SentinelController)->previewReport(new Request)->headers->get('Content-Security-Policy');
+
+        $this->assertStringStartsWith('sandbox;', $csp);
+        $this->assertStringContainsString("default-src 'none'", $csp);
+    }
+
     public function test_the_status_preview_renders_a_cached_audit(): void
     {
         // The cached audit is reconciled against the live Statamic version,
