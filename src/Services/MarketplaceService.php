@@ -35,6 +35,13 @@ class MarketplaceService
      */
     protected array $notOnMarketplace = [];
 
+    /**
+     * Set when statamic.com refuses a connection, so the rest of the scan
+     * stops waiting on it (each lookup would otherwise hit its own timeout).
+     * Failing open: no vendor flags, OSV still applies.
+     */
+    protected bool $unreachable = false;
+
     public function enabled(): bool
     {
         return (bool) config('statamic-sentinel.vendor_security_check', true);
@@ -87,7 +94,7 @@ class MarketplaceService
      */
     public function releases(string $package): array
     {
-        if (! $this->enabled()) {
+        if (! $this->enabled() || $this->unreachable) {
             return [];
         }
 
@@ -102,12 +109,70 @@ class MarketplaceService
         $url = str_replace('{package}', $package, self::RELEASES_URL);
 
         try {
-            // perPage=50 keeps us under a single page for ~all real-world
-            // upgrade ranges (Statamic 6.x has shipped ~30 releases in a
-            // year), without paying for full history we'll never read.
-            $response = AuditService::prepare(Http::acceptJson(), 5)
-                ->get($url, ['perPage' => 50, 'page' => 1]);
+            $response = AuditService::prepare(Http::acceptJson(), 5)->get($url, self::QUERY);
         } catch (\Throwable $e) {
+            $response = $e;
+        }
+
+        return $this->store($package, $response);
+    }
+
+    /**
+     * Fetch several packages' release feeds in one concurrent round instead
+     * of one blocking request each (35 s for seven addons when statamic.com
+     * hangs). Results land in the per-scan cache that releases() reads, so
+     * callers carry on asking package by package. If the pool can't run,
+     * nothing is cached and releases() looks them up one at a time.
+     *
+     * @param array<int, string> $packages
+     */
+    public function prefetch(array $packages): void
+    {
+        if (! $this->enabled() || $this->unreachable) {
+            return;
+        }
+
+        $todo = array_values(array_filter(
+            array_unique($packages),
+            fn ($p) => is_string($p) && $p !== '' && ! isset($this->releaseCache[$p]) && ! isset($this->notOnMarketplace[$p])
+        ));
+
+        if (count($todo) < 2) {
+            return;
+        }
+
+        try {
+            $responses = Http::pool(fn ($pool) => array_map(
+                fn ($p) => AuditService::prepare($pool->as($p)->acceptJson(), 5)
+                    ->get(str_replace('{package}', $p, self::RELEASES_URL), self::QUERY),
+                $todo
+            ));
+        } catch (\Throwable $e) {
+            return;
+        }
+
+        foreach ($todo as $p) {
+            $this->store($p, $responses[$p] ?? null);
+        }
+    }
+
+    // perPage=50 keeps us under a single page for ~all real-world upgrade
+    // ranges (Statamic 6.x has shipped ~30 releases in a year), without
+    // paying for full history we'll never read.
+    const QUERY = ['perPage' => 50, 'page' => 1];
+
+    /**
+     * Cache one package's answer: a release list, a 404 (not on the
+     * marketplace), or [] for anything else. A refused connection marks
+     * statamic.com unreachable for the rest of the scan.
+     */
+    protected function store(string $package, $response): array
+    {
+        if (! $response instanceof \Illuminate\Http\Client\Response) {
+            if ($response instanceof \Illuminate\Http\Client\ConnectionException) {
+                $this->unreachable = true;
+            }
+
             return $this->releaseCache[$package] = [];
         }
 

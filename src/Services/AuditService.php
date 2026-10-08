@@ -927,6 +927,14 @@ class AuditService
         $vendorOnly  = 0;
         $marketplace = $ecosystemType === 'composer' ? $this->marketplace() : null;
 
+        // One concurrent round for every marketplace lookup this pass needs.
+        if ($marketplace) {
+            $marketplace->prefetch(array_values(array_filter(
+                array_map(fn ($pkg) => ($pkg['name'] ?? '') !== '' && ($pkg['current'] ?? '') !== '' ? $pkg['name'] : null, $packages),
+                fn ($name) => $name !== null && $this->isMarketplacePackage($name)
+            )));
+        }
+
         foreach ($packages as $i => $pkg) {
             $name    = $pkg['name'] ?? '';
             $current = $pkg['current'] ?? '';

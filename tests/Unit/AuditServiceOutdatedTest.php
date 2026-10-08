@@ -490,6 +490,7 @@ class AuditServiceOutdatedTest extends TestCase
         ]);
 
         $marketplace = Mockery::mock(\D3Creative\Sentinel\Services\MarketplaceService::class);
+        $marketplace->shouldReceive('prefetch')->once()->with(['statamic/cms', 'acme/seo']);
         $marketplace->shouldReceive('hasSecurityReleaseAfter')->once()->with('statamic/cms', '6.0.0')->andReturn(false);
         $marketplace->shouldReceive('hasSecurityReleaseAfter')->once()->with('acme/seo', '1.0.0')->andReturn(true);
         $marketplace->shouldNotReceive('hasSecurityReleaseAfter')->with('laravel/framework', Mockery::any());

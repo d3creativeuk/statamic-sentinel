@@ -111,6 +111,10 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
   Sentinel also no longer follows redirects from the services it checks (none of them use them).
   If a scan is cut off by a server time limit, Scan now works again straight away instead of
   after five minutes.
+- **Statamic marketplace checks run together.** Sentinel looked up each outdated addon on the
+  Statamic marketplace one after another; they now go out at once, and a marketplace that refuses
+  connections is skipped for the rest of the scan. With statamic.com unreachable and seven addons
+  to check, that part of a scan drops from about 35 seconds to a few.
 - **Fewer background processes.** The two every-minute Content Freeze checks used to start a
   full `artisan` process each, every minute, even with no update scheduled. They now only run
   when a freeze is actually due to change.
