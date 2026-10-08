@@ -40,10 +40,10 @@ Sometimes a vulnerable package can't be updated straight away, for example `brac
 
 Content Freeze is a coordinated update-window workflow. The lifecycle has four states, driven by two timestamps the admin sets at schedule time:
 
-1. **Scheduled** - waiting for the notification time. Nothing visible to other CP users yet.
-2. **Notified** - heads-up email has been sent. Still no banner. Waiting for the freeze start time.
-3. **Active** - the banner is up. Editors see an amber "update in progress" strip at the top of every CP page, and a one-shot modal the first time they load any CP page during the window.
-4. **Complete** - the all-clear email has been sent and the banner switches to a green dismissible "update complete" message, shown for 7 days or until each user dismisses it (per-user, per-freeze cookie).
+1. **Scheduled** - waiting for the notification time. CP users already see a blue "Notification of planned work" banner with the start time, and a modal with the details once per browser session.
+2. **Notified** - heads-up email has been sent. The blue banner stays up until the freeze start time.
+3. **Active** - the amber banner is up. Editors see an amber "update in progress" strip at the top of every CP page, and a one-shot modal the first time they load any CP page during the window.
+4. **Complete** - the all-clear email has been sent and the banner switches to a green dismissible "update complete" message, shown for 7 days or until it's dismissed (a per-browser, per-freeze cookie, so it shows again in another browser).
 
 ### What triggers each transition
 
