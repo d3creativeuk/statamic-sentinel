@@ -133,6 +133,10 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 - **Scan history is capped at 500 entries** as well as a year, and a failed Statamic licence check
   no longer adds an entry of its own. Users without super admin access no longer load the
   history, sent emails and schedules behind the scenes, since they can't see those tabs.
+- **The Users tab lists Control Panel users only.** It listed every user on the site, front-end
+  members included, and looked each one up on every load, which got slow on membership sites.
+  On sites with more than 500 users it now lists the Control Panel users active in the last 30
+  days, plus you.
 - **Fewer background processes.** The two every-minute Content Freeze checks used to start a
   full `artisan` process each, every minute, even with no update scheduled. They now only run
   when a freeze is actually due to change.

@@ -323,12 +323,43 @@ class ServiceProvider extends AddonServiceProvider
      * utility's Users tab and sorted most-recently-active first, then by name.
      * Guarded so an older/absent User API can never break utility rendering.
      */
+    /**
+     * Above this many users, the tab lists recently active CP users only.
+     */
+    const USERS_TAB_SCAN_LIMIT = 500;
+
+    /**
+     * Control Panel users only: the tab used to list every Statamic user,
+     * front-end members included, calling lastLogin() and isSuper() on each
+     * (two queries per user with database users, a YAML read each with
+     * file users) on every super's utility load. On a site with more than
+     * USERS_TAB_SCAN_LIMIT users it starts from the users recorded as active
+     * (always CP users) plus whoever is viewing, rather than loading them all.
+     */
+    protected function cpUsers(array $active)
+    {
+        $repository = \Statamic\Facades\User::getFacadeRoot();
+
+        if ($repository->query()->count() > self::USERS_TAB_SCAN_LIMIT) {
+            $users = collect(array_keys($active))
+                ->push(\D3Creative\Sentinel\Support\CurrentUser::id())
+                ->filter()
+                ->unique()
+                ->map(fn ($id) => $repository->find((string) $id))
+                ->filter();
+        } else {
+            $users = $repository->all();
+        }
+
+        return $users->filter(fn ($user) => $user->isSuper() || $user->hasPermission('access cp'))->values();
+    }
+
     protected function buildUserActivity(): array
     {
         try {
             $active = app(LastActiveService::class)->all();
 
-            $users = \Statamic\Facades\User::all()->map(function ($user) use ($active) {
+            $users = $this->cpUsers($active)->map(function ($user) use ($active) {
                 $id        = (string) $user->id();
                 $lastLogin = $user->lastLogin();
 
