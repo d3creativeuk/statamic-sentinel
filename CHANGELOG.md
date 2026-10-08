@@ -90,6 +90,18 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
   DynamoDB on Laravel Vapor) but still held the previous one, Sentinel kept showing the old results.
   It now notices the saved copy is newer and shows that, and stops retrying a cache that won't take
   the scan.
+- **Content Freeze emails could go to clients more than once.** The update-scheduled email was
+  sent before Sentinel saved that it had been, so if the save failed (for example storage the
+  scheduler couldn't write to) every minute's check sent it again; a slow mail server could also
+  outlast the lock and let a second check send it. Mark complete had the same shape for the
+  all-clear. Sentinel now records that it's sending before it sends, sends nothing if it can't, and
+  a second click on Mark complete can't send a second all-clear.
+- **A failing mail server was retried on every Control Panel request.** If the update-scheduled
+  email couldn't be sent, every page view by any editor tried again. It now retries once a minute,
+  and the Notify tab says the email hasn't gone yet.
+- **Two updates scheduled at the same moment could both report success**, with one silently
+  replacing the other. Scheduling (and deleting a past update) now waits its turn like every other
+  update action.
 
 ### Changed
 

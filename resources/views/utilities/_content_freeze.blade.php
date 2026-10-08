@@ -275,6 +275,9 @@
                 Notification will be sent at <strong style="font-variant-numeric:tabular-nums;">{{ $notifyAtDisplay }}</strong>. The amber update-in-progress banner appears at <strong style="font-variant-numeric:tabular-nums;">{{ $freezeAtDisplay }}</strong>.
             </p>
             <p style="font-size:13px; color:#475569; margin:0; line-height:1.55;">{{ $recipientCount }} {{ \Illuminate\Support\Str::plural('recipient', $recipientCount) }} on this update.</p>
+            @if (! empty($freeze_current['notify_retry_at']))
+                <p style="font-size:13px; color:#b91c1c; margin:8px 0 0 0; line-height:1.55;">The notification email couldn't be sent. Sentinel tries again every minute; check the site's mail settings.</p>
+            @endif
         @elseif ($currentStatus === $statusNotified)
             <p style="font-size:14px; color:#0f172a; margin:0 0 8px 0; line-height:1.55;">
                 Notify email {{ $freezeMailVerb }} at <strong style="font-variant-numeric:tabular-nums;">{{ $notifiedAtDisplay }}</strong>. The amber update-in-progress banner appears at <strong style="font-variant-numeric:tabular-nums;">{{ $freezeAtDisplay }}</strong>.

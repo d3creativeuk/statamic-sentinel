@@ -29,12 +29,25 @@ class ContentFreezeService
     const HISTORY_PATH      = 'statamic-sentinel/content-freeze-history.json';
     const LAST_CANCEL_PATH      = 'statamic-sentinel/content-freeze-last-cancel.json';
 
-    // One lock serialises every state change (see withFreezeLock()). The TTL
-    // outlives a slow SMTP send on the sync queue; user actions wait up to
-    // LOCK_WAIT_SECONDS for an in-flight tick to finish.
+    // One lock serialises every state change (see withFreezeLock()). User
+    // actions wait up to LOCK_WAIT_SECONDS for an in-flight tick to finish.
+    // The TTL used to be 60 seconds, which is also Symfony Mailer's default
+    // timeout per SMTP operation, so a slow send on the sync queue could
+    // outlive it. The heads-up and all-clear no longer rely on the lock
+    // alone (see markNotified() and completeLocked()); the longer TTL only
+    // matters after a crash, when ticks skip and Complete reports busy
+    // until it expires.
     const LOCK_NAME         = 'sentinel_freeze_tick';
-    const LOCK_SECONDS      = 60;
+    const LOCK_SECONDS      = 600;
     const LOCK_WAIT_SECONDS = 10;
+
+    // A heads-up send is claimed on the record before it starts. While the
+    // claim is younger than this, no other tick sends it; after it (a crash
+    // mid-send) the next tick does. A failed dispatch waits NOTIFY_RETRY
+    // seconds before the next attempt, rather than retrying on every CP
+    // request.
+    const NOTIFY_CLAIM_SECONDS = 600;
+    const NOTIFY_RETRY_SECONDS = 60;
 
     const HISTORY_LIMIT     = 50;
     const SCHEDULE_LEAD_MIN = 5;
@@ -68,7 +81,14 @@ class ContentFreezeService
 
             $decoded = json_decode($disk->get(self::CURRENT_PATH), true);
 
-            return is_array($decoded) ? $decoded : null;
+            // Complete saves the finished record here before sending the
+            // all-clear; if removing it afterwards fails, it must not read as
+            // a live freeze (banner, a second Complete, a blocked schedule).
+            if (! is_array($decoded) || ($decoded['status'] ?? null) === self::STATUS_COMPLETE) {
+                return null;
+            }
+
+            return $decoded;
         } catch (\Throwable $e) {
             return null;
         }
@@ -286,10 +306,6 @@ class ContentFreezeService
             }
         }
 
-        if ($this->current() !== null) {
-            return $this->failure('An update is already scheduled or in progress. Mark it complete first.');
-        }
-
         $freeze = [
             'id'             => 'freeze_' . Str::lower(Str::random(16)),
             'notify_at'      => $notifyAt->copy()->utc()->toIso8601String(),
@@ -306,11 +322,19 @@ class ContentFreezeService
             'created_at'     => Carbon::now()->utc()->toIso8601String(),
         ];
 
-        if (! $this->writeCurrent($freeze)) {
-            return $this->failure('Failed to save the update record. Check storage permissions.');
-        }
+        // Under the freeze lock like every other state change, so two
+        // schedules at once can't both report success with one overwritten.
+        return $this->withFreezeLock(function () use ($freeze) {
+            if ($this->current() !== null) {
+                return $this->failure('An update is already scheduled or in progress. Mark it complete first.');
+            }
 
-        return ['ok' => true, 'freeze' => $freeze];
+            if (! $this->writeCurrent($freeze)) {
+                return $this->failure('Failed to save the update record. Check storage permissions.');
+            }
+
+            return ['ok' => true, 'freeze' => $freeze];
+        }, $this->failure('Another update action is in progress. Try again in a moment.'), static::LOCK_WAIT_SECONDS);
     }
 
     /**
@@ -358,11 +382,40 @@ class ContentFreezeService
             return false;
         }
 
+        if ($field === 'notify_at' && $this->notificationHeldBack($freeze)) {
+            return false;
+        }
+
         try {
             return ! Carbon::now()->lessThan(Carbon::parse($freeze[$field]));
         } catch (\Throwable $e) {
             return false;
         }
+    }
+
+    /**
+     * True while another process has claimed the heads-up send (a claim
+     * younger than NOTIFY_CLAIM_SECONDS) or a failed send is waiting for its
+     * retry time. Records without either field aren't held back.
+     */
+    protected function notificationHeldBack(array $freeze): bool
+    {
+        $now = Carbon::now();
+
+        try {
+            if (! empty($freeze['notify_claimed_at'])
+                && Carbon::parse($freeze['notify_claimed_at'])->addSeconds(static::NOTIFY_CLAIM_SECONDS)->greaterThan($now)) {
+                return true;
+            }
+
+            if (! empty($freeze['notify_retry_at']) && Carbon::parse($freeze['notify_retry_at'])->greaterThan($now)) {
+                return true;
+            }
+        } catch (\Throwable $e) {
+            return false;
+        }
+
+        return false;
     }
 
     /**
@@ -390,7 +443,7 @@ class ContentFreezeService
             return 0;
         }
 
-        if (Carbon::now()->lessThan($notifyAt)) {
+        if (Carbon::now()->lessThan($notifyAt) || $this->notificationHeldBack($freeze)) {
             return 0;
         }
 
@@ -434,45 +487,73 @@ class ContentFreezeService
     }
 
     /**
-     * Send the heads-up email and move status to `notified`. Mail is dispatched
-     * BEFORE the state write so a dispatch failure (SMTP down on the sync
-     * driver, queue config wrong, malformed template) leaves the freeze at
-     * `scheduled` and the next tick retries. With no valid recipients we
-     * advance anyway so the state machine doesn't stall on a permanently-bad
-     * record. Must run under the freeze lock (via a tick).
+     * Send the heads-up email and move status to `notified`. Must run under
+     * the freeze lock (via a tick).
+     *
+     * The send is claimed on the record first. If that can't be saved
+     * (storage the ticking process can read but not write), nothing is sent:
+     * before, the email went out and the unsaved status left the freeze due,
+     * so every tick emailed every recipient again. While the claim is fresh,
+     * other ticks leave it alone even if the lock expires mid-send.
+     *
+     * A dispatch failure (SMTP down on the sync driver, queue config wrong)
+     * drops the claim and leaves the freeze `scheduled` with a retry time a
+     * minute out. With no valid recipients we advance anyway so the state
+     * machine doesn't stall on a permanently-bad record.
      */
     protected function markNotified(array $freeze): void
     {
         $current = $this->current();
+        $id      = $current['id'] ?? null;
 
-        if (! $current || ($current['status'] ?? null) !== self::STATUS_SCHEDULED || ($current['id'] ?? null) !== ($freeze['id'] ?? null)) {
+        if (! $current || ($current['status'] ?? null) !== self::STATUS_SCHEDULED || $id !== ($freeze['id'] ?? null)
+            || $this->notificationHeldBack($current)) {
             return;
         }
 
-        $recipients = $this->filterValidRecipients($current['recipients'] ?? [], $current['id'] ?? '?');
+        $recipients = $this->filterValidRecipients($current['recipients'] ?? [], $id ?? '?');
+
+        unset($current['notify_retry_at']);
+        $current['notify_claimed_at'] = Carbon::now()->utc()->toIso8601String();
+
+        if (! $this->writeCurrent($current)) {
+            Log::warning("Sentinel could not save freeze {$id} before sending its heads-up email, so it wasn't sent. Check storage permissions.");
+
+            return;
+        }
 
         if (! empty($recipients)) {
             try {
                 Mail::to($recipients)->queue(new FreezeNotificationMail($current));
             } catch (\Throwable $e) {
                 Log::warning('Sentinel freeze notification mail dispatch failed: ' . $e->getMessage());
+
+                if ($this->isStillCurrent($id, self::STATUS_SCHEDULED)) {
+                    unset($current['notify_claimed_at']);
+                    $current['notify_retry_at'] = Carbon::now()->addSeconds(static::NOTIFY_RETRY_SECONDS)->utc()->toIso8601String();
+                    $this->writeCurrent($current);
+                }
+
                 return;
             }
         } else {
-            Log::warning('Sentinel freeze ' . ($current['id'] ?? '?') . ': no valid recipients to notify; advancing anyway.');
+            Log::warning('Sentinel freeze ' . ($id ?? '?') . ': no valid recipients to notify; advancing anyway.');
         }
 
         // Sending can take seconds. If the freeze was completed or cancelled
         // meanwhile (possible on a cache store without locks), don't write the
         // stale copy back and revive it.
-        if (! $this->isStillCurrent($current['id'] ?? null, self::STATUS_SCHEDULED)) {
+        if (! $this->isStillCurrent($id, self::STATUS_SCHEDULED)) {
             return;
         }
 
+        unset($current['notify_claimed_at']);
         $current['status']      = self::STATUS_NOTIFIED;
         $current['notified_at'] = Carbon::now()->utc()->toIso8601String();
 
-        $this->writeCurrent($current);
+        if (! $this->writeCurrent($current)) {
+            Log::warning("Sentinel sent the heads-up for freeze {$id} but could not save that it had. If this persists it will be sent again once the claim expires. Check storage permissions.");
+        }
     }
 
     /**
@@ -523,33 +604,47 @@ class ContentFreezeService
             return $this->failure('No update to complete.');
         }
 
+        $original = $current;
+
+        unset($current['notify_claimed_at'], $current['notify_retry_at']);
         $current['status']       = self::STATUS_COMPLETE;
         $current['completed_at'] = Carbon::now()->utc()->toIso8601String();
         $current['completed_by'] = $completedBy ?: self::ACTOR_CLI;
 
+        // Save the completion BEFORE sending the all-clear. If it can't be
+        // saved, nothing is sent and the freeze stays as it was; before, the
+        // email went out, the record stayed live, and each retry sent another.
+        // current() ignores a completed record, so once this is saved a second
+        // Complete finds nothing to complete.
+        if (! $this->writeCurrent($current)) {
+            return $this->failure('Could not save the update as complete, so the all-clear email was not sent. Check storage permissions.');
+        }
+
         $recipients = $this->filterValidRecipients($current['recipients'] ?? [], $current['id'] ?? '?');
 
-        // Dispatch the all-clear email BEFORE advancing state. complete() is
-        // user-initiated (button or CLI command) so a dispatch failure should
-        // surface as a retryable failure rather than silently advancing the
-        // freeze and losing the email.
+        // complete() is user-initiated (button or CLI command), so a dispatch
+        // failure puts the freeze back and reports a retryable failure rather
+        // than ending it without the email.
         if (! empty($recipients)) {
             try {
                 Mail::to($recipients)->queue(new FreezeCompletionMail($current));
             } catch (\Throwable $e) {
                 Log::warning('Sentinel freeze completion mail dispatch failed: ' . $e->getMessage());
+
+                if (! $this->writeCurrent($original)) {
+                    Log::warning('Sentinel could not restore freeze ' . ($current['id'] ?? '?') . ' after the all-clear failed to send.');
+                }
+
                 return $this->failure('Could not send the all-clear email. Check your mail configuration and try again.');
             }
         }
 
         $this->appendHistory($current);
 
-        // If the record can't be removed the freeze stays live (banner on,
-        // Complete still offered), so say so rather than reporting success.
+        // A leftover completed record is harmless (current() ignores it and
+        // the next schedule() replaces it), so this doesn't fail the action.
         if (! $this->deleteCurrent()) {
-            Log::warning('Sentinel could not remove the completed freeze record ' . ($current['id'] ?? '?'));
-
-            return $this->failure('The all-clear email was sent, but the update record could not be removed. Check storage permissions.');
+            Log::warning('Sentinel could not remove the completed freeze record ' . ($current['id'] ?? '?') . '; it is ignored until the next update replaces it.');
         }
 
         return ['ok' => true, 'freeze' => $current];
@@ -894,6 +989,12 @@ class ContentFreezeService
      * HistoryService::delete - atomic filter-and-rewrite of the JSON file.
      */
     public function deleteHistory(string $id): bool
+    {
+        // Under the freeze lock, so it can't race Complete appending a row.
+        return $this->withFreezeLock(fn () => $this->deleteHistoryLocked($id), false, static::LOCK_WAIT_SECONDS);
+    }
+
+    protected function deleteHistoryLocked(string $id): bool
     {
         try {
             $entries = JsonStore::read(self::HISTORY_PATH, true);

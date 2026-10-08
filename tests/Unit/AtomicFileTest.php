@@ -195,17 +195,23 @@ class AtomicFileTest extends TestCase
         $this->assertNotNull((new ContentFreezeService)->current());
     }
 
-    public function test_complete_fails_when_the_record_cannot_be_removed(): void
+    /**
+     * The completed record is saved before the all-clear goes, so a record
+     * that can't then be removed reads as finished: no banner, and a second
+     * Complete has nothing to complete (it used to send another all-clear).
+     */
+    public function test_a_completed_record_that_cannot_be_removed_is_not_completed_again(): void
     {
         $this->useDisk(deleteFails: true);
         Mail::fake();
 
         $this->writeFreeze(ContentFreezeService::STATUS_ACTIVE);
 
-        $result = (new ContentFreezeService)->complete('u1');
-
-        $this->assertFalse($result['ok']);
-        $this->assertStringContainsString('could not be removed', $result['message']);
+        $service = new ContentFreezeService;
+        $this->assertTrue($service->complete('u1')['ok']);
+        $this->assertNull($service->current());
+        $this->assertSame('No update to complete.', $service->complete('u1')['message']);
+        Mail::assertQueued(FreezeCompletionMail::class, 1);
     }
 
     protected function writeFreeze(string $status): void
