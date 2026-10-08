@@ -13,7 +13,7 @@ use D3Creative\Sentinel\Mail\SentinelUpdateReport;
 use D3Creative\Sentinel\Services\MaintenanceReportBuilder;
 use D3Creative\Sentinel\Services\UpdateReportBuilder;
 use D3Creative\Sentinel\Tests\Support\RegistersViews;
-use D3Creative\Sentinel\Tests\Support\ViewTestUser;
+use D3Creative\Sentinel\Tests\Support\ActsAsStatamicUser;
 use D3Creative\Sentinel\Tests\TestCase;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -28,7 +28,7 @@ use Symfony\Component\HttpKernel\Exception\HttpException;
  */
 class EmailAndControllerAccessTest extends TestCase
 {
-    use RegistersViews;
+    use RegistersViews, ActsAsStatamicUser;
 
     protected function setUp(): void
     {
@@ -147,7 +147,7 @@ class EmailAndControllerAccessTest extends TestCase
 
     public function test_every_controller_endpoint_refuses_non_supers(): void
     {
-        $this->actingAs(new ViewTestUser(false));
+        $this->actingAsStatamicUser(false);
 
         foreach ([SentinelController::class, FreezeController::class] as $class) {
             foreach ((new ReflectionClass($class))->getMethods(ReflectionMethod::IS_PUBLIC) as $method) {
@@ -165,9 +165,34 @@ class EmailAndControllerAccessTest extends TestCase
         }
     }
 
+    /**
+     * On database-user sites auth()->user() is the host's Eloquent model. A
+     * query scope named isSuper made `$model->isSuper()` return a truthy
+     * Builder, so a truthy guard let any CP user through.
+     */
+    public function test_a_host_model_scope_named_is_super_does_not_open_the_endpoints(): void
+    {
+        $this->actingAsStatamicUser(false, 'editor@example.test', \D3Creative\Sentinel\Tests\Support\ScopedHostEloquentUser::class);
+
+        foreach ([SentinelController::class, FreezeController::class] as $class) {
+            foreach ((new ReflectionClass($class))->getMethods(ReflectionMethod::IS_PUBLIC) as $method) {
+                if ($method->class !== $class || $method->isConstructor()) {
+                    continue;
+                }
+
+                try {
+                    $this->app->call([$this->app->make($class), $method->name], ['request' => Request::create('/'), 'id' => 'abcdefghijklmnop']);
+                    $this->fail("{$class}::{$method->name} let a non-super through.");
+                } catch (HttpException $e) {
+                    $this->assertSame(403, $e->getStatusCode(), "{$class}::{$method->name}");
+                }
+            }
+        }
+    }
+
     public function test_freeze_schedule_rejects_array_input_without_a_500(): void
     {
-        $this->actingAs(new ViewTestUser(true));
+        $this->actingAsStatamicUser(true);
 
         $response = $this->app->call([$this->app->make(FreezeController::class), 'schedule'], [
             'request' => Request::create('/', 'POST', ['email' => ['a@example.test'], 'notify_at' => ['x'], 'freeze_at' => ['y']]),

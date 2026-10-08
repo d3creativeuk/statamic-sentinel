@@ -13,7 +13,7 @@ class FreezeController extends Controller
 
     public function schedule(Request $request, ContentFreezeService $service)
     {
-        abort_unless(auth()->user()?->isSuper(), 403);
+        abort_unless(\D3Creative\Sentinel\Support\CurrentUser::isSuper(), 403);
 
         $recipients = $this->parseRecipients($request->input('email', ''));
 
@@ -41,7 +41,7 @@ class FreezeController extends Controller
 
     public function complete(Request $request, ContentFreezeService $service)
     {
-        abort_unless(auth()->user()?->isSuper(), 403);
+        abort_unless(\D3Creative\Sentinel\Support\CurrentUser::isSuper(), 403);
 
         $result = $service->complete($this->actorId());
 
@@ -57,7 +57,7 @@ class FreezeController extends Controller
 
     public function cancel(Request $request, ContentFreezeService $service)
     {
-        abort_unless(auth()->user()?->isSuper(), 403);
+        abort_unless(\D3Creative\Sentinel\Support\CurrentUser::isSuper(), 403);
 
         $result = $service->cancel($this->actorId());
 

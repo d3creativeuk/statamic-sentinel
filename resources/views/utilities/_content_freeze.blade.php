@@ -20,7 +20,7 @@
         ? 'Times in ' . $tz . '.'
         : 'Times in ' . $tz . '. Server is ' . $serverTz . '.';
 
-    $userEmailDefault = auth()->user()?->email ?? '';
+    $userEmailDefault = \D3Creative\Sentinel\Support\CurrentUser::email();
 
     // Times are picked as a date + a 15-minute dropdown, so round the defaults
     // up to the next 15-minute block. Basic Carbon methods only, for wide compat.

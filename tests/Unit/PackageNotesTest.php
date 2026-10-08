@@ -9,7 +9,7 @@ use D3Creative\Sentinel\Services\PackageNoteService;
 use D3Creative\Sentinel\Services\UpdateReportBuilder;
 use D3Creative\Sentinel\Support\VulnerabilityGroups;
 use D3Creative\Sentinel\Tests\Support\RegistersViews;
-use D3Creative\Sentinel\Tests\Support\ViewTestUser;
+use D3Creative\Sentinel\Tests\Support\ActsAsStatamicUser;
 use D3Creative\Sentinel\Tests\TestCase;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -22,7 +22,7 @@ use Illuminate\Support\Facades\Storage;
  */
 class PackageNotesTest extends TestCase
 {
-    use RegistersViews;
+    use RegistersViews, ActsAsStatamicUser;
 
     protected function setUp(): void
     {
@@ -266,7 +266,7 @@ class PackageNotesTest extends TestCase
 
     public function test_the_controller_saves_and_validates_a_note(): void
     {
-        $this->actingAs(new ViewTestUser(true));
+        $this->actingAsStatamicUser(true);
 
         $saved = $this->saveNote(['ecosystem' => 'npm', 'package' => '@scope/tailwind-plugin', 'note' => 'Hello']);
         $this->assertSame(200, $saved->getStatusCode());
@@ -317,7 +317,7 @@ class PackageNotesTest extends TestCase
 
     public function test_the_utility_shows_a_saved_note_and_escapes_it(): void
     {
-        $this->actingAs(new ViewTestUser(true));
+        $this->actingAsStatamicUser(true);
 
         $html = $this->renderUtility(['acme/pkg' => ['note' => '{{ 7*7 }} <script>x</script> "quoted"']]);
 
@@ -329,7 +329,7 @@ class PackageNotesTest extends TestCase
 
     public function test_non_supers_see_notes_but_no_editor(): void
     {
-        $this->actingAs(new ViewTestUser(false));
+        $this->actingAsStatamicUser(false);
 
         $html = $this->renderUtility(['acme/pkg' => ['note' => 'Visible note']]);
 

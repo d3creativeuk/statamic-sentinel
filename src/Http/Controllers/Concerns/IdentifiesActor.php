@@ -2,28 +2,17 @@
 
 namespace D3Creative\Sentinel\Http\Controllers\Concerns;
 
+use D3Creative\Sentinel\Support\CurrentUser;
+
 trait IdentifiesActor
 {
     /**
-     * Statamic user IDs are strings - take whatever the auth user exposes
-     * and stringify it. Falls back to email when the id() helper is absent
-     * on older Statamic versions.
+     * The Statamic user's id as a string (email if it has none). The auth
+     * guard's user is the host's Eloquent model on database-user sites, so
+     * go through the Statamic user rather than auth()->user().
      */
     protected function actorId(): ?string
     {
-        $user = auth()->user();
-
-        if (! $user) {
-            return null;
-        }
-
-        if (method_exists($user, 'id')) {
-            $id = $user->id();
-            if ($id !== null && $id !== '') {
-                return (string) $id;
-            }
-        }
-
-        return $user->email ?? null;
+        return CurrentUser::id();
     }
 }

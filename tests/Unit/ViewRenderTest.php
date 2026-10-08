@@ -4,7 +4,7 @@ namespace D3Creative\Sentinel\Tests\Unit;
 
 use D3Creative\Sentinel\Services\ContentFreezeService;
 use D3Creative\Sentinel\Tests\Support\RegistersViews;
-use D3Creative\Sentinel\Tests\Support\ViewTestUser;
+use D3Creative\Sentinel\Tests\Support\ActsAsStatamicUser;
 use D3Creative\Sentinel\Tests\TestCase;
 use Illuminate\Support\Facades\Storage;
 
@@ -16,7 +16,7 @@ use Illuminate\Support\Facades\Storage;
  */
 class ViewRenderTest extends TestCase
 {
-    use RegistersViews;
+    use RegistersViews, ActsAsStatamicUser;
 
     protected function setUp(): void
     {
@@ -29,7 +29,7 @@ class ViewRenderTest extends TestCase
 
     public function test_utility_renders_for_a_super_with_a_full_payload(): void
     {
-        $this->actingAs(new ViewTestUser(true));
+        $this->actingAsStatamicUser(true);
 
         $html = $this->renderUtility($this->audit());
 
@@ -41,7 +41,7 @@ class ViewRenderTest extends TestCase
 
     public function test_tabs_panels_and_dialogs_are_wired_for_assistive_tech(): void
     {
-        $this->actingAs(new ViewTestUser(true));
+        $this->actingAsStatamicUser(true);
 
         $html = $this->renderUtility($this->audit());
 
@@ -68,7 +68,7 @@ class ViewRenderTest extends TestCase
      */
     public function test_alpine_attributes_are_not_cut_short_by_quotes(): void
     {
-        $this->actingAs(new ViewTestUser(true));
+        $this->actingAsStatamicUser(true);
 
         $pages = [
             'utility' => $this->renderUtility($this->audit()),
@@ -94,7 +94,7 @@ class ViewRenderTest extends TestCase
 
     public function test_utility_renders_for_a_non_super(): void
     {
-        $this->actingAs(new ViewTestUser(false));
+        $this->actingAsStatamicUser(false);
 
         $html = $this->renderUtility($this->audit());
 
@@ -104,7 +104,7 @@ class ViewRenderTest extends TestCase
 
     public function test_utility_renders_an_audit_cached_before_newer_keys_existed(): void
     {
-        $this->actingAs(new ViewTestUser(true));
+        $this->actingAsStatamicUser(true);
 
         $audit = $this->audit();
         unset($audit['license'], $audit['composer']['by_package'], $audit['composer']['dependency_parents'], $audit['statamic']['releases_behind']);
@@ -118,7 +118,7 @@ class ViewRenderTest extends TestCase
 
     public function test_utility_renders_the_empty_state(): void
     {
-        $this->actingAs(new ViewTestUser(true));
+        $this->actingAsStatamicUser(true);
 
         $this->assertStringContainsString('No scan yet', $this->renderUtility(null));
     }

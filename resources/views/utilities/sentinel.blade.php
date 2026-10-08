@@ -63,7 +63,7 @@
     // define $license - fall back explicitly so the row below never errors.
     $license = $audit['license'] ?? ['supported' => false];
 
-    $userEmail = auth()->user()?->email ?? '';
+    $userEmail = \D3Creative\Sentinel\Support\CurrentUser::email();
 
     // Reports, history, scheduling and content-freeze controls all drive
     // super-only POST endpoints (SentinelController / FreezeController abort
@@ -71,7 +71,7 @@
     // open this page, so hide every tab but Current for them - the Current
     // tab carries the same audit data the Status Report would email, and the
     // Refresh link (see ManualScan) stays available to all.
-    $isSuper = auth()->user()?->isSuper() === true;
+    $isSuper = \D3Creative\Sentinel\Support\CurrentUser::isSuper();
 
     // Pre-fill each one-off send field with the recipients last entered for
     // that report (extra addresses included), falling back to the current

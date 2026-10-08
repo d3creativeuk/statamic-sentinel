@@ -27,7 +27,7 @@ class SentinelController extends Controller
 
     public function sendReport(Request $request)
     {
-        abort_unless(auth()->user()?->isSuper(), 403);
+        abort_unless(\D3Creative\Sentinel\Support\CurrentUser::isSuper(), 403);
 
         $recipientResult = $this->validateRecipientsInput($request->input('email', ''));
         if ($recipientResult instanceof \Illuminate\Http\JsonResponse) {
@@ -43,7 +43,7 @@ class SentinelController extends Controller
 
     public function sendUpdateReport(Request $request)
     {
-        abort_unless(auth()->user()?->isSuper(), 403);
+        abort_unless(\D3Creative\Sentinel\Support\CurrentUser::isSuper(), 403);
 
         $recipientResult = $this->validateRecipientsInput($request->input('email', ''));
         if ($recipientResult instanceof \Illuminate\Http\JsonResponse) {
@@ -64,7 +64,7 @@ class SentinelController extends Controller
 
     public function sendMaintenanceReport(Request $request)
     {
-        abort_unless(auth()->user()?->isSuper(), 403);
+        abort_unless(\D3Creative\Sentinel\Support\CurrentUser::isSuper(), 403);
 
         $recipientResult = $this->validateRecipientsInput($request->input('email', ''));
         if ($recipientResult instanceof \Illuminate\Http\JsonResponse) {
@@ -80,7 +80,7 @@ class SentinelController extends Controller
 
     public function saveMaintenancePlan(Request $request)
     {
-        abort_unless(auth()->user()?->isSuper(), 403);
+        abort_unless(\D3Creative\Sentinel\Support\CurrentUser::isSuper(), 403);
 
         $validator = Validator::make($request->all(), [
             'plan_name'   => ['nullable', 'string', 'max:100'],
@@ -121,7 +121,7 @@ class SentinelController extends Controller
      */
     public function savePackageNote(Request $request)
     {
-        abort_unless(auth()->user()?->isSuper(), 403);
+        abort_unless(\D3Creative\Sentinel\Support\CurrentUser::isSuper(), 403);
 
         $validator = Validator::make($request->all(), [
             'ecosystem' => ['required', 'string', 'in:' . implode(',', PackageNoteService::ECOSYSTEMS)],
@@ -167,7 +167,7 @@ class SentinelController extends Controller
 
     public function saveSchedule(Request $request)
     {
-        abort_unless(auth()->user()?->isSuper(), 403);
+        abort_unless(\D3Creative\Sentinel\Support\CurrentUser::isSuper(), 403);
 
         $store    = app(ScheduleService::class);
         $config   = $store->all();
@@ -279,7 +279,7 @@ class SentinelController extends Controller
 
     public function previewReport(Request $request)
     {
-        abort_unless(auth()->user()?->isSuper(), 403);
+        abort_unless(\D3Creative\Sentinel\Support\CurrentUser::isSuper(), 403);
 
         $audit = (new AuditService())->run();
 
@@ -293,7 +293,7 @@ class SentinelController extends Controller
 
     public function previewUpdateReport(Request $request)
     {
-        abort_unless(auth()->user()?->isSuper(), 403);
+        abort_unless(\D3Creative\Sentinel\Support\CurrentUser::isSuper(), 403);
 
         (new AuditService())->run();
 
@@ -325,7 +325,7 @@ class SentinelController extends Controller
 
     public function previewMaintenanceReport(Request $request)
     {
-        abort_unless(auth()->user()?->isSuper(), 403);
+        abort_unless(\D3Creative\Sentinel\Support\CurrentUser::isSuper(), 403);
 
         $history = app(HistoryService::class)->all();
         $plan    = app(MaintenancePlanService::class)->all();
@@ -341,7 +341,7 @@ class SentinelController extends Controller
 
     public function previewFreezeNotification(Request $request)
     {
-        abort_unless(auth()->user()?->isSuper(), 403);
+        abort_unless(\D3Creative\Sentinel\Support\CurrentUser::isSuper(), 403);
 
         $service = app(ContentFreezeService::class);
 
@@ -370,7 +370,7 @@ class SentinelController extends Controller
 
     public function previewFreezeCompletion(Request $request)
     {
-        abort_unless(auth()->user()?->isSuper(), 403);
+        abort_unless(\D3Creative\Sentinel\Support\CurrentUser::isSuper(), 403);
 
         $freeze  = $this->previewFreezeRecord();
         $service = app(ContentFreezeService::class);
@@ -414,7 +414,7 @@ class SentinelController extends Controller
 
     public function previewSentReport(Request $request, string $id)
     {
-        abort_unless(auth()->user()?->isSuper(), 403);
+        abort_unless(\D3Creative\Sentinel\Support\CurrentUser::isSuper(), 403);
 
         $store = app(SentMailService::class);
         $entry = $store->find($id);

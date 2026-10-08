@@ -253,7 +253,7 @@ class ServiceProvider extends AddonServiceProvider
                             'package_notes'   => app(PackageNoteService::class)->all(),
                             // Who's-online list - super-only (it exposes every CP
                             // user's activity), so don't even build it otherwise.
-                            'users'           => auth()->user()?->isSuper() === true ? $this->buildUserActivity() : [],
+                            'users'           => \D3Creative\Sentinel\Support\CurrentUser::isSuper() ? $this->buildUserActivity() : [],
                             'online_window'   => (int) config('statamic-sentinel.users.online_window', 5),
                             'freeze'          => $freeze,
                             'freeze_current'  => $freeze->current(),

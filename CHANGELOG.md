@@ -8,6 +8,15 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ## [3.0.0] - Unreleased
 
+### Fixed
+
+- **The utility and every report, schedule, note, preview and freeze action failed on sites that
+  store users in a database.** They checked for a super admin on the login guard's user, which on
+  those sites is the app's own user model rather than a Statamic user, so each returned an error
+  for everyone. If that model had an `isSuper` query scope, the check passed for any Control Panel
+  user instead. Every check now goes through Statamic's user, and users who are super admins
+  through a role now count as one, matching Statamic.
+
 ### Removed
 
 - **Support for Statamic 3.3 and 4.x, PHP 8.0 and 8.1, and Laravel 8 and 9.** Sentinel now needs
