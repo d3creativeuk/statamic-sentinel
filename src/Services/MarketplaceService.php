@@ -181,7 +181,7 @@ class MarketplaceService
             return [];
         }
 
-        if (! $response->ok()) {
+        if (! $response->ok() || AuditService::bodyTooLarge($response)) {
             return $this->releaseCache[$package] = [];
         }
 

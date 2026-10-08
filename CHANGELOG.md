@@ -118,6 +118,10 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 - **Faster vulnerability checks on large projects.** Sentinel sends packages to the vulnerability
   database in batches of 500, and waited for each batch before sending the next. They now go
   together: about 1 second instead of 5 for a project with 3,000 npm packages.
+- **Scans can't run out of memory on an oversized response.** Sentinel read every response whole,
+  however large; a few big npm registry documents could exhaust PHP's memory and kill the scan.
+  Responses over 10 MB are now skipped (the update shows as "Unchecked"), and large documents are
+  released as soon as they've been read.
 - **Fewer background processes.** The two every-minute Content Freeze checks used to start a
   full `artisan` process each, every minute, even with no update scheduled. They now only run
   when a freeze is actually due to change.

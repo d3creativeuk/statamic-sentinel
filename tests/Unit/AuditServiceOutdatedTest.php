@@ -373,6 +373,38 @@ class AuditServiceOutdatedTest extends TestCase
         $this->assertTrue($pkg['release_age_unknown']);
     }
 
+    /**
+     * A registry document over the size cap is never decoded (a 39 MB vite
+     * document needed about 97 MB to decode); the row is marked unchecked.
+     */
+    public function test_an_oversized_registry_document_is_not_decoded(): void
+    {
+        CarbonImmutable::setTestNow('2026-09-15 12:00:00');
+
+        $service = $this->npmService(['vite' => '8.2.2'], 7);
+
+        Http::fake([
+            'registry.npmjs.org/vite/latest' => Http::response(['version' => '8.3.0']),
+            'registry.npmjs.org/vite'        => Http::response('{"time":{"8.3.0":"2026-09-14T00:00:00Z"},"pad":"' . str_repeat('x', AuditService::MAX_BODY_BYTES) . '"}'),
+        ]);
+
+        $before = memory_get_usage();
+        $pkg    = $this->invokeNpmOutdated($service)['packages'][0];
+
+        $this->assertTrue($pkg['release_age_unknown']);
+        $this->assertFalse($pkg['blocked']);
+        $this->assertLessThan(5 * 1024 * 1024, memory_get_usage() - $before);
+    }
+
+    public function test_body_size_is_read_without_decoding(): void
+    {
+        $small = new Response(new Psr7Response(200, [], '{"ok":true}'));
+        $big   = new Response(new Psr7Response(200, [], str_repeat(' ', AuditService::MAX_BODY_BYTES + 1)));
+
+        $this->assertFalse(AuditService::bodyTooLarge($small));
+        $this->assertTrue(AuditService::bodyTooLarge($big));
+    }
+
     public static function failedDocumentProvider(): array
     {
         return [

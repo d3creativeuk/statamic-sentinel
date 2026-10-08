@@ -55,6 +55,15 @@ class AuditService
     const CONNECT_TIMEOUT = 4;
 
     /**
+     * Largest response body decoded, in bytes, after gzip. Decoding a whole
+     * document costs several times its size (a 39 MB npm document needed
+     * about 97 MB, fatal at a 128M memory_limit), and a 200 KB gzip body can
+     * inflate to hundreds of MB. Larger bodies count as a failed lookup.
+     * The biggest real ones Sentinel reads are about 1.6 MB.
+     */
+    const MAX_BODY_BYTES = 10 * 1024 * 1024;
+
+    /**
      * Per-instance lockfile cache. Each scan reads composer.lock /
      * package-lock.json from several methods (audit + installed-direct +
      * outdated); decoding once and reusing keeps a multi-MB JSON parse from
@@ -827,7 +836,25 @@ class AuditService
 
     protected function isOkResponse($response): bool
     {
-        return $response instanceof \Illuminate\Http\Client\Response && $response->ok();
+        return $response instanceof \Illuminate\Http\Client\Response
+            && $response->ok()
+            && ! static::bodyTooLarge($response);
+    }
+
+    /**
+     * Checked before anything decodes the body. The size comes from the
+     * stream (spooled to disk past 2 MB), so checking costs no memory; an
+     * unknown size counts as too large.
+     */
+    public static function bodyTooLarge(\Illuminate\Http\Client\Response $response): bool
+    {
+        try {
+            $size = $response->toPsrResponse()->getBody()->getSize();
+        } catch (\Throwable $e) {
+            return true;
+        }
+
+        return $size === null || $size > self::MAX_BODY_BYTES;
     }
 
     /**
@@ -2586,12 +2613,18 @@ class AuditService
             if (! $publishedAt) {
                 $doc = $docs[$pkg['name']] ?? null;
 
+                // Release each document as soon as it's read: a Response keeps
+                // its decoded body, and these can be tens of MB each.
+                unset($docs[$pkg['name']]);
+
                 if ($this->isOkResponse($doc)) {
                     // Version keys contain dots, so index the array directly rather than
                     // using dot-notation data_get, which would treat "4.3.3" as a path.
                     $time        = $doc->json('time');
                     $publishedAt = is_array($time) ? ($time[$pkg['latest']] ?? null) : null;
                 }
+
+                $doc = $time = null;
             }
 
             try {
