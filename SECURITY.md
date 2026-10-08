@@ -26,14 +26,18 @@ Please include:
 In scope:
 
 - The addon source in this repository (PHP, Blade views, JS in views, Composer manifest).
-- The Control Panel widget and utility page rendered by Sentinel.
-- The CP routes registered by Sentinel (status report send, update report send, schedule config, history).
-- The artisan command `sentinel:scan`.
+- The Control Panel widget and utility page, including the `?d3_refresh` manual scan.
+- Every CP route under `cp/d3-sentinel/*`: report sends, email previews (including stored sent reports), schedule, maintenance plan and package note saves, history actions, the freeze banner, and Content Freeze schedule, complete and cancel.
+- The three middlewares Sentinel adds to Statamic's `statamic.cp` group (freeze state, freeze banner, last-active tracking), which also run on the CP login screens.
+- The artisan commands `sentinel:scan`, `sentinel:send-status-report`, `sentinel:freeze:start`, `sentinel:freeze:complete`, `sentinel:freeze:tick-notifications` and `sentinel:freeze:tick-activations`, and the scheduled tasks that run them.
+- The emails Sentinel sends, and the files it stores under `storage/app/statamic-sentinel`.
+
+Sentinel's permission model: reporting, history, scheduling, previews and Content Freeze are limited to super admins. A user with the `access sentinel utility` permission sees the read-only Current audit, the widget and Refresh. A way round either is in scope.
 
 Out of scope:
 
 - Vulnerabilities in Statamic, Laravel, PHP, or third-party packages themselves. Report those upstream.
-- Vulnerabilities in the external services Sentinel queries (Packagist, npm registry, endoflife.date, OSV) - report those to the relevant project.
+- Vulnerabilities in the external services Sentinel queries (Packagist, npm registry, endoflife.date, OSV, statamic.com) - report those to the relevant project.
 - Issues that require an attacker to already have super admin access in the host Statamic CP (Sentinel's send/schedule actions are intentionally gated to super admins).
 - Findings produced by automated scanners with no demonstrated exploit path.
 

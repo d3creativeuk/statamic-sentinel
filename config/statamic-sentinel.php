@@ -70,8 +70,9 @@ return [
     | This catches vendor-published security patches before they appear in
     | the public OSV / GHSA advisory feeds.
     |
-    | Disable for air-gapped installs or test environments that should not
-    | reach out to statamic.com during a scan.
+    | Disable for air-gapped installs or test environments to stop Sentinel's
+    | marketplace lookups. This only covers Sentinel: Statamic's own licence
+    | check may still call outpost.statamic.com.
     |
     */
 
