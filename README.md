@@ -125,8 +125,9 @@ This writes `config/statamic-sentinel.php` into your app. Committing it means `c
 
 ## Requirements
 
-- PHP 8.0+
-- Statamic 3.3, 4.x, 5.x, or 6.x
+- PHP 8.2+
+- Statamic 5.x or 6.x
+- On Statamic 3.3 or 4, or on PHP 8.0 or 8.1? Sentinel 2.x still installs (`composer require d3creative/statamic-sentinel:^2.4`), but upgrade: Statamic 3 and 4 get no security fixes, and PHP 8.1 and older get none from php.net.
 - If your host app sets a Content Security Policy, the freeze banner and modal use inline `<style>` and `<script>` to position the overlay and the auto-open dialog. Allow `style-src 'unsafe-inline'` and `script-src 'unsafe-inline'` on CP routes, or whitelist Sentinel's inline assets via nonce/hash. With a strict CSP and no allowance, the banner falls back to a normal-flow position and the auto-open modal won't run - the addon's reporting and audit features are unaffected.
 
 ## Support

@@ -21,7 +21,7 @@ class FreezeCompletionMail extends Mailable
 
     /**
      * Using build() rather than envelope()/content() for compatibility
-     * with Laravel 8 through 13.
+     * with Laravel 10 through 13.
      */
     public function build(): static
     {

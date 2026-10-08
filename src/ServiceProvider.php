@@ -50,10 +50,10 @@ class ServiceProvider extends AddonServiceProvider
 
         // Register two middlewares on every CP request via the manual router
         // API rather than AddonServiceProvider's `$middlewareGroups` property.
-        // The manual API is plain Laravel, available identically on every
-        // supported Statamic version (3.3 -> 6.x), whereas `$middlewareGroups`
-        // depends on Statamic's `bootMiddleware()` being part of the addon
-        // boot chain - which is true in 6 but not verified for 3.3.
+        // The manual API is plain Laravel and behaves the same on every
+        // supported Statamic version (5 and 6), so the registration doesn't
+        // depend on how each version's addon boot chain handles
+        // `$middlewareGroups`.
         //
         //  - AdvanceFreezeState: ticks the freeze state machine forward if
         //    any timestamps have passed. Runs on every request (HTML and

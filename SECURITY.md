@@ -45,7 +45,7 @@ Security fixes are issued for the latest minor release on each supported Statami
 | -------- | ------ | --------- |
 | 6.x      | 8.2+   | Yes       |
 | 5.x      | 8.2+   | Yes       |
-| 4.x      | 8.1+   | Yes       |
-| 3.3+     | 8.0+   | Yes       |
+| 4.x      | -      | No        |
+| 3.3+     | -      | No        |
 
-Older Statamic majors and PHP versions outside the matrix above will not receive backported fixes.
+Sentinel 3.0 dropped Statamic 3.3 and 4.x, and PHP 8.0 and 8.1. Sites on those versions stay on Sentinel 2.x, which gets no further releases. Statamic 3 and 4 receive no security fixes upstream, so upgrade Statamic itself.

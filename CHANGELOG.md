@@ -6,6 +6,17 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). Releases are git-tag driven
 (`composer.json` carries no `version` field).
 
+## [3.0.0] - Unreleased
+
+### Removed
+
+- **Support for Statamic 3.3 and 4.x, PHP 8.0 and 8.1, and Laravel 8 and 9.** Sentinel now needs
+  Statamic 5 or 6 on PHP 8.2 or later. Statamic 3 and 4 no longer get security fixes: none of the
+  2026 Statamic security advisories has a fix on either, so a site on them is exposed whatever
+  else it runs. PHP 8.1 lost php.net security support at the end of 2025. Sites on those versions
+  stay on Sentinel 2.x (Composer won't offer them 3.0), which keeps working but gets no further
+  releases.
+
 ## [2.4.0] - 2026-10-06
 
 ### Added

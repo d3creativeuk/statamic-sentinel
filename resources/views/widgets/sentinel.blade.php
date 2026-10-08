@@ -13,7 +13,7 @@
         : '';
 @endphp
 
-{{-- v-pre: stop Statamic 3.3-5's Vue from evaluating `{{ }}` in printed text
+{{-- v-pre: stop Statamic 5's Vue from evaluating `{{ }}` in printed text
      (see the utility view). --}}
 <div v-pre style="background:#fff; border:1px solid #e4e4e7; border-radius:8px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #1e293b;">
 

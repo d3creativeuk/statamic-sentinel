@@ -12,7 +12,7 @@ use Symfony\Component\HttpFoundation\Response;
  *
  * Two injection strategies, picked by what's in the response HTML:
  *
- *  1. Statamic 3.3 / 4 / 5: the layout is Blade-rendered, so the
+ *  1. Statamic 5: the layout is Blade-rendered, so the
  *     `<div class="workspace">` is present in the response. Banner is
  *     injected as its first child - normal document flow, sits below
  *     the fixed `.global-header`.

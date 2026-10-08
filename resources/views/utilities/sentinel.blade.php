@@ -23,7 +23,7 @@
      static <style> tag, so inject the CVE hover rule into <head> (same pattern as
      the spinner keyframes).
 
-     v-pre: Statamic 3.3-5 mount Vue on the server-rendered #statamic markup, so
+     v-pre: Statamic 5 mounts Vue on the server-rendered #statamic markup, so
      Vue would evaluate any `{{ }}` inside printed text. Blade's escaping doesn't
      touch braces, and user names, package names and recipients are printed
      here, so a CP user could name themselves `{{ ...js... }}` and run it in a

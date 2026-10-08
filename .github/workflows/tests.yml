@@ -6,16 +6,18 @@ on:
 
 jobs:
   test:
-    name: PHP ${{ matrix.php }}
+    name: PHP ${{ matrix.php }} / Statamic ${{ matrix.statamic }}
     runs-on: ubuntu-latest
 
     strategy:
       fail-fast: false
       matrix:
-        # composer.lock isn't committed, so each PHP version resolves the newest
-        # Statamic / Laravel / Testbench / PHPUnit it supports: PHP 8.0 lands on
-        # Statamic 3.x with Laravel 9 and PHPUnit 9, 8.3+ on Statamic 6.
-        php: ['8.0', '8.1', '8.2', '8.3', '8.4', '8.5']
+        # composer.lock isn't committed, so each leg resolves the newest
+        # Laravel / Testbench / PHPUnit its PHP and Statamic major allow.
+        # Without the statamic axis every leg would resolve Statamic 6, and
+        # nothing would test Statamic 5.
+        php: ['8.2', '8.3', '8.4', '8.5']
+        statamic: ['^5.0', '^6.0']
 
     steps:
       - uses: actions/checkout@v4
@@ -29,14 +31,19 @@ jobs:
       - name: Validate composer.json
         run: composer validate --strict
 
-      # Composer 2.9+ refuses to install package versions with known security
-      # advisories. PHP 8.0 and 8.1 can only resolve Testbench 7 / Laravel 9,
-      # every release of which now has advisories, so nothing would install.
-      # These are dev dependencies for the test run only; sites installing the
-      # addon never get them.
+      - name: Pin the Statamic major
+        run: composer require "statamic/cms:${{ matrix.statamic }}" --no-update --no-interaction
+
+      # Every installable Statamic 5 release requires ueberdosis/tiptap-php
+      # ^1.4, and its only 1.x release has an advisory with no fix, so
+      # Composer's security blocking refuses it. Ignore that one advisory on
+      # the Statamic 5 legs; every other advisory and malware check still
+      # blocks.
+      - name: Allow tiptap-php 1.x (Statamic 5 only)
+        if: matrix.statamic == '^5.0'
+        run: composer config audit.ignore --json '{"PKSA-52qp-479k-9x2j": "tiptap-php 1.x has no fixed release; every Statamic 5 release requires it"}'
+
       - name: Install dependencies
-        env:
-          COMPOSER_NO_SECURITY_BLOCKING: 1
         run: composer update --no-interaction --no-progress --prefer-dist
 
       - name: Run tests
