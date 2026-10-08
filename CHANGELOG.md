@@ -10,6 +10,13 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Fixed
 
+- **Private packages were compared with public packages of the same name.** A package installed
+  from a path or VCS repository, or an npm scope served from a private registry, was looked up on
+  Packagist, npm and the Statamic marketplace by name, so whoever owned that name publicly decided
+  the "latest version" Sentinel showed, and could flag it as a vendor security update. These
+  packages are now recognised and listed as not checked. A new `private_packages` config setting
+  covers Private Packagist, Satis and private npm registries, and keeps those names out of the
+  vulnerability lookup too.
 - **The utility and every report, schedule, note, preview and freeze action failed on sites that
   store users in a database.** They checked for a super admin on the login guard's user, which on
   those sites is the app's own user model rather than a Statamic user, so each returned an error

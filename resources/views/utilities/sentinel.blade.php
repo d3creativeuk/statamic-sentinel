@@ -548,6 +548,13 @@
             </div>
         @endif
 
+        @if(! empty($d['outdated']['private']) && is_array($d['outdated']['private']))
+            @php $privateNames = $d['outdated']['private']; @endphp
+            <div title="Installed from a private source, so not compared with the public registry: {{ implode(', ', $privateNames) }}" style="margin-top:8px; font-size:12px; color:#64748b; cursor:help;">
+                {{ count($privateNames) }} private {{ \Illuminate\Support\Str::plural('package', count($privateNames)) }} not checked for updates: {{ \Illuminate\Support\Str::limit(implode(', ', $privateNames), 120) }}
+            </div>
+        @endif
+
     </div>
     @endforeach
 

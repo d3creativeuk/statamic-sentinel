@@ -172,6 +172,16 @@ class ViewRenderTest extends TestCase
         $this->assertSame(1, substr_count($html, 'save-package-note') + substr_count($html, 'saveNote(ecosystem'));
     }
 
+    public function test_private_packages_are_listed_as_not_checked(): void
+    {
+        $this->actingAsStatamicUser(true);
+
+        $audit = $this->audit();
+        $audit['composer']['outdated']['private'] = ['acme/billing'];
+
+        $this->assertStringContainsString('1 private package not checked for updates: acme/billing', $this->renderUtility($audit));
+    }
+
     protected function renderUtility(?array $audit, array $history = []): string
     {
         $freeze = new ContentFreezeService;

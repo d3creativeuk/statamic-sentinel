@@ -725,6 +725,8 @@ class AuditService
         $this->lockfileCache      = [];
         $this->unreadableFiles    = [];
         $this->downHosts          = [];
+        $this->privateSources     = null;
+        $this->scopeRegistries    = null;
 
         // Taken before the scan reads the lock files, so one rewritten
         // mid-scan reads as changed and is reconciled on the next render.
@@ -1043,6 +1045,10 @@ class AuditService
      */
     protected function isMarketplacePackage(string $name): bool
     {
+        if ($this->isPrivateComposerPackage($name)) {
+            return false;
+        }
+
         if ($name === 'statamic/cms') {
             return true;
         }
@@ -1673,7 +1679,7 @@ class AuditService
         // every historic advisory for it (laravel/framework at dev-master
         // matches 12), so only tagged releases are checked.
         $packages = array_values(array_filter($packages, fn ($p) =>
-            ! empty($p['name']) && $this->isReleaseVersion((string) ($p['version'] ?? ''))
+            ! empty($p['name']) && $this->isReleaseVersion((string) ($p['version'] ?? '')) && ! $this->isConfiguredPrivate($p['name'])
         ));
 
         $queries = array_map(fn($p) => [
@@ -1706,10 +1712,12 @@ class AuditService
             return ['status' => 'ok', 'message' => 'No packages found.', 'severities' => [], 'counts' => [], 'total_packages' => 0, 'total_vulns' => 0];
         }
 
+        $packages = array_values(array_filter($packages, fn ($pkg) => ! $this->isConfiguredPrivate($pkg['name'])));
+
         $queries = array_map(fn ($pkg) => [
             'package' => ['name' => $pkg['name'], 'ecosystem' => 'npm'],
             'version' => $pkg['version'],
-        ], array_values($packages));
+        ], $packages);
 
         return $this->queryOsv($queries, count($packages));
     }
@@ -2216,6 +2224,158 @@ class AuditService
      * `['vendor/pkg' => '1.2.3', ...]`. Empty array on any read failure.
      * Used both by composerOutdated() and by HistoryService for diffing.
      */
+    // -------------------------------------------------------------------------
+    // Private packages
+    //
+    // A package installed from a private source isn't the package of the
+    // same name on Packagist, npm or the Statamic marketplace. Comparing the
+    // two let whoever owns the public name set the "latest version" Sentinel
+    // reported, and even a red vendor "security update", which is the first
+    // step of a dependency-confusion attack. Only positively private sources
+    // are skipped (a mirror such as Tencent or npmmirror is still checked).
+    // -------------------------------------------------------------------------
+
+    /**
+     * statamic-sentinel.private_packages: Str::is patterns ('acme/*',
+     * '@acme/*') for packages from Private Packagist, Satis or a private
+     * default npm registry, which the lock files can't reveal. These are
+     * also kept out of the OSV lookup, so their names never leave the site.
+     */
+    protected function isConfiguredPrivate(string $name): bool
+    {
+        foreach ((array) config('statamic-sentinel.private_packages', []) as $pattern) {
+            if (is_string($pattern) && $pattern !== '' && \Illuminate\Support\Str::is($pattern, $name)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Configured private, installed from a path repository, or from a
+     * VCS/path/artifact repository listed in composer.json.
+     */
+    protected function isPrivateComposerPackage(string $name): bool
+    {
+        return $this->isConfiguredPrivate($name) || isset($this->privateComposerSources()[$name]);
+    }
+
+    protected ?array $privateSources = null;
+
+    /**
+     * Lock packages installed from a path or a private repository, keyed by
+     * name. Built once, as the outdated and marketplace checks ask per package.
+     */
+    protected function privateComposerSources(): array
+    {
+        if ($this->privateSources !== null) {
+            return $this->privateSources;
+        }
+
+        $repos   = $this->composerPrivateRepoUrls();
+        $private = [];
+
+        foreach ($this->composerLockPackages() as $pkg) {
+            $source = $this->normaliseRepoUrl((string) ($pkg['source']['url'] ?? ''));
+
+            if (($pkg['dist']['type'] ?? null) === 'path' || ($source !== '' && in_array($source, $repos, true))) {
+                $private[$pkg['name']] = true;
+            }
+        }
+
+        return $this->privateSources = $private;
+    }
+
+    protected function composerPrivateRepoUrls(): array
+    {
+        $urls = [];
+        $repositories = $this->readJsonFile(base_path('composer.json'))['repositories'] ?? [];
+
+        foreach (is_array($repositories) ? $repositories : [] as $repo) {
+            if (is_array($repo)
+                && in_array($repo['type'] ?? null, ['vcs', 'git', 'github', 'gitlab', 'bitbucket', 'path', 'artifact'], true)
+                && is_string($repo['url'] ?? null)) {
+                $urls[] = $this->normaliseRepoUrl($repo['url']);
+            }
+        }
+
+        return array_values(array_filter($urls));
+    }
+
+    /**
+     * host/owner/repo, so git@github.com:acme/x.git, https://github.com/acme/x
+     * and ssh://git@github.com/acme/x.git compare equal.
+     */
+    protected function normaliseRepoUrl(string $url): string
+    {
+        $url = strtolower(trim($url));
+        $url = preg_replace('#^[a-z+]+://#', '', $url);
+        $url = preg_replace('#^[^@/]+@#', '', $url);
+        $url = preg_replace('#^([^/:]+):(?!\d)#', '$1/', $url);
+
+        return rtrim(preg_replace('#\.git$#', '', rtrim($url, '/')), '/');
+    }
+
+    /**
+     * Configured private, or a scope mapped to a registry other than npm's in
+     * the project or user .npmrc (`@acme:registry=https://npm.acme.dev/`).
+     */
+    protected function isPrivateNpmPackage(string $name): bool
+    {
+        if ($this->isConfiguredPrivate($name)) {
+            return true;
+        }
+
+        if (! str_starts_with($name, '@') || ! str_contains($name, '/')) {
+            return false;
+        }
+
+        $registry = $this->npmScopeRegistries()[strtolower(substr($name, 0, strpos($name, '/')))] ?? null;
+
+        return $registry !== null && ! preg_match('#^https?://registry\.npmjs\.(org|com)/?$#i', $registry);
+    }
+
+    protected ?array $scopeRegistries = null;
+
+    /**
+     * `@scope:registry=` lines from the project .npmrc, then the user's; the
+     * project's wins. Read quietly, like min-release-age.
+     */
+    protected function npmScopeRegistries(): array
+    {
+        if ($this->scopeRegistries !== null) {
+            return $this->scopeRegistries;
+        }
+
+        $found = [];
+
+        try {
+            $files = [base_path('.npmrc')];
+            $home  = getenv('HOME');
+
+            if (is_string($home) && $home !== '') {
+                $files[] = rtrim($home, '/') . '/.npmrc';
+            }
+
+            foreach ($files as $path) {
+                if (! @is_file($path) || ! @is_readable($path)) {
+                    continue;
+                }
+
+                foreach (@file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) ?: [] as $line) {
+                    if (preg_match('#^\s*(@[^:\s]+):registry\s*=\s*(\S+)#i', $line, $m)) {
+                        $found[strtolower($m[1])] ??= trim($m[2], '"\'');
+                    }
+                }
+            }
+        } catch (\Throwable $e) {
+            // No scope mappings known: nothing treated as private.
+        }
+
+        return $this->scopeRegistries = $found;
+    }
+
     public function composerInstalledDirect(): array
     {
         $manifest = $this->readJsonFile(base_path('composer.json'));
@@ -2258,11 +2418,12 @@ class AuditService
 
         if (empty($installed)) return ['total' => 0, 'packages' => []];
 
-        $toCheck = array_keys($installed);
+        $private = array_values(array_filter(array_keys($installed), fn ($n) => $this->isPrivateComposerPackage($n)));
+        $toCheck = array_values(array_diff(array_keys($installed), $private));
         $toFetch = array_values(array_diff($toCheck, array_keys($this->packagistResponses)));
 
         if (! empty($toFetch) && isset($this->downHosts['repo.packagist.org'])) {
-            return $this->outdatedResult([], $toCheck);
+            return $this->outdatedResult([], $toCheck, $private);
         }
 
         // Fetch latest versions from Packagist concurrently, skipping any feed
@@ -2318,7 +2479,7 @@ class AuditService
             }
         }
 
-        return $this->outdatedResult($outdated, $unchecked);
+        return $this->outdatedResult($outdated, $unchecked, $private);
     }
 
     /**
@@ -2347,9 +2508,15 @@ class AuditService
      * outage as "up to date", history keeps the previous figures and
      * sentinel:scan exits non-zero; the packages that did answer are kept.
      */
-    protected function outdatedResult(array $outdated, array $unchecked): array
+    protected function outdatedResult(array $outdated, array $unchecked, array $private = []): array
     {
         $result = ['total' => count($outdated), 'packages' => $outdated];
+
+        // Installed from a private source, so not compared with the public
+        // registry (see isPrivateComposerPackage / isPrivateNpmPackage).
+        if (! empty($private)) {
+            $result['private'] = array_values($private);
+        }
 
         if (! empty($unchecked)) {
             $result['error']     = true;
@@ -2436,10 +2603,11 @@ class AuditService
 
         if (empty($installed)) return ['total' => 0, 'packages' => []];
 
-        $registryNames = $this->npmRegistryNames(array_keys($installed));
+        $private       = array_values(array_filter(array_keys($installed), fn ($n) => $this->isPrivateNpmPackage($n)));
+        $registryNames = $this->npmRegistryNames(array_values(array_diff(array_keys($installed), $private)));
         $toCheck       = array_keys($registryNames);
 
-        if (empty($toCheck)) return ['total' => 0, 'packages' => []];
+        if (empty($toCheck)) return $this->outdatedResult([], [], $private);
 
         // Fetch latest versions from npm registry concurrently
         // Scoped packages (@scope/name) are supported natively by the registry URL
@@ -2499,7 +2667,7 @@ class AuditService
         // UI can explain why `npm update` leaves them behind.
         $outdated = $this->annotateReleaseAge($outdated);
 
-        return $this->outdatedResult($outdated, $unchecked);
+        return $this->outdatedResult($outdated, $unchecked, $private);
     }
 
     /**

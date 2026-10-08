@@ -107,6 +107,7 @@ This renders Sentinel fully unbranded ("Sentinel for Statamic", no link, no CTA 
 ## Other settings
 
 - `SENTINEL_SCAN_SCHEDULE` - run scans unattended through Laravel's scheduler: `daily` (04:00), `weekly` (Monday 04:00) or a cron expression such as `30 2 * * *`. Unset by default, so scans only run on demand or before a scheduled status report. Needs the host's `schedule:run` cron entry.
+- `private_packages` (in the published config) - names or wildcards such as `acme/*` or `@acme/*` for packages from Private Packagist, Satis or a private npm registry. A scan sends installed package names and versions to OSV, Packagist, npm and the Statamic marketplace; listed packages are skipped for update checks and left out of the OSV lookup. Packages from a path or VCS repository in `composer.json`, or from an npm scope mapped to another registry in `.npmrc`, are recognised as private automatically and are never compared with a public package of the same name.
 - `SENTINEL_VENDOR_SECURITY_CHECK=false` - stop asking the Statamic marketplace which releases are flagged as security releases (for air-gapped installs or test environments). Default `true`.
 - `SENTINEL_FREEZE_TIMEZONE` - display timezone for content-freeze times in the CP and freeze emails. Example: `SENTINEL_FREEZE_TIMEZONE='Europe/London'`.
   - **Unset (default):** times use the Laravel app timezone and render *without* timezone letters, e.g. `4 Jul 2026, 08:00`.

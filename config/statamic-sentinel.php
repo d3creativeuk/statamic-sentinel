@@ -75,6 +75,27 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Private packages
+    |--------------------------------------------------------------------------
+    |
+    | A scan sends installed package names and versions to OSV, Packagist,
+    | npm and the Statamic marketplace. Packages installed from a path or
+    | VCS repository in composer.json, or from an npm scope mapped to
+    | another registry in .npmrc, are recognised as private and not
+    | compared with a public package of the same name.
+    |
+    | Packages from Private Packagist, Satis or a private default npm
+    | registry can't be told apart from the lock file, so list them here
+    | (wildcards allowed, e.g. 'acme/*' or '@acme/*'). Listed packages are
+    | skipped for update checks and also left out of the OSV lookup, so
+    | their names never leave the site.
+    |
+    */
+
+    'private_packages' => [],
+
+    /*
+    |--------------------------------------------------------------------------
     | Scheduled scans
     |--------------------------------------------------------------------------
     |
