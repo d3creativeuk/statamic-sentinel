@@ -14,9 +14,11 @@ return [
     |
     | Agencies installing Sentinel on a client site have two options:
     |
-    |  - White-label: override any of the SENTINEL_DEV_* vars below to swap in
-    |    your own name, link, and contact email. A `name` set without a `url`
-    |    renders as plain text.
+    |  - White-label: override the SENTINEL_DEV_* vars below to swap in your
+    |    own name, link, and contact email. Once SENTINEL_DEV_NAME is set, D3
+    |    Creative's link and email are no longer used: a `name` without a
+    |    `url` renders as plain text, and without an `email` there's no
+    |    "Need help" button.
     |
     |  - Remove branding: set SENTINEL_BRANDING=false to render Sentinel fully
     |    unbranded ("Sentinel for Statamic", no link, no CTA).
@@ -29,8 +31,10 @@ return [
 
     'developer' => [
         'name'  => env('SENTINEL_DEV_NAME', 'D3 Creative'),
-        'url'   => env('SENTINEL_DEV_URL', 'https://d3creative.uk/services/statamic-maintenance'),
-        'email' => env('SENTINEL_DEV_EMAIL', 'support@d3creative.uk'),
+        // D3's link and email only go with D3's name, so a white-label name
+        // set on its own doesn't send the site's clients to D3.
+        'url'   => env('SENTINEL_DEV_URL', env('SENTINEL_DEV_NAME') === null ? 'https://d3creative.uk/services/statamic-maintenance' : null),
+        'email' => env('SENTINEL_DEV_EMAIL', env('SENTINEL_DEV_NAME') === null ? 'support@d3creative.uk' : null),
     ],
 
     /*

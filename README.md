@@ -96,6 +96,8 @@ SENTINEL_DEV_EMAIL='hello@your-agency.example'
 - `SENTINEL_DEV_URL` - the address the brand name links to in the widget, utility, and email footers.
 - `SENTINEL_DEV_EMAIL` - the address behind the `Need help with your website?` mailto button on the status report email, pre-filling the subject with the site host.
 
+Once `SENTINEL_DEV_NAME` is set, D3 Creative's link and email are dropped: set `SENTINEL_DEV_URL` and `SENTINEL_DEV_EMAIL` too if you want the link and the `Need help with your website?` button.
+
 **Remove branding entirely** - set:
 
 ```env

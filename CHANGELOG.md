@@ -116,6 +116,9 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Changed
 
+- **Setting only `SENTINEL_DEV_NAME` no longer keeps D3 Creative's link and support email.** A
+  white-label name now stands alone; set `SENTINEL_DEV_URL` and `SENTINEL_DEV_EMAIL` for a link and
+  the "Need help with your website?" button.
 - **Scans give up faster on a service that's down.** Each request now waits at most 4 seconds to
   connect, and once a service has refused a connection during a scan, Sentinel doesn't wait on it
   again. With every service unreachable, a scan that took about 40 seconds now takes about 12.
