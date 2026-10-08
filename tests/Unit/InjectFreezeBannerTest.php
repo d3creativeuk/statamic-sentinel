@@ -124,6 +124,10 @@ class InjectFreezeBannerTest extends TestCase
      */
     public function test_the_banner_key_is_shared_with_inertia_pages(): void
     {
+        if (! class_exists(\Inertia\Inertia::class)) {
+            $this->markTestSkipped('Inertia ships with Statamic 6 only.');
+        }
+
         $this->activeFreeze();
 
         $this->inject($this->statamic6Shell(1_000));
