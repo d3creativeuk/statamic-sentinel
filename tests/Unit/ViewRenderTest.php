@@ -131,6 +131,25 @@ class ViewRenderTest extends TestCase
         $this->assertStringContainsString('>3</span>', $html);
     }
 
+    /**
+     * The renewal link's URL ends in the site's licence key, which Statamic
+     * only shows to people with access to its Licensing utility.
+     */
+    public function test_the_licence_key_link_follows_the_licensing_permission(): void
+    {
+        $audit = $this->audit();
+        $audit['license'] = ['supported' => true, 'status' => 'renewal', 'account_url' => 'https://statamic.com/account/sites/SECRETKEY123'];
+
+        $this->actingAsStatamicUser(false);
+        $this->assertStringNotContainsString('SECRETKEY123', $this->renderUtility($audit));
+
+        $this->actingAsStatamicUser(false, permissions: ['access licensing utility']);
+        $this->assertStringContainsString('SECRETKEY123', $this->renderUtility($audit));
+
+        $this->actingAsStatamicUser(true);
+        $this->assertStringContainsString('SECRETKEY123', $this->renderUtility($audit));
+    }
+
     protected function renderUtility(?array $audit): string
     {
         $freeze = new ContentFreezeService;

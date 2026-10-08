@@ -13,14 +13,17 @@ use Statamic\Facades\User;
  */
 trait ActsAsStatamicUser
 {
-    protected function actingAsStatamicUser(bool $super, string $email = 'super@example.test', ?string $model = null): void
+    /**
+     * @param array<int, string> $permissions granted to a non-super
+     */
+    protected function actingAsStatamicUser(bool $super, string $email = 'super@example.test', ?string $model = null, array $permissions = []): void
     {
         $model ??= HostEloquentUser::class;
         $this->actingAs((new $model)->forceFill(['id' => 1, 'email' => $email, 'super' => $super]));
 
         $user = Mockery::mock();
         $user->shouldReceive('isSuper')->andReturn($super);
-        $user->shouldReceive('hasPermission')->andReturn($super);
+        $user->shouldReceive('hasPermission')->andReturnUsing(fn ($permission) => $super || in_array($permission, $permissions, true));
         $user->shouldReceive('id')->andReturn('user-1');
         $user->shouldReceive('email')->andReturn($email);
 

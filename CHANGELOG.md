@@ -46,6 +46,10 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
   happened to send it. Someone browsing through another address (or deliberately faking one)
   could have that address appear in the email to your client. Emails now always use the site's
   configured address (`APP_URL`).
+- **The Statamic licence key was visible to Sentinel users who aren't super admins.** When the
+  licence needed renewing, the "View renewal date" link (whose address contains the licence key)
+  showed to anyone with Sentinel access. It now shows only to super admins and users who can open
+  Statamic's own Licensing utility, which is where Statamic shows the key.
 
 ### Removed
 

@@ -32,6 +32,18 @@ class CurrentUser
         }
     }
 
+    /**
+     * Supers have every permission, as in Statamic.
+     */
+    public static function hasPermission(string $permission): bool
+    {
+        try {
+            return static::isSuper() || static::get()?->hasPermission($permission) === true;
+        } catch (\Throwable $e) {
+            return false;
+        }
+    }
+
     public static function id(): ?string
     {
         try {

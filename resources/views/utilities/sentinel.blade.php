@@ -221,6 +221,10 @@
                 // constraint syntax that confuses non-technical users.
                 $licenseText   = ['ok' => 'Licensed', 'renewal' => 'Renewal due', 'invalid' => 'Not licensed', 'trial' => 'Trial', 'free' => 'Free edition', 'unknown' => 'Unverified'][$license['status'] ?? 'unknown'] ?? 'Unverified';
                 $licenseAlert  = in_array($license['status'] ?? '', ['renewal', 'invalid']);
+                // The account link carries the site's licence key in its path.
+                // Statamic only shows that key to people who can open its
+                // Licensing utility, so follow the same rule here.
+                $canSeeLicenseKey = \D3Creative\Sentinel\Support\CurrentUser::hasPermission('access licensing utility');
                 $licenseColour = $licenseAlert ? '#dc2626' : (($license['status'] ?? '') === 'ok' ? '#047857' : '#64748b');
                 // Always render as a bordered pill (matching the widget), whatever the state.
                 $licenseChrome = 'padding:1px 7px; border-radius:4px; background:#fff; border:1px solid ' . $licenseColour . ';';
@@ -228,7 +232,7 @@
             <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; padding:8px 14px; border-top:1px solid #e2e8f0;">
                 <span style="display:inline-flex; align-items:baseline; gap:8px; min-width:0; flex-wrap:wrap;">
                     <span style="font-size:13px; font-weight:600; color:#0f172a;">Statamic License Status</span>
-                    @if(! empty($license['account_url']) && $licenseAlert)
+                    @if(! empty($license['account_url']) && $licenseAlert && $canSeeLicenseKey)
                         <a href="{{ $license['account_url'] }}" target="_blank" rel="noopener" style="font-size:11px; font-weight:500; color:#1d4ed8; text-decoration:none;">View renewal date &#8599;</a>
                     @endif
                 </span>
