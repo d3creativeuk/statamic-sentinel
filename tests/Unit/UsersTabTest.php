@@ -57,6 +57,28 @@ class UsersTabTest extends TestCase
         $this->assertFalse($repo->allCalled);
     }
 
+    /**
+     * Switching tracking off used to keep showing, and keep storing, the
+     * activity recorded while it was on.
+     */
+    public function test_switching_tracking_off_hides_and_removes_recorded_activity(): void
+    {
+        Storage::disk('local')->put(LastActiveService::RELATIVE_PATH, json_encode(['editor' => Carbon::now()->toIso8601String()]));
+        $this->fakeUsers([$this->user('editor', cp: true)], count: 1);
+
+        foreach (['false', '0', false] as $off) {
+            config(['statamic-sentinel.users.track_activity' => $off]);
+            $this->assertFalse(ServiceProvider::tracksActivity());
+        }
+
+        $m = new ReflectionMethod(ServiceProvider::class, 'buildUserActivity');
+        $m->setAccessible(true);
+        $users = $m->invoke(new ServiceProvider($this->app));
+
+        $this->assertNull($users[0]['last_active']);
+        Storage::disk('local')->assertMissing(LastActiveService::RELATIVE_PATH);
+    }
+
     protected function listedIds(): array
     {
         $m = new ReflectionMethod(ServiceProvider::class, 'buildUserActivity');

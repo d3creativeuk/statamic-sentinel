@@ -36,7 +36,7 @@ The utility's **Users** tab (super admins only) lists every control-panel user w
 
 Statamic has no built-in "who's online" concept, so Sentinel tracks it with a lightweight CP middleware that records each authenticated user's last-active time (throttled to about one write per minute per user, persisted so it survives `cache:clear`). Because activity only advances on a CP request, "online" means "active in the last few minutes" - an open but idle tab drops to "last seen". Only timestamps are stored (no IP or user-agent).
 
-- `SENTINEL_TRACK_ACTIVITY=false` disables the tracking entirely (the tab then shows last-login only).
+- `SENTINEL_TRACK_ACTIVITY=false` (or `0`) disables the tracking entirely: the tab then shows last-login only, and activity already recorded is deleted the next time a super admin opens the utility.
 - `SENTINEL_ONLINE_WINDOW` sets the minutes of inactivity still counted as online (default `5`).
 
 ## Content Freeze

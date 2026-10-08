@@ -140,9 +140,10 @@
     $packageNotes = $package_notes ?? [];
 
     // Users tab: how many CP users are "online" (active within the window).
-    $onlineWindow = (int) ($online_window ?? 5);
-    $onlineCount  = 0;
-    foreach (($users ?? []) as $u) {
+    $onlineWindow  = (int) ($online_window ?? 5);
+    $trackActivity = (bool) ($track_activity ?? true);
+    $onlineCount   = 0;
+    foreach ($trackActivity ? ($users ?? []) : [] as $u) {
         if (\D3Creative\Sentinel\Services\LastActiveService::isOnline($u['last_active'] ?? null, $onlineWindow)) {
             $onlineCount++;
         }
@@ -1018,7 +1019,9 @@
                             <thead>
                                 <tr style="background:#f8fafc; border-bottom:1px solid #e2e8f0;">
                                     <th style="text-align:left; padding:10px 14px; font-weight:600; color:#475569; white-space:nowrap;">User</th>
+                                    @if ($trackActivity)
                                     <th style="text-align:left; padding:10px 14px; font-weight:600; color:#475569; white-space:nowrap;">Status</th>
+                                    @endif
                                     <th style="text-align:left; padding:10px 14px; font-weight:600; color:#475569; white-space:nowrap;">Last login</th>
                                 </tr>
                             </thead>
@@ -1058,12 +1061,14 @@
                                                 <div style="font-size:12px; color:#64748b; margin-top:2px;">{{ $u['email'] }}</div>
                                             @endif
                                         </td>
+                                        @if ($trackActivity)
                                         <td style="padding:10px 14px; white-space:nowrap; vertical-align:top;">
                                             <span style="display:inline-flex; align-items:center; gap:7px; color:{{ $statusColour }}; font-weight:500;">
                                                 <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:{{ $dotColour }}; flex-shrink:0;"></span>
                                                 {{ $statusText }}
                                             </span>
                                         </td>
+                                        @endif
                                         <td style="padding:10px 14px; color:#475569; white-space:nowrap; vertical-align:top;">{{ $loginHuman ?? 'Never' }}</td>
                                     </tr>
                                 @endforeach

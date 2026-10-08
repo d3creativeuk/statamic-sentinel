@@ -273,6 +273,7 @@ class ServiceProvider extends AddonServiceProvider
             // user's activity), so don't even build it otherwise.
             'users'           => $isSuper ? $this->buildUserActivity() : [],
             'online_window'   => (int) config('statamic-sentinel.users.online_window', 5),
+            'track_activity'  => self::tracksActivity(),
             'freeze'          => $freeze,
             'freeze_current'  => $freeze->current(),
             'freeze_history'  => $isSuper ? $freeze->history() : [],
@@ -354,10 +355,26 @@ class ServiceProvider extends AddonServiceProvider
         return $users->filter(fn ($user) => $user->isSuper() || $user->hasPermission('access cp'))->values();
     }
 
+    /**
+     * SENTINEL_TRACK_ACTIVITY. filter_var so 'false', '0' and 'off' all
+     * switch it off, however the value reaches config.
+     */
+    public static function tracksActivity(): bool
+    {
+        return filter_var(config('statamic-sentinel.users.track_activity', true), FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? true;
+    }
+
     protected function buildUserActivity(): array
     {
         try {
-            $active = app(LastActiveService::class)->all();
+            // Switching tracking off stops showing activity already recorded,
+            // and removes it rather than keeping it indefinitely.
+            if (self::tracksActivity()) {
+                $active = app(LastActiveService::class)->all();
+            } else {
+                app(LastActiveService::class)->clear();
+                $active = [];
+            }
 
             $users = $this->cpUsers($active)->map(function ($user) use ($active) {
                 $id        = (string) $user->id();

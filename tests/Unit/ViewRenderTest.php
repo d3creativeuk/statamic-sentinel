@@ -182,7 +182,15 @@ class ViewRenderTest extends TestCase
         $this->assertStringContainsString('1 private package not checked for updates: acme/billing', $this->renderUtility($audit));
     }
 
-    protected function renderUtility(?array $audit, array $history = []): string
+    public function test_the_users_tab_drops_the_status_column_when_tracking_is_off(): void
+    {
+        $this->actingAsStatamicUser(true);
+
+        $this->assertStringContainsString('>Status</th>', $this->renderUtility($this->audit()));
+        $this->assertStringNotContainsString('>Status</th>', $this->renderUtility($this->audit(), [], ['track_activity' => false]));
+    }
+
+    protected function renderUtility(?array $audit, array $history = [], array $extra = []): string
     {
         $freeze = new ContentFreezeService;
 
@@ -204,7 +212,7 @@ class ViewRenderTest extends TestCase
             'freeze'                      => $freeze,
             'freeze_current'              => null,
             'freeze_history'              => [],
-        ]);
+        ] + $extra);
     }
 
     protected function audit(): array

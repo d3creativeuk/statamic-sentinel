@@ -51,6 +51,20 @@ class LastActiveServiceTest extends TestCase
         $this->assertSame([], (new LastActiveService)->all());
     }
 
+    /**
+     * The file is only rewritten on a touch, so on a quiet site a user active
+     * months ago still read as "last seen".
+     */
+    public function test_all_drops_entries_past_retention_without_a_touch(): void
+    {
+        Storage::disk('local')->put(LastActiveService::RELATIVE_PATH, json_encode([
+            'stale'  => Carbon::now()->subDays(LastActiveService::RETENTION_DAYS + 5)->toIso8601String(),
+            'recent' => Carbon::now()->subDay()->toIso8601String(),
+        ]));
+
+        $this->assertSame(['recent'], array_keys((new LastActiveService)->all()));
+    }
+
     public function test_touch_prunes_entries_older_than_the_retention_window(): void
     {
         Carbon::setTestNow(Carbon::parse('2026-07-24 12:00:00'));

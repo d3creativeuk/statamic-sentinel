@@ -37,7 +37,9 @@ class LastActiveService
 
             $decoded = json_decode(Storage::disk('local')->get(self::RELATIVE_PATH), true);
 
-            return is_array($decoded) ? $decoded : [];
+            // Pruned here too: the file is only rewritten on a touch, so on a
+            // quiet site entries past retention would otherwise still show.
+            return is_array($decoded) ? $this->prune($decoded) : [];
         } catch (\Throwable $e) {
             return [];
         }
@@ -54,6 +56,21 @@ class LastActiveService
             $entries[$userId] = Carbon::now()->toIso8601String();
 
             $this->write($this->prune($entries));
+        } catch (\Throwable $e) {
+            // Silent fail - bookkeeping only.
+        }
+    }
+
+    /**
+     * Remove every recorded activity time (tracking switched off). Silent on
+     * failure.
+     */
+    public function clear(): void
+    {
+        try {
+            if (Storage::disk('local')->exists(self::RELATIVE_PATH)) {
+                Storage::disk('local')->delete(self::RELATIVE_PATH);
+            }
         } catch (\Throwable $e) {
             // Silent fail - bookkeeping only.
         }

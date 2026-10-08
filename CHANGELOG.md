@@ -10,6 +10,10 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Fixed
 
+- **Turning off activity tracking kept showing, and keeping, the activity already recorded.** With
+  `SENTINEL_TRACK_ACTIVITY=false` the Users tab now drops its Status column and the stored activity
+  is deleted. Activity older than 30 days also stops showing on a quiet site, rather than waiting
+  for the next user to be recorded.
 - **Private packages were compared with public packages of the same name.** A package installed
   from a path or VCS repository, or an npm scope served from a private registry, was looked up on
   Packagist, npm and the Statamic marketplace by name, so whoever owned that name publicly decided
