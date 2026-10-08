@@ -1,7 +1,8 @@
 {{--
     A package's note under its Security Issues row, plus the inline editor
     (super users only). Runs inside the row's x-data (`note`, `draft`,
-    `editing`). The update report shows the note next to this package's
+    `editing`, `saving`, `error`); the request itself is saveNote() on the
+    utility's root component. The update report shows the note next to this package's
     vulnerabilities and any it pulls in.
     Expects: $eco, $package, $noteText, $isChild, $isSuper.
 --}}
@@ -11,38 +12,7 @@
 </div>
 @if($isSuper)
     <div x-show="editing" x-cloak>
-        <div x-data="{
-                saving: false,
-                error: '',
-                save(text) {
-                    this.saving = true;
-                    this.error = '';
-                    const fd = new FormData();
-                    fd.append('_token', @js(csrf_token()));
-                    fd.append('ecosystem', @js($eco));
-                    fd.append('package', @js($package));
-                    fd.append('note', text);
-                    fetch(@js(route('statamic.cp.d3-sentinel.save-package-note')), {
-                        method: 'POST',
-                        body: fd,
-                        headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
-                    })
-                    .then(res => res.json().then(body => ({ ok: res.ok, body })))
-                    .then(res => {
-                        this.saving = false;
-                        if (res.ok) {
-                            this.note = res.body.note;
-                            this.editing = false;
-                        } else {
-                            this.error = res.body.message;
-                        }
-                    })
-                    .catch(() => {
-                        this.saving = false;
-                        this.error = 'Something went wrong. Please try again.';
-                    });
-                }
-             }"
+        <div x-data="{ save(text) { saving = true; error = ''; saveNote(@js($eco), @js($package), text).then(r => { saving = false; if (r.ok) { note = r.body.note; editing = false; } else { error = r.body.message; } }).catch(() => { saving = false; error = 'Something went wrong. Please try again.'; }); } }"
              style="{{ $notePad }}">
             <textarea x-model="draft" rows="3" maxlength="1000"
                       aria-label="Note on {{ $package }}"

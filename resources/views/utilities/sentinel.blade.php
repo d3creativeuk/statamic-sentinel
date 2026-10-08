@@ -29,7 +29,62 @@
      here, so a CP user could name themselves `{{ ...js... }}` and run it in a
      super's session. v-pre stops Vue compiling this subtree; Alpine is
      unaffected. --}}
-<div v-pre x-data x-init="if (! document.getElementById('d3-sentinel-cve-style')) { var s = document.createElement('style'); s.id = 'd3-sentinel-cve-style'; s.textContent = '.d3-sentinel-cve{text-decoration:none} .d3-sentinel-cve:hover{text-decoration:underline}'; document.head.appendChild(s); } $nextTick(() => window.scrollTo({ top: 0, behavior: 'instant' }))" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; color: #1e293b;">
+{{-- deleteRow() and saveNote() are shared by every row (delete buttons on
+     the History, Sent and Notify tables; note editors on Security Issues)
+     instead of each row carrying its own copy of the script. --}}
+<div v-pre x-data="{
+        deleteRow(el, dispatch) {
+            dispatch('sentinel-confirm-open', {
+                message: el.dataset.confirm,
+                confirmLabel: 'Delete',
+                onConfirm: () => {
+                    el.disabled = true;
+                    var fd = new FormData();
+                    fd.append('action', el.dataset.handle);
+                    fd.append('selections[]', el.dataset.id);
+                    // Statamic's ActionController calls $request->replace($request->values)
+                    // and rejects null; force `values` to parse as an empty array.
+                    fd.append('values[_]', '');
+                    try {
+                        var ctx = JSON.parse(el.dataset.context || '{}');
+                        Object.entries(ctx).forEach(([k, v]) => fd.append('context[' + k + ']', v));
+                    } catch (e) {}
+                    fd.append('_token', @js(csrf_token()));
+                    fetch(el.dataset.url, {
+                        method: 'POST',
+                        body: fd,
+                        headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
+                    })
+                    .then(res => res.json().then(body => ({ ok: res.ok, body })).catch(() => ({ ok: res.ok, body: {} })))
+                    .then(({ ok, body }) => {
+                        el.disabled = false;
+                        if (ok && body.success !== false) {
+                            var row = el.closest('tr');
+                            if (row) row.remove();
+                        } else {
+                            alert((body && body.message) || 'Failed to delete.');
+                        }
+                    })
+                    .catch(() => {
+                        el.disabled = false;
+                        alert('Something went wrong. Please try again.');
+                    });
+                }
+            });
+        },
+        saveNote(ecosystem, pkg, text) {
+            var fd = new FormData();
+            fd.append('_token', @js(csrf_token()));
+            fd.append('ecosystem', ecosystem);
+            fd.append('package', pkg);
+            fd.append('note', text);
+            return fetch(@js(route('statamic.cp.d3-sentinel.save-package-note')), {
+                method: 'POST',
+                body: fd,
+                headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
+            }).then(res => res.json().then(body => ({ ok: res.ok, body })));
+        }
+     }" x-init="if (! document.getElementById('d3-sentinel-cve-style')) { var s = document.createElement('style'); s.id = 'd3-sentinel-cve-style'; s.textContent = '.d3-sentinel-cve{text-decoration:none} .d3-sentinel-cve:hover{text-decoration:underline}'; document.head.appendChild(s); } $nextTick(() => window.scrollTo({ top: 0, behavior: 'instant' }))" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; color: #1e293b;">
 
 @if (! $audit)
 
@@ -392,7 +447,7 @@
                                     $pillColour = fn($sev) => in_array(strtoupper((string) $sev), ['CRITICAL', 'HIGH']) ? '#dc2626' : '#475569';
                                     $noteText = $packageNotes[$ecoKey][$pkg['name']]['note'] ?? '';
                                 @endphp
-                                <div x-data="{ note: @js($noteText), draft: '', editing: false }" style="{{ $border }}">
+                                <div x-data="{ note: @js($noteText), draft: '', editing: false, saving: false, error: '' }" style="{{ $border }}">
                                     @if($hasVulns)
                                         <div style="display:flex; align-items:center; flex-wrap:wrap; gap:5px 8px; {{ $pad }}">
                                             <span style="display:inline-flex; align-items:center; gap:6px; margin-right:2px; min-width:0;">
@@ -518,6 +573,10 @@
                         'php'      => 'PHP',
                     ];
 
+                    // The newest rows only: each one is a table row plus a delete
+                    // button, and a year of daily scans made the page megabytes.
+                    $historyRows = 50;
+
                     $ecosystemLines = function (int $vulns, int $outdated) {
                         $lines = [];
                         if ($vulns > 0) {
@@ -548,7 +607,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach ($history as $i => $entry)
+                                @foreach (array_slice($history, 0, $historyRows) as $i => $entry)
                                     @php
                                         try {
                                             $recordedAt = \Carbon\Carbon::parse($entry['recorded_at'])->format('j M Y, H:i');
@@ -599,7 +658,7 @@
                     </div>
                 </div>
 
-                <p style="font-size:12px; color:#64748b; margin:10px 2px 0 2px;">Newest first. Retained for {{ \D3Creative\Sentinel\Services\HistoryService::RETENTION_DAYS }} days.</p>
+                <p style="font-size:12px; color:#64748b; margin:10px 2px 0 2px;">Newest first.@if (count($history) > $historyRows) Showing the {{ $historyRows }} most recent of {{ count($history) }} changes; the reports still use them all.@endif Retained for {{ \D3Creative\Sentinel\Services\HistoryService::RETENTION_DAYS }} days.</p>
 
             @endif
 

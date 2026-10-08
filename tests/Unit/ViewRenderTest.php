@@ -150,13 +150,34 @@ class ViewRenderTest extends TestCase
         $this->assertStringContainsString('SECRETKEY123', $this->renderUtility($audit));
     }
 
-    protected function renderUtility(?array $audit): string
+    /**
+     * Each row used to carry its own delete script and the History tab
+     * listed every snapshot in the year, so the page ran to megabytes.
+     */
+    public function test_history_shows_the_newest_rows_and_rows_share_one_delete_script(): void
+    {
+        $this->actingAsStatamicUser(true);
+
+        $history = [];
+        for ($i = 0; $i < 120; $i++) {
+            $history[] = ['id' => "h{$i}", 'recorded_at' => now()->subDays($i)->toIso8601String(), 'statamic' => '6.0.0'];
+        }
+
+        $html = $this->renderUtility($this->audit(), $history);
+
+        $this->assertSame(50, substr_count($html, 'data-handle="delete_history_entry"'));
+        $this->assertStringContainsString('Showing the 50 most recent of 120 changes', $html);
+        $this->assertSame(1, substr_count($html, "fd.append('selections[]'"));
+        $this->assertSame(1, substr_count($html, 'save-package-note') + substr_count($html, 'saveNote(ecosystem'));
+    }
+
+    protected function renderUtility(?array $audit, array $history = []): string
     {
         $freeze = new ContentFreezeService;
 
         return (string) view('statamic-sentinel::utilities.sentinel', [
             'audit'                       => $audit,
-            'history'                     => [],
+            'history'                     => $history,
             'schedule'                    => ['status_report' => ['enabled' => false, 'frequency' => 'daily', 'day_of_week' => 1, 'day_of_month' => 1, 'time' => '09:00', 'recipients' => []]],
             'sent_status'                 => [['id' => 'abcdefghijklmnop', 'recorded_at' => '2026-09-01T09:00:00Z', 'recipients' => ['a@b.test'], 'trigger' => 'manual', 'outcome' => 'sent']],
             'sent_update'                 => [['recorded_at' => '2026-09-01T09:00:00Z', 'recipients' => ['a@b.test']]],

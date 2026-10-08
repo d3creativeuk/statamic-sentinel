@@ -137,6 +137,10 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
   members included, and looked each one up on every load, which got slow on membership sites.
   On sites with more than 500 users it now lists the Control Panel users active in the last 30
   days, plus you.
+- **A much lighter Sentinel page.** Every delete button and note editor carried its own copy of the
+  same script, and the History tab listed a whole year of changes. Those now share one script,
+  and History shows the 50 most recent changes (the reports still use them all). On a site with a
+  year of daily changes and 100 vulnerable packages, the page drops from about 2.5 MB to 0.7 MB.
 - **Fewer background processes.** The two every-minute Content Freeze checks used to start a
   full `artisan` process each, every minute, even with no update scheduled. They now only run
   when a freeze is actually due to change.
