@@ -71,6 +71,10 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
   recorded a false drop. Now the check shows as failed in the Control Panel and the email, the
   history keeps the previous figures, and `sentinel:scan` exits with an error. Packages that
   aren't on the public registry still don't count as a failure.
+- **The update report could repeat an old report.** A scan where only package versions changed
+  (for example updates within the same major version), or where one vulnerable package was
+  swapped for another, left every total the same, so it wasn't recorded and the next update report
+  described the previous changes instead. Those scans are now recorded.
 
 ### Changed
 

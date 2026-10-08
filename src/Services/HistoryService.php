@@ -31,6 +31,19 @@ class HistoryService
     ];
 
     /**
+     * Per-package maps that also count as a change. Without them, a scan that
+     * only moved package versions (staying behind the same newer major) or
+     * swapped one vulnerable package for another left every total the same,
+     * recorded nothing, and the next update report re-sent the previous diff.
+     */
+    const CHANGE_MAPS = [
+        'composer_packages',
+        'npm_packages',
+        'composer_vuln_packages',
+        'npm_vuln_packages',
+    ];
+
+    /**
      * Build a snapshot from the audit array and append it to the history file
      * if any tracked field differs from the most recent stored snapshot.
      *
@@ -282,6 +295,23 @@ class HistoryService
     {
         foreach (self::TRACKED_FIELDS as $field) {
             if (($a[$field] ?? null) !== ($b[$field] ?? null)) {
+                return false;
+            }
+        }
+
+        foreach (self::CHANGE_MAPS as $field) {
+            // Snapshots from before a map existed don't count as a change.
+            if (! array_key_exists($field, $a) || ! array_key_exists($field, $b)) {
+                continue;
+            }
+
+            $x = (array) $a[$field];
+            $y = (array) $b[$field];
+            ksort($x);
+            ksort($y);
+
+            // Strict: loose == treats versions '1.10' and '1.1' as equal.
+            if ($x !== $y) {
                 return false;
             }
         }
