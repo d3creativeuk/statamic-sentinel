@@ -37,6 +37,10 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
   warning. Now the check shows as failed, the report keeps the previous figures, and
   `sentinel:scan` exits with an error. Byte-order marks and deeply nested fields are now read
   normally. The same applies to `composer.lock`.
+- **On Statamic 6 the freeze banner didn't appear on large pages.** Statamic 6 puts the whole page
+  into one attribute of its Control Panel shell, and on pages over about 1 MB (large entries, or
+  Sentinel's own report with a long history) the check for that shell gave up, so editors opening
+  such a page saw no update banner. The check no longer depends on page size.
 
 ### Removed
 

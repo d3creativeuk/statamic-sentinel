@@ -67,16 +67,22 @@ class InjectFreezeBanner
             // Statamic 6's layout.blade.php uses multi-line attributes, so
             // the rendered shell is `<div\n    id="statamic"` (whitespace
             // between the tag name and the id attribute). Match the id
-            // attribute alone via regex so we tolerate any whitespace and
-            // attribute ordering.
-            if (! preg_match('/<div\b[^>]*\bid\s*=\s*"statamic"/is', $content)) {
+            // attribute alone so we tolerate any whitespace and attribute
+            // ordering. It must be a linear scan: Statamic 6 puts the whole
+            // page (often over 1 MB) in the same tag's data-page attribute,
+            // and a `<div[^>]*` prefix backtracked across all of it, hit
+            // pcre.backtrack_limit and silently dropped the banner. Escaped
+            // content can't match, since its quotes are &quot; or \".
+            if (! preg_match('/\sid\s*=\s*"statamic"/i', $content)) {
                 return $response;
             }
 
             // Preferred injection point: first child of <div class="workspace">,
-            // which Statamic renders inside #main, below the .global-header.
-            // The regex tolerates extra classes and attribute ordering.
-            if (preg_match('/<div\s[^>]*\bclass\s*=\s*"[^"]*\bworkspace\b[^"]*"[^>]*>/i', $content, $matches, PREG_OFFSET_CAPTURE)) {
+            // which Statamic 5 renders inside #main, below the .global-header.
+            // Anchored on class as the tag's first attribute (as Statamic 5
+            // renders it) so it can't backtrack across the shell's large
+            // attributes; extra classes are tolerated.
+            if (preg_match('/<div\s+class\s*=\s*"[^"<>]*\bworkspace\b[^"<>]*"[^>]*>/i', $content, $matches, PREG_OFFSET_CAPTURE)) {
                 $insertAt = $matches[0][1] + strlen($matches[0][0]);
                 $response->setContent(
                     substr($content, 0, $insertAt) . $markup . substr($content, $insertAt)
