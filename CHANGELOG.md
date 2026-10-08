@@ -41,6 +41,11 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
   into one attribute of its Control Panel shell, and on pages over about 1 MB (large entries, or
   Sentinel's own report with a long history) the check for that shell gave up, so editors opening
   such a page saw no update banner. The check no longer depends on page size.
+- **The update-scheduled email could name the wrong website.** With Statamic's default site URL
+  (`/`), the site name in the email came from the address of whichever Control Panel request
+  happened to send it. Someone browsing through another address (or deliberately faking one)
+  could have that address appear in the email to your client. Emails now always use the site's
+  configured address (`APP_URL`).
 
 ### Removed
 

@@ -20,7 +20,7 @@ class ReportHostsTest extends TestCase
     /**
      * Bind a stand-in Sites repository under the Site facade's accessor so
      * Statamic\Facades\Site::all() resolves it without booting Statamic. Each
-     * site only needs the absoluteUrl() ReportHosts reads.
+     * site only needs the configured url() ReportHosts reads.
      *
      * @param array<int, string> $urls
      */
@@ -32,9 +32,15 @@ class ReportHostsTest extends TestCase
             {
             }
 
-            public function absoluteUrl(): string
+            public function url(): string
             {
                 return $this->url;
+            }
+
+            // Like Statamic: a relative URL takes the current request's host.
+            public function absoluteUrl(): string
+            {
+                return str_starts_with($this->url, '/') ? request()->getSchemeAndHttpHost() . $this->url : $this->url;
             }
         });
 
@@ -95,6 +101,23 @@ class ReportHostsTest extends TestCase
         $this->bindSites(['/', '']); // relative + empty - no host on either
 
         $this->assertSame(['primary.test'], ReportHosts::all());
+    }
+
+    /**
+     * A relative site URL used to resolve against the request, so whoever's
+     * CP request ran the freeze tick picked the host named in the email.
+     */
+    public function test_a_relative_site_url_ignores_the_request_host(): void
+    {
+        config(['app.url' => 'https://real-site.test']);
+        $this->app->instance('request', \Illuminate\Http\Request::create('http://evil-login.test/cp/dashboard'));
+
+        $this->bindSites(['/', '/fr/']);
+
+        $this->assertSame(['real-site.test'], ReportHosts::all());
+
+        $mailable = (new FreezeNotificationMail(['freeze_at' => '2026-07-01T13:41:00Z']))->build();
+        $this->assertStringStartsWith('real-site.test update scheduled for', $mailable->subject);
     }
 
     public function test_update_report_subject_lists_all_hosts(): void

@@ -27,8 +27,15 @@ class ReportHosts
     {
         try {
             if (class_exists(\Statamic\Facades\Site::class)) {
+                // The configured URL, never absoluteUrl(): for a relative
+                // site URL ('/', Statamic's default) that prepends the current
+                // request's Host, so a CP user sending a forged Host header
+                // could choose the site name in a heads-up email sent from a
+                // tick in their request. Relative URLs use app.url's host.
+                $appHost = parse_url((string) config('app.url'), PHP_URL_HOST);
+
                 $hosts = \Statamic\Facades\Site::all()
-                    ->map(fn ($site) => parse_url($site->absoluteUrl(), PHP_URL_HOST))
+                    ->map(fn ($site) => parse_url((string) $site->url(), PHP_URL_HOST) ?: $appHost)
                     ->filter()
                     ->unique()
                     ->values()
