@@ -80,6 +80,11 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
   it was still waiting for the worker. They now say "queued" there. The Notify tab also says the
   amber banner appears at the start time, since the blue planned-work banner already shows from
   the moment an update is scheduled.
+- **A damaged data file was silently replaced.** If one of Sentinel's saved files (history, sent
+  log, notes, user activity, freeze history) couldn't be read, it was treated as empty and the next
+  save overwrote it with just the newest entry. A damaged file is now kept beside it as
+  `<name>.corrupt-<date>` (and logged) before a fresh one is started, and if a file can't be read
+  at all, the save is skipped and the file left alone.
 
 ### Changed
 

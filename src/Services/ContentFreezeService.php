@@ -3,6 +3,7 @@
 namespace D3Creative\Sentinel\Services;
 
 use D3Creative\Sentinel\Support\AtomicFile;
+use D3Creative\Sentinel\Support\JsonStore;
 use Carbon\Carbon;
 use Carbon\CarbonInterval;
 use Illuminate\Contracts\Cache\LockTimeoutException;
@@ -895,7 +896,7 @@ class ContentFreezeService
     public function deleteHistory(string $id): bool
     {
         try {
-            $entries = $this->history();
+            $entries = JsonStore::read(self::HISTORY_PATH, true);
             $before  = count($entries);
 
             $entries = array_values(array_filter(
@@ -918,7 +919,7 @@ class ContentFreezeService
     protected function appendHistory(array $freeze): void
     {
         try {
-            $entries = $this->history();
+            $entries = JsonStore::read(self::HISTORY_PATH, true);
 
             array_unshift($entries, $freeze);
 

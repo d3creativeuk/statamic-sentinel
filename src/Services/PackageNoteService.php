@@ -3,6 +3,7 @@
 namespace D3Creative\Sentinel\Services;
 
 use D3Creative\Sentinel\Support\AtomicFile;
+use D3Creative\Sentinel\Support\JsonStore;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Storage;
 
@@ -61,6 +62,8 @@ class PackageNoteService
     public function set(string $ecosystem, string $package, ?string $note, ?string $updatedBy = null): bool
     {
         try {
+            // Fail rather than overwrite notes we couldn't read.
+            JsonStore::read(self::RELATIVE_PATH, true);
             $notes = $this->all();
             $note  = trim((string) $note);
 

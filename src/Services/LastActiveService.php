@@ -3,6 +3,7 @@
 namespace D3Creative\Sentinel\Services;
 
 use D3Creative\Sentinel\Support\AtomicFile;
+use D3Creative\Sentinel\Support\JsonStore;
 use Illuminate\Support\Facades\Storage;
 use Carbon\Carbon;
 
@@ -49,7 +50,7 @@ class LastActiveService
     public function touch(string $userId): void
     {
         try {
-            $entries = $this->all();
+            $entries = JsonStore::read(self::RELATIVE_PATH, true);
             $entries[$userId] = Carbon::now()->toIso8601String();
 
             $this->write($this->prune($entries));

@@ -3,6 +3,7 @@
 namespace D3Creative\Sentinel\Services;
 
 use D3Creative\Sentinel\Support\AtomicFile;
+use D3Creative\Sentinel\Support\JsonStore;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
@@ -52,7 +53,7 @@ class HistoryService
     public function recordIfChanged(array $audit): void
     {
         try {
-            $entries  = $this->all();
+            $entries  = JsonStore::read(self::RELATIVE_PATH, true);
             $snapshot = $this->carryForwardFailedChecks($this->buildSnapshot($audit), $audit, $entries[0] ?? null);
 
             if ($snapshot === null) {
@@ -118,7 +119,7 @@ class HistoryService
     public function delete(string $key): bool
     {
         try {
-            $entries = $this->all();
+            $entries = JsonStore::read(self::RELATIVE_PATH, true);
             $before  = count($entries);
 
             $entries = array_values(array_filter(

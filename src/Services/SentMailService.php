@@ -3,6 +3,7 @@
 namespace D3Creative\Sentinel\Services;
 
 use D3Creative\Sentinel\Support\AtomicFile;
+use D3Creative\Sentinel\Support\JsonStore;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
@@ -91,7 +92,7 @@ class SentMailService
                 throw new \RuntimeException('Could not write the HTML snapshot');
             }
 
-            $entries = $this->all();
+            $entries = JsonStore::read(self::INDEX_PATH, true);
             array_unshift($entries, $entry);
             $entries = $this->prune($entries);
 
@@ -127,7 +128,7 @@ class SentMailService
         }
 
         try {
-            $entries = $this->all();
+            $entries = JsonStore::read(self::INDEX_PATH, true);
             $found   = false;
 
             foreach ($entries as &$entry) {
@@ -265,7 +266,7 @@ class SentMailService
         }
 
         try {
-            $entries = $this->all();
+            $entries = JsonStore::read(self::INDEX_PATH, true);
             $before  = count($entries);
 
             $entries = array_values(array_filter(
