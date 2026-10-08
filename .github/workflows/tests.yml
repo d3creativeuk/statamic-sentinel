@@ -4,6 +4,11 @@ on:
   push:
   pull_request:
 
+# Read-only: setup-php also copies the token into Composer's auth.json, so
+# a compromised dependency's scripts would otherwise get a writable token.
+permissions:
+  contents: read
+
 jobs:
   test:
     name: PHP ${{ matrix.php }} / Statamic ${{ matrix.statamic }}
@@ -20,9 +25,11 @@ jobs:
         statamic: ['^5.0', '^6.0']
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
 
-      - uses: shivammathur/setup-php@v2
+      - uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
         with:
           php-version: ${{ matrix.php }}
           coverage: none
@@ -41,7 +48,8 @@ jobs:
       # blocks.
       - name: Allow tiptap-php 1.x (Statamic 5 only)
         if: matrix.statamic == '^5.0'
-        run: composer config audit.ignore --json '{"PKSA-52qp-479k-9x2j": "tiptap-php 1.x has no fixed release; every Statamic 5 release requires it"}'
+        run: |
+          composer config audit.ignore --json '{"PKSA-52qp-479k-9x2j": "tiptap-php 1.x has no fixed release; every Statamic 5 release requires it"}'
 
       - name: Install dependencies
         run: composer update --no-interaction --no-progress --prefer-dist
