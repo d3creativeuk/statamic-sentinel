@@ -281,7 +281,16 @@ class SentinelController extends Controller
     {
         abort_unless(\D3Creative\Sentinel\Support\CurrentUser::isSuper(), 403);
 
-        $audit = (new AuditService())->run();
+        // cached(), not run(): a GET (which a link on another site can trigger)
+        // must never start a scan. Scans stay behind Scan now's token and
+        // cooldown, the console command and the scheduler.
+        $audit = (new AuditService())->cached();
+
+        if ($audit === null) {
+            return $this->previewResponse(
+                "<!DOCTYPE html><html><head></head><body style='margin:0;padding:24px;font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;color:#64748b;font-size:14px;'>No scan yet. Run a scan first, then preview the report.</body></html>"
+            );
+        }
 
         return $this->previewResponse(view('statamic-sentinel::emails.report', [
             'audit'     => $audit,
@@ -294,8 +303,6 @@ class SentinelController extends Controller
     public function previewUpdateReport(Request $request)
     {
         abort_unless(\D3Creative\Sentinel\Support\CurrentUser::isSuper(), 403);
-
-        (new AuditService())->run();
 
         $history = app(HistoryService::class)->all();
 

@@ -50,6 +50,9 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
   licence needed renewing, the "View renewal date" link (whose address contains the licence key)
   showed to anyone with Sentinel access. It now shows only to super admins and users who can open
   Statamic's own Licensing utility, which is where Statamic shows the key.
+- **Opening a report preview could start a full scan.** Before the first scan, the preview links
+  ran one, bypassing the limits on Scan now (and a link on another site could open them for a
+  signed-in super admin). Previews now only show the last scan, or ask you to run one first.
 
 ### Removed
 
