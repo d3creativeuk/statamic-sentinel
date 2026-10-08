@@ -2066,11 +2066,19 @@ class AuditService
 
         $responses = $this->packagistResponses + $responses;
 
-        $outdated = [];
+        $outdated  = [];
+        $unchecked = [];
 
         foreach ($toCheck as $name) {
             $response = $responses[$name] ?? null;
-            if (! $this->isOkResponse($response)) continue;
+
+            if (! $this->isOkResponse($response)) {
+                if ($this->lookupFailed($response)) {
+                    $unchecked[] = $name;
+                }
+
+                continue;
+            }
 
             $latest = null;
             foreach ($this->packagistVersions($response, $name) as $v) {
@@ -2096,7 +2104,45 @@ class AuditService
             }
         }
 
-        return ['total' => count($outdated), 'packages' => $outdated];
+        return $this->outdatedResult($outdated, $unchecked);
+    }
+
+    /**
+     * True when a registry lookup failed rather than answered: no response at
+     * all (connection error), or a rate limit / server error. A 404 or 401/403
+     * is an answer (the package isn't public there) and is skipped as before.
+     */
+    protected function lookupFailed($response): bool
+    {
+        if (! $response instanceof \Illuminate\Http\Client\Response) {
+            return true;
+        }
+
+        try {
+            $status = $response->status();
+        } catch (\Throwable $e) {
+            return true;
+        }
+
+        return $status === 429 || $status >= 500;
+    }
+
+    /**
+     * An outdated-lookup result. Any failed lookup marks the whole check as
+     * failed (like an OSV outage) so the CP and reports don't read a registry
+     * outage as "up to date", history keeps the previous figures and
+     * sentinel:scan exits non-zero; the packages that did answer are kept.
+     */
+    protected function outdatedResult(array $outdated, array $unchecked): array
+    {
+        $result = ['total' => count($outdated), 'packages' => $outdated];
+
+        if (! empty($unchecked)) {
+            $result['error']     = true;
+            $result['unchecked'] = array_values($unchecked);
+        }
+
+        return $result;
     }
 
     /**
@@ -2194,11 +2240,19 @@ class AuditService
             return ['total' => 0, 'packages' => [], 'error' => true];
         }
 
-        $outdated = [];
+        $outdated  = [];
+        $unchecked = [];
 
         foreach ($toCheck as $name) {
             $response = $responses[$name] ?? null;
-            if (! $this->isOkResponse($response)) continue;
+
+            if (! $this->isOkResponse($response)) {
+                if ($this->lookupFailed($response)) {
+                    $unchecked[] = $name;
+                }
+
+                continue;
+            }
 
             $latest  = $response->json('version');
             if (! $latest) continue;
@@ -2231,7 +2285,7 @@ class AuditService
         // UI can explain why `npm update` leaves them behind.
         $outdated = $this->annotateReleaseAge($outdated);
 
-        return ['total' => count($outdated), 'packages' => $outdated];
+        return $this->outdatedResult($outdated, $unchecked);
     }
 
     /**

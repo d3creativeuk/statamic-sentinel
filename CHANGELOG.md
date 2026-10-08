@@ -65,6 +65,12 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
   killed while one was running (a deploy or server restart), Laravel's default overlap lock kept
   the task from running again for 24 hours. Freeze checks now recover after 10 minutes, scans and
   status reports after 2 hours.
+- **A Packagist or npm outage looked like everything was up to date.** If a package registry was
+  down or rate-limiting during a scan, Sentinel reported "0 updates available", the status email
+  said "Up to date" (and could claim Statamic was on the latest version), and the update history
+  recorded a false drop. Now the check shows as failed in the Control Panel and the email, the
+  history keeps the previous figures, and `sentinel:scan` exits with an error. Packages that
+  aren't on the public registry still don't count as a failure.
 
 ### Changed
 

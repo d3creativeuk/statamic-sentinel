@@ -454,6 +454,9 @@
                         </svg>
                     </button>
                 </div>
+                @if(! empty($d['outdated']['error']))
+                    <div style="margin-top:6px; font-size:12px; color:#ef4444;">⚠ A package registry didn't respond, so this list may be incomplete.</div>
+                @endif
                 <div x-show="open" x-cloak style="margin-top:8px; background:#fff; border:1px solid #e2e8f0; border-radius:6px; overflow:hidden;">
                     @foreach($packages as $i => $pkg)
                         <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; padding:6px 12px; {{ $i < count($packages) - 1 ? 'border-bottom:1px solid #e2e8f0;' : '' }}">
@@ -481,7 +484,11 @@
             <div style="border-top:1px solid #e2e8f0; padding-top:12px;">
                 <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
                     <div style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; color:#64748b;">Updates Available</div>
-                    <span style="display:inline-flex; align-items:center; font-size:12px; font-weight:500; padding:3px 10px; border-radius:5px; color:#047857; background:#fff; border:1px solid #047857;">All packages up to date</span>
+                    @if(! empty($d['outdated']['error']))
+                        <span style="display:inline-flex; align-items:center; font-size:12px; font-weight:500; padding:3px 10px; border-radius:5px; color:#ef4444; background:#fff; border:1px solid #ef4444;">⚠ Update check failed</span>
+                    @else
+                        <span style="display:inline-flex; align-items:center; font-size:12px; font-weight:500; padding:3px 10px; border-radius:5px; color:#047857; background:#fff; border:1px solid #047857;">All packages up to date</span>
+                    @endif
                 </div>
             </div>
         @endif

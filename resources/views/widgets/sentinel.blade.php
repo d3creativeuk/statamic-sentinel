@@ -154,7 +154,9 @@
             {{-- Updates row --}}
             <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; padding:6px 12px;">
                 <span style="font-size:11px; font-weight:600; color:#0f172a;">Updates available</span>
-                @if($updatesTotal > 0)
+                @if(! empty($d['outdated']['error']))
+                    <span title="A package registry didn't respond, so some updates may be missing" style="display:inline-flex; align-items:center; font-size:10px; font-weight:500; padding:1px 7px; border-radius:4px; color:#ef4444; background:#fff; border:1px solid #ef4444; flex-shrink:0;">⚠ check failed</span>
+                @elseif($updatesTotal > 0)
                     <span style="display:inline-flex; align-items:center; font-size:10px; font-weight:500; padding:1px 7px; border-radius:4px; color:#1d4ed8; background:#fff; border:1px solid #1d4ed8; flex-shrink:0; font-variant-numeric:tabular-nums;">{{ $updatesTotal }}</span>
                 @else
                     <span style="display:inline-flex; align-items:center; font-size:10px; font-weight:500; padding:1px 7px; border-radius:4px; color:#047857; background:#fff; border:1px solid #047857; flex-shrink:0; font-variant-numeric:tabular-nums;">0</span>

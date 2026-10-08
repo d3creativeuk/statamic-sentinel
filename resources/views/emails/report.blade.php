@@ -103,11 +103,17 @@
         if ($status === 'error')       return ['text' => 'Check failed', 'colour' => '#dc2626', 'detail' => ! empty($eco['lock_unreadable']) ? 'Lock file could not be read' : 'Could not reach the registry'];
 
         $updatesText = $outdated . ' ' . \Illuminate\Support\Str::plural('update', $outdated) . ' available';
+        $updatesFailed = ! empty($eco['outdated']['error']);
         $vulnsText   = $totalSec . ' security ' . \Illuminate\Support\Str::plural('issue', $totalSec);
 
         // Security issues are the headline, so the (red) pill stands alone.
         if ($totalSec > 0) {
             return ['text' => $vulnsText, 'colour' => '#dc2626', 'detail' => ''];
+        }
+
+        // A registry outage isn't "up to date".
+        if ($updatesFailed) {
+            return ['text' => 'Update check failed', 'colour' => '#dc2626', 'detail' => 'Could not reach the package registry'];
         }
 
         // No vulns: updates own the pill (blue), no detail line needed.
@@ -183,6 +189,9 @@
         $introDetail  = 'The license no longer covers your installed version.';
     } elseif ($platformMajorBehind) {
         $intro        = 'One or more platforms a major version behind.';
+    } elseif (! empty($composer['outdated']['error']) || ! empty($npm['outdated']['error'])) {
+        $intro        = "Sentinel couldn't finish checking for updates.";
+        $introDetail  = 'A package registry did not respond, so some updates may not be listed.';
     } elseif ($totalOutdated > 0) {
         $intro        = 'Your Statamic website is in good health, routine updates available.';
     } else {
@@ -205,7 +214,9 @@
                 . 'The latest version is ' . $statamicLatest . '. '
                 . "That's " . $statamicBehind . ' ' . \Illuminate\Support\Str::plural('version', $statamicBehind) . ' behind.';
         }
-    } elseif ($statamicCurrent) {
+    } elseif ($statamicCurrent && $statamicLatest) {
+        // Only when the latest version is known: an unreachable registry
+        // leaves it null, which isn't the same as being up to date.
         $introMessage = 'Hi, your Statamic installation is running the latest version, ' . $statamicCurrent . '.';
     }
 @endphp

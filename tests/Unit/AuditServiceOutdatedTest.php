@@ -83,6 +83,39 @@ class AuditServiceOutdatedTest extends TestCase
         $this->assertSame([
             ['name' => 'foo/bar', 'current' => '1.0.0', 'latest' => '2.0.0'],
         ], $result['packages']);
+
+        // The package that couldn't be checked makes the whole check fail,
+        // rather than quietly reading as one fewer update.
+        $this->assertTrue($result['error']);
+        $this->assertSame(['baz/qux'], $result['unchecked']);
+    }
+
+    /**
+     * A registry outage or rate limit used to read as "0 updates available".
+     * A 404 or 401 is an answer (the package isn't public there), not a
+     * failure.
+     */
+    public function test_rate_limits_and_server_errors_fail_the_update_check_but_404s_do_not(): void
+    {
+        foreach ([429 => true, 503 => true, 500 => true, 404 => false, 401 => false, 403 => false] as $status => $fails) {
+            $service = Mockery::mock(AuditService::class)->makePartial()->shouldAllowMockingProtectedMethods();
+            $service->shouldReceive('composerInstalledDirect')->andReturn(['acme/pkg' => '1.0.0']);
+            $service->shouldReceive('npmInstalledDirect')->andReturn(['left-pad' => '1.0.0']);
+            $service->shouldReceive('npmRegistryNames')->andReturn(['left-pad' => 'left-pad']);
+            $service->shouldReceive('annotateReleaseAge')->andReturnUsing(fn ($p) => $p);
+
+            Http::swap(new \Illuminate\Http\Client\Factory);
+            Http::fake(['*' => Http::response('', $status)]);
+
+            foreach (['composerOutdated', 'npmOutdated'] as $name) {
+                $method = new ReflectionMethod($service, $name);
+                $method->setAccessible(true);
+                $result = $method->invoke($service);
+
+                $this->assertSame(0, $result['total'], "{$name} {$status}");
+                $this->assertSame($fails, ! empty($result['error']), "{$name} {$status}");
+            }
+        }
     }
 
     /**

@@ -103,6 +103,19 @@ class EmailAndControllerAccessTest extends TestCase
         $current['statamic'] = ['current' => '6.1.0', 'latest' => '6.1.0', 'is_latest' => true, 'status' => 'ok'];
         $this->assertStringContainsString('Hi, your Statamic installation is running the latest version, 6.1.0.', (new SentinelReport($current))->render());
 
+        // An unknown latest version (registry unreachable) isn't "the latest".
+        $unknown = $this->audit();
+        $unknown['statamic'] = ['current' => '6.1.0', 'latest' => null, 'status' => 'unknown'];
+        $this->assertStringNotContainsString('running the latest version', (new SentinelReport($unknown))->render());
+
+        // A failed update check says so instead of "Up to date".
+        $failed = $this->audit();
+        foreach (['composer', 'npm'] as $eco) {
+            $failed[$eco] = array_merge($failed[$eco], ['status' => 'ok', 'total_vulns' => 0, 'counts' => [], 'severities' => [], 'by_package' => [], 'outdated' => ['total' => 0, 'packages' => [], 'error' => true]]);
+        }
+        $failedHtml = (new SentinelReport($failed))->render();
+        $this->assertSame(2, substr_count($failedHtml, 'Update check failed'));
+
         // "Major version behind" is always the first pill.
         $majorAudit = $this->audit();
         $majorAudit['statamic'] = ['current' => '5.73.2', 'latest' => '6.33.0', 'is_latest' => false, 'status' => 'outdated', 'security_update_available' => true, 'security_source' => 'osv'];
