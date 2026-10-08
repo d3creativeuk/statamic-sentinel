@@ -115,6 +115,9 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
   Statamic marketplace one after another; they now go out at once, and a marketplace that refuses
   connections is skipped for the rest of the scan. With statamic.com unreachable and seven addons
   to check, that part of a scan drops from about 35 seconds to a few.
+- **Faster vulnerability checks on large projects.** Sentinel sends packages to the vulnerability
+  database in batches of 500, and waited for each batch before sending the next. They now go
+  together: about 1 second instead of 5 for a project with 3,000 npm packages.
 - **Fewer background processes.** The two every-minute Content Freeze checks used to start a
   full `artisan` process each, every minute, even with no update scheduled. They now only run
   when a freeze is actually due to change.

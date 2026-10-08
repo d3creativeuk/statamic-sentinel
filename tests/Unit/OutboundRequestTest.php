@@ -69,6 +69,40 @@ class OutboundRequestTest extends TestCase
         Http::assertSentCount(1);
     }
 
+    /**
+     * Chunks now go out together; each result must still be matched to the
+     * packages in its own chunk.
+     */
+    public function test_pooled_querybatch_chunks_keep_their_packages(): void
+    {
+        config(['cache.default' => 'array']);
+
+        Http::fake([
+            'api.osv.dev/v1/querybatch' => function (Request $request) {
+                $queries = $request->data()['queries'];
+                $results = array_fill(0, count($queries), ['vulns' => []]);
+
+                // Flag the first package of whichever chunk this is.
+                $results[0] = ['vulns' => [['id' => 'GHSA-' . md5($queries[0]['package']['name']), 'modified' => '2026-09-01T00:00:00Z']]];
+
+                return Http::response(['results' => $results]);
+            },
+            'api.osv.dev/v1/vulns/*' => fn (Request $request) => Http::response([
+                'id' => basename($request->url()), 'database_specific' => ['severity' => 'HIGH'],
+            ]),
+        ]);
+
+        $queries = array_map(fn ($i) => ['package' => ['name' => "pkg-{$i}", 'ecosystem' => 'npm'], 'version' => '1.0.0'], range(0, 1000));
+
+        $service = new AuditService;
+        $query   = new ReflectionMethod($service, 'queryOsv');
+        $query->setAccessible(true);
+        $result = $query->invoke($service, $queries, count($queries));
+
+        $this->assertSame(3, Http::recorded(fn ($r) => str_contains($r->url(), 'querybatch'))->count());
+        $this->assertSame(['pkg-0', 'pkg-1000', 'pkg-500'], collect($result['severities']['HIGH']['vulns'])->pluck('package')->sort()->values()->all());
+    }
+
     public function test_the_update_check_fails_fast_when_packagist_is_down(): void
     {
         Http::fake([

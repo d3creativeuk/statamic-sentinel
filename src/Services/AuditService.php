@@ -1754,14 +1754,39 @@ class AuditService
         // summary, or affected ranges). Collect pairs here, then hydrate below.
         $pairs = [];
 
-        foreach (array_chunk($queries, 500) as $chunk) {
+        $chunks = array_chunk($queries, 500);
+
+        // Large lock files need several 500-query chunks; send them together
+        // rather than waiting for each in turn (3,000 npm packages: about
+        // 5.5 s one after another, about 1 s at once). Any failed chunk still
+        // fails the whole check.
+        try {
+            $responses = count($chunks) > 1
+                ? Http::pool(fn ($pool) => array_map(
+                    fn ($i) => self::prepare($pool->as((string) $i), 10)->post(self::OSV_BATCH_API, ['queries' => $chunks[$i]]),
+                    array_keys($chunks)
+                ))
+                : [0 => self::prepare(Http::withOptions([]), 10)->post(self::OSV_BATCH_API, ['queries' => $chunks[0] ?? []])];
+        } catch (\Throwable $e) {
+            if ($e instanceof \Illuminate\Http\Client\ConnectionException) {
+                $this->downHosts['api.osv.dev'] = true;
+            }
+
+            return $failed();
+        }
+
+        foreach ($chunks as $i => $chunk) {
             try {
-                $response = self::prepare(Http::withOptions([]), 10)->post(self::OSV_BATCH_API, ['queries' => $chunk]);
+                $response = $responses[$i] ?? null;
+
+                if ($response instanceof \Throwable) {
+                    throw $response;
+                }
 
                 // A 429 / 5xx must read as a failed check, not as a chunk with
                 // no advisories - otherwise an outage caches "0 vulnerabilities".
-                if (! $response->ok()) {
-                    throw new \RuntimeException('OSV querybatch returned HTTP ' . $response->status());
+                if (! $this->isOkResponse($response)) {
+                    throw new \RuntimeException('OSV querybatch returned HTTP ' . ($response instanceof \Illuminate\Http\Client\Response ? $response->status() : 'no response'));
                 }
 
                 // A 200 that isn't a querybatch answer (a proxy's HTML page,
