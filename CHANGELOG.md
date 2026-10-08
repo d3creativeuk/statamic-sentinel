@@ -85,6 +85,11 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
   save overwrote it with just the newest entry. A damaged file is now kept beside it as
   `<name>.corrupt-<date>` (and logged) before a fresh one is started, and if a file can't be read
   at all, the save is skipped and the file left alone.
+- **Refresh could look like it did nothing.** If the cache refused to store a new scan (for
+  example a cache file created by another server user, or a cache with an item size limit such as
+  DynamoDB on Laravel Vapor) but still held the previous one, Sentinel kept showing the old results.
+  It now notices the saved copy is newer and shows that, and stops retrying a cache that won't take
+  the scan.
 
 ### Changed
 

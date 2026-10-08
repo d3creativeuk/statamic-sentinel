@@ -28,6 +28,12 @@ class AuditService
     // (which Statamic / Laravel sites routinely run after `composer update`).
     const DISK_PATH     = 'statamic-sentinel/audit.json';
 
+    /**
+     * Set for an hour when the cache refused the audit (too large for the
+     * store, read-only, out of memory), so reads stop retrying the write.
+     */
+    const CACHE_UNWRITABLE_KEY = 'd3creative_sentinel_audit_unwritable';
+
     const EOL_DATE_PHP_API = 'https://endoflife.date/api/php.json';
 
     // A plain stable release: 1.2.3, no pre-release or build suffix.
@@ -170,10 +176,19 @@ class AuditService
             $cached = null;
         }
 
+        // A newer scan on disk than in the cache means the cache refused the
+        // last write but kept serving the old value (a root-owned cache file,
+        // DynamoDB's item size limit, a read-only replica), so Refresh looked
+        // like it did nothing. One stat; audits from before scanned_at
+        // existed skip it.
+        if (is_array($cached) && $this->diskIsNewerThan($cached)) {
+            $cached = null;
+        }
+
         if ($cached === null) {
             $cached = $this->readFromDisk();
 
-            if ($cached !== null) {
+            if ($cached !== null && ! $this->cacheIsUnwritable()) {
                 try {
                     Cache::forever(self::CACHE_KEY, $cached);
                 } catch (\Throwable $e) {
@@ -183,6 +198,59 @@ class AuditService
         }
 
         return is_array($cached) ? $this->reconcileAgainstLive($cached) : null;
+    }
+
+    /**
+     * A cache failure must not throw away a finished scan: the disk mirror
+     * still keeps it, and cached() reads from there. Clear the old value too,
+     * or readers keep getting the previous scan, and note the failure so
+     * reads stop retrying the write for a while.
+     */
+    protected function storeInCache(array $result): void
+    {
+        $written = false;
+
+        try {
+            $written = Cache::forever(self::CACHE_KEY, $result) !== false;
+        } catch (\Throwable $e) {
+            // Fall through to the disk mirror.
+        }
+
+        try {
+            if ($written) {
+                Cache::forget(self::CACHE_UNWRITABLE_KEY);
+            } else {
+                Cache::forget(self::CACHE_KEY);
+                Cache::put(self::CACHE_UNWRITABLE_KEY, true, 3600);
+            }
+        } catch (\Throwable $e) {
+            // cached() still prefers a newer disk mirror.
+        }
+    }
+
+    protected function diskIsNewerThan(array $cached): bool
+    {
+        if (! isset($cached['scanned_at']) || ! is_int($cached['scanned_at'])) {
+            return false;
+        }
+
+        try {
+            $disk = Storage::disk('local');
+
+            return $disk->exists(self::DISK_PATH)
+                && $disk->lastModified(self::DISK_PATH) > $cached['scanned_at'] + 5;
+        } catch (\Throwable $e) {
+            return false;
+        }
+    }
+
+    protected function cacheIsUnwritable(): bool
+    {
+        try {
+            return Cache::has(self::CACHE_UNWRITABLE_KEY);
+        } catch (\Throwable $e) {
+            return false;
+        }
     }
 
     protected function readFromDisk(): ?array
@@ -644,15 +712,10 @@ class AuditService
             'composer'   => $composer,
             'npm'        => $npm,
             'audited_at' => now()->format('j M Y, H:i'),
+            'scanned_at' => time(),
         ];
 
-        // A cache failure must not throw away a finished scan: the disk mirror
-        // below still keeps it, and cached() reads from there.
-        try {
-            Cache::forever(self::CACHE_KEY, $result);
-        } catch (\Throwable $e) {
-            // Fall through to the disk mirror.
-        }
+        $this->storeInCache($result);
 
         $this->writeToDisk($result);
 
