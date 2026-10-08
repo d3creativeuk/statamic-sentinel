@@ -51,7 +51,8 @@ class FreezeController extends Controller
         }
 
         return response()->json([
-            'message' => 'Update marked as complete. All-clear email sent.',
+            // On a real queue the email is only handed to a worker here.
+            'message' => 'Update marked as complete. All-clear email ' . (config('queue.default') === 'sync' ? 'sent.' : 'queued.'),
             'freeze'  => $result['freeze'],
         ], 200);
     }

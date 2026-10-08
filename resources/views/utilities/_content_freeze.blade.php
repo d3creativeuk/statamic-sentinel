@@ -250,6 +250,9 @@
         $notifiedAtDisplay = $freeze_service->formatTime($freeze_current['notified_at'] ?? null);
         $activatedDisplay  = $freeze_service->formatTime($freeze_current['activated_at'] ?? $freeze_current['freeze_at'] ?? null);
         $recipientCount    = count($freeze_current['recipients'] ?? []);
+        // On a real queue the heads-up is only handed to a worker here; it
+        // goes out when the worker runs it.
+        $freezeMailVerb    = config('queue.default') === 'sync' ? 'sent' : 'queued';
 
         $stateBg = $currentStatus === $statusActive ? '#fef3c7' : '#dbeafe';
         $stateBorder = $currentStatus === $statusActive ? '#fcd34d' : '#bfdbfe';
@@ -269,12 +272,12 @@
 
         @if ($currentStatus === $statusScheduled)
             <p style="font-size:14px; color:#0f172a; margin:0 0 8px 0; line-height:1.55;">
-                Notification will be sent at <strong style="font-variant-numeric:tabular-nums;">{{ $notifyAtDisplay }}</strong>. The banner will appear at <strong style="font-variant-numeric:tabular-nums;">{{ $freezeAtDisplay }}</strong>.
+                Notification will be sent at <strong style="font-variant-numeric:tabular-nums;">{{ $notifyAtDisplay }}</strong>. The amber update-in-progress banner appears at <strong style="font-variant-numeric:tabular-nums;">{{ $freezeAtDisplay }}</strong>.
             </p>
             <p style="font-size:13px; color:#475569; margin:0; line-height:1.55;">{{ $recipientCount }} {{ \Illuminate\Support\Str::plural('recipient', $recipientCount) }} on this update.</p>
         @elseif ($currentStatus === $statusNotified)
             <p style="font-size:14px; color:#0f172a; margin:0 0 8px 0; line-height:1.55;">
-                Notify email sent at <strong style="font-variant-numeric:tabular-nums;">{{ $notifiedAtDisplay }}</strong>. The banner switches on at <strong style="font-variant-numeric:tabular-nums;">{{ $freezeAtDisplay }}</strong>.
+                Notify email {{ $freezeMailVerb }} at <strong style="font-variant-numeric:tabular-nums;">{{ $notifiedAtDisplay }}</strong>. The amber update-in-progress banner appears at <strong style="font-variant-numeric:tabular-nums;">{{ $freezeAtDisplay }}</strong>.
             </p>
             <p style="font-size:13px; color:#475569; margin:0; line-height:1.55;">Notified {{ $recipientCount }} {{ \Illuminate\Support\Str::plural('recipient', $recipientCount) }}.</p>
         @elseif ($currentStatus === $statusActive)

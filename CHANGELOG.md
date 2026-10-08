@@ -75,6 +75,11 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
   (for example updates within the same major version), or where one vulnerable package was
   swapped for another, left every total the same, so it wasn't recorded and the next update report
   described the previous changes instead. Those scans are now recorded.
+- **Content Freeze emails were reported as sent when they'd only been queued.** On sites that send
+  mail through a queue worker, the Notify tab and Mark complete said the email had been sent when
+  it was still waiting for the worker. They now say "queued" there. The Notify tab also says the
+  amber banner appears at the start time, since the blue planned-work banner already shows from
+  the moment an update is scheduled.
 
 ### Changed
 
