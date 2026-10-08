@@ -91,3 +91,18 @@ Sentinel writes runtime state to the host app's `storage/app/` directory under `
 Two things live in the host's cache store rather than on disk: the audit itself (`d3creative_sentinel_audit`, mirrored to `audit.json` above) and a summary of each OSV advisory (`d3creative_sentinel_osv_summaries`), which lets repeat scans skip re-downloading advisories that haven't changed. Losing either to `cache:clear` only costs a slower next scan.
 
 All of it is per-environment runtime state - regenerable from `composer.lock`, `package-lock.json`, and the live OSV/Packagist/npm APIs. Laravel's default `.gitignore` already covers `storage/app/`, so these files aren't (and shouldn't be) tracked in git. Back them up with the rest of `storage/` if you want to preserve the sent archive across environment moves.
+
+## Uninstalling
+
+Sentinel's scheduled tasks, routes and middleware go when the package does. To remove everything it stored as well:
+
+1. Clear its cache entries (before removing the package, or with any cache tool):
+
+   ```bash
+   php artisan cache:forget d3creative_sentinel_audit
+   php artisan cache:forget d3creative_sentinel_osv_summaries
+   ```
+
+2. Remove the package: `composer remove d3creative/statamic-sentinel`.
+3. Delete the data folder: `storage/app/statamic-sentinel`, or `storage/app/private/statamic-sentinel` on Laravel 11 and later (wherever the `local` disk's root points).
+4. Remove the `sentinel` widget from `config/statamic/cp.php` if you added it, a published `config/statamic-sentinel.php`, and any `SENTINEL_*` lines in `.env`.
