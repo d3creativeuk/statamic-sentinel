@@ -77,6 +77,14 @@ class ManualScanTest extends TestCase
         $lock->release();
     }
 
+    public function test_an_array_parameter_redirects_without_scanning(): void
+    {
+        $redirect = $this->handle('/cp/dashboard?d3_refresh[]=good-token&tab=1', $this->audit(0));
+        $this->assertStringContainsString('tab=1', $redirect);
+
+        $this->handle('/cp/dashboard?d3_refresh[a][b]=x', $this->audit(0));
+    }
+
     public function test_a_failing_scan_still_redirects_and_releases_the_lock(): void
     {
         $audit = Mockery::mock(AuditService::class);

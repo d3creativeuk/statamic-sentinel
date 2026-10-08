@@ -40,6 +40,24 @@ class ContentFreezeScheduleTest extends TestCase
         ];
     }
 
+    /**
+     * The Notify preview passes its query string straight in, where
+     * `notify_at[]=x` arrives as an array.
+     */
+    public function test_a_draft_ignores_array_values(): void
+    {
+        $draft = (new ContentFreezeService)->draftRecord([
+            'notify_at'              => ['x'],
+            'freeze_at'              => ['x'],
+            'freeze_ends_at'         => ['x'],
+            'expected_duration'      => 2,
+            'expected_duration_unit' => ['hours'],
+        ]);
+
+        $this->assertNull($draft['freeze_ends_at']);
+        $this->assertSame(2, $draft['expected_duration_minutes']);
+    }
+
     public function test_freeze_end_before_start_is_rejected(): void
     {
         $t = $this->times();

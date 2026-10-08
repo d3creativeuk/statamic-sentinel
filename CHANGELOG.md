@@ -53,6 +53,8 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 - **Opening a report preview could start a full scan.** Before the first scan, the preview links
   ran one, bypassing the limits on Scan now (and a link on another site could open them for a
   signed-in super admin). Previews now only show the last scan, or ask you to run one first.
+- **A malformed link could break the dashboard or the Notify preview.** Adding `[]` to the Scan
+  now or preview parameters in the address bar caused a server error. They're now ignored.
 
 ### Removed
 

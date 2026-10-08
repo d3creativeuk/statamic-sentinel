@@ -688,9 +688,13 @@ class ContentFreezeService
         $tz  = $this->timezone();
         $now = Carbon::now()->toIso8601String();
 
+        // These come straight from the preview's query string, where
+        // `notify_at[]=x` arrives as an array; (string) on that threw.
+        $str = fn (string $key, string $default = '') => is_string($input[$key] ?? null) ? $input[$key] : $default;
+
         $expectedMinutes = null;
         $number          = filter_var($input['expected_duration'] ?? null, FILTER_VALIDATE_INT);
-        $unit            = strtolower(trim((string) ($input['expected_duration_unit'] ?? 'minutes'))) ?: 'minutes';
+        $unit            = strtolower(trim($str('expected_duration_unit', 'minutes'))) ?: 'minutes';
         $multipliers     = ['minutes' => 1, 'hours' => 60, 'days' => 1440];
 
         if ($number !== false && $number > 0 && isset($multipliers[$unit])
@@ -699,9 +703,9 @@ class ContentFreezeService
         }
 
         return [
-            'notify_at'                 => $this->toUtcIso((string) ($input['notify_at'] ?? ''), $tz) ?? $now,
-            'freeze_at'                 => $this->toUtcIso((string) ($input['freeze_at'] ?? ''), $tz) ?? $now,
-            'freeze_ends_at'            => $this->toUtcIso((string) ($input['freeze_ends_at'] ?? ''), $tz),
+            'notify_at'                 => $this->toUtcIso($str('notify_at'), $tz) ?? $now,
+            'freeze_at'                 => $this->toUtcIso($str('freeze_at'), $tz) ?? $now,
+            'freeze_ends_at'            => $this->toUtcIso($str('freeze_ends_at'), $tz),
             'expected_duration_minutes' => $expectedMinutes,
             'completed_at'              => $now,
             'recipients'                => [],

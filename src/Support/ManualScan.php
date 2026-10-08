@@ -65,7 +65,10 @@ class ManualScan
             return;
         }
 
-        if ($this->allowed((string) $request->query(self::PARAM))) {
+        // An array (`?d3_refresh[]=1`) can't be the token; (string) on it threw.
+        $given = $request->query(self::PARAM);
+
+        if ($this->allowed(is_string($given) ? $given : '')) {
             $this->runOnce($audit);
         }
 
