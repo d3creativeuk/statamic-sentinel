@@ -127,6 +127,9 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
   (beanstalkd's is 64 KB) on a site with many advisories. It now carries just what the email shows,
   once. Stored send errors are also kept short, so one that quoted the whole message no longer
   bloats the Sent list.
+- **A lighter dashboard.** Each time the dashboard or the Sentinel page loaded, Sentinel re-read
+  `composer.lock` (twice) and all of `package-lock.json` to check whether anything had been updated
+  since the last scan. It now skips that when neither file has changed since the scan.
 - **Fewer background processes.** The two every-minute Content Freeze checks used to start a
   full `artisan` process each, every minute, even with no update scheduled. They now only run
   when a freeze is actually due to change.

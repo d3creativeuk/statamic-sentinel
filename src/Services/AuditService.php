@@ -335,10 +335,21 @@ class AuditService
 
     protected function reconcileAgainstLive(array $audit): array
     {
-        if (! empty($audit['statamic']) && class_exists(\Statamic\Statamic::class)) {
+        // Runs on every dashboard and utility render. A lock file unchanged
+        // since the scan can't change anything below (the scan read the same
+        // file), so skip decoding it: composer.lock twice and all of
+        // package-lock.json on each render otherwise. Audits from before the
+        // fingerprints existed reconcile as before.
+        $fingerprints = is_array($audit['lock_fingerprints'] ?? null) ? $audit['lock_fingerprints'] : [];
+        $composerSame = isset($fingerprints['composer']) && $fingerprints['composer'] === $this->lockFingerprint('composer.lock');
+        $npmSame      = isset($fingerprints['npm']) && $fingerprints['npm'] === $this->lockFingerprint('package-lock.json');
+
+        if (! $composerSame && ! empty($audit['statamic']) && class_exists(\Statamic\Statamic::class)) {
             $audit['statamic'] = $this->reconcileStatamicAgainstLive(
                 $audit['statamic'],
-                \Statamic\Statamic::version()
+                // The composer.lock map is decoded once per request and reused
+                // for the prune below; Statamic::version() decodes it again.
+                $this->liveComposerVersions()['statamic/cms'] ?? \Statamic\Statamic::version()
             );
         }
 
@@ -356,14 +367,14 @@ class AuditService
             );
         }
 
-        if (! empty($audit['composer']['outdated']['packages'])) {
+        if (! $composerSame && ! empty($audit['composer']['outdated']['packages'])) {
             $audit['composer'] = $this->pruneOutdatedAgainstLive(
                 $audit['composer'],
                 $this->liveComposerVersions()
             );
         }
 
-        if (! empty($audit['npm']['outdated']['packages'])) {
+        if (! $npmSame && ! empty($audit['npm']['outdated']['packages'])) {
             $audit['npm'] = $this->pruneOutdatedAgainstLive(
                 $audit['npm'],
                 $this->liveNpmVersions()
@@ -371,6 +382,23 @@ class AuditService
         }
 
         return $audit;
+    }
+
+    /**
+     * Size and modified time of a lock file in the project root, or
+     * 'missing'. Cheap enough for every render (one stat).
+     */
+    protected function lockFingerprint(string $file): string
+    {
+        $path = base_path($file);
+
+        clearstatcache(true, $path);
+
+        if (! is_file($path)) {
+            return 'missing';
+        }
+
+        return @filesize($path) . ':' . @filemtime($path);
     }
 
     protected function reconcileStatamicAgainstLive(array $info, string $live): array
@@ -697,6 +725,13 @@ class AuditService
         $this->lockfileCache      = [];
         $this->unreadableFiles    = [];
         $this->downHosts          = [];
+
+        // Taken before the scan reads the lock files, so one rewritten
+        // mid-scan reads as changed and is reconciled on the next render.
+        $lockFingerprints = [
+            'composer' => $this->lockFingerprint('composer.lock'),
+            'npm'      => $this->lockFingerprint('package-lock.json'),
+        ];
         $this->vulnSummaryCache   = null;
         $this->vulnIdsSeen        = [];
 
@@ -738,6 +773,7 @@ class AuditService
             'npm'        => $npm,
             'audited_at' => now()->format('j M Y, H:i'),
             'scanned_at' => time(),
+            'lock_fingerprints' => $lockFingerprints,
         ];
 
         $this->storeInCache($result);
