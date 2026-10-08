@@ -201,7 +201,10 @@ class ReportSender
     protected function safeRender($mailable): string
     {
         try {
-            return $mailable->render();
+            // A clone: render() runs build(), which copies the data into the
+            // mailable's view data, and the original is the one that gets
+            // queued, so the job payload carried everything twice.
+            return (clone $mailable)->render();
         } catch (\Throwable $e) {
             return '';
         }

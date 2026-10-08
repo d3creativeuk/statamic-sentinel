@@ -83,7 +83,7 @@ class SentMailService
                 'recipients'  => array_values($recipients),
                 'trigger'     => $trigger,
                 'outcome'     => $outcome,
-                'error'       => $error,
+                'error'       => self::cleanError($error),
             ];
 
             $disk = Storage::disk('local');
@@ -121,6 +121,20 @@ class SentMailService
      * Returns false if the id isn't on record. Silent on failure - bookkeeping
      * must never break the send.
      */
+    /**
+     * Transport errors are stored and shown in the Sent list. Some embed the
+     * whole job payload (a database queue's SQL bindings), and SMTP replies
+     * can be in any encoding, so keep a short, valid UTF-8 excerpt.
+     */
+    protected static function cleanError(?string $error): ?string
+    {
+        if ($error === null) {
+            return null;
+        }
+
+        return Str::limit(mb_scrub($error, 'UTF-8'), 500);
+    }
+
     public function updateOutcome(string $id, string $outcome, ?string $error = null): bool
     {
         if (! self::isValidId($id)) {
@@ -134,7 +148,7 @@ class SentMailService
             foreach ($entries as &$entry) {
                 if (($entry['id'] ?? null) === $id) {
                     $entry['outcome'] = $outcome;
-                    $entry['error']   = $error;
+                    $entry['error']   = self::cleanError($error);
                     $found = true;
                     break;
                 }

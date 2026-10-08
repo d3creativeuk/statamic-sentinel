@@ -147,7 +147,8 @@ class AtomicFileTest extends TestCase
         $fresh = new SentMailService;
         $this->assertNotNull($fresh->find($kept));
         $this->assertSame(SentMailService::OUTCOME_FAILED, $fresh->find($id)['outcome']);
-        $this->assertStringContainsString("Bo\u{FFFD}te", $fresh->find($id)['error']);
+        $this->assertStringContainsString('te aux lettres inconnue', $fresh->find($id)['error']);
+        $this->assertTrue(mb_check_encoding($fresh->find($id)['error'], 'UTF-8'));
     }
 
     public function test_a_note_with_invalid_utf8_keeps_the_other_notes(): void

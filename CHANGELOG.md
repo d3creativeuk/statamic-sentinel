@@ -122,6 +122,11 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
   however large; a few big npm registry documents could exhaust PHP's memory and kill the scan.
   Responses over 10 MB are now skipped (the update shows as "Unchecked"), and large documents are
   released as soon as they've been read.
+- **Smaller queued report emails.** A queued status report carried the full scan (every advisory
+  and package) twice, though the email only shows totals, which could exceed a queue's size limit
+  (beanstalkd's is 64 KB) on a site with many advisories. It now carries just what the email shows,
+  once. Stored send errors are also kept short, so one that quoted the whole message no longer
+  bloats the Sent list.
 - **Fewer background processes.** The two every-minute Content Freeze checks used to start a
   full `artisan` process each, every minute, even with no update scheduled. They now only run
   when a freeze is actually due to change.
