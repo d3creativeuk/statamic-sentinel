@@ -132,10 +132,7 @@ class HistoryService
     public function rememberLastReport(array $report): void
     {
         try {
-            Storage::disk('local')->put(
-                self::LAST_REPORT_PATH,
-                json_encode($report, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)
-            );
+            AtomicFile::putJson(self::LAST_REPORT_PATH, $report);
         } catch (\Throwable $e) {
             // Silent fail
         }
@@ -304,8 +301,6 @@ class HistoryService
      */
     protected function write(array $entries): void
     {
-        $json = json_encode($entries, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
-
-        AtomicFile::put(self::RELATIVE_PATH, $json);
+        AtomicFile::putJson(self::RELATIVE_PATH, $entries);
     }
 }

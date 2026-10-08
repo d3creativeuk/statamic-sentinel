@@ -87,8 +87,8 @@ class SentMailService
 
             $disk = Storage::disk('local');
 
-            if ($html !== '') {
-                $disk->put(self::DIR . '/' . $id . '.html', $html);
+            if ($html !== '' && $disk->put(self::DIR . '/' . $id . '.html', $html) === false) {
+                throw new \RuntimeException('Could not write the HTML snapshot');
             }
 
             $entries = $this->all();
@@ -346,9 +346,7 @@ class SentMailService
      */
     protected function writeIndex(array $entries): void
     {
-        $json = json_encode($entries, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
-
-        AtomicFile::put(self::INDEX_PATH, $json);
+        AtomicFile::putJson(self::INDEX_PATH, $entries);
 
         $this->cachedAll = $entries;
     }

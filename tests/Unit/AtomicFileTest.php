@@ -3,9 +3,13 @@
 namespace D3Creative\Sentinel\Tests\Unit;
 
 use Carbon\Carbon;
+use D3Creative\Sentinel\Jobs\SendSentinelMail;
+use D3Creative\Sentinel\Mail\FreezeCompletionMail;
 use D3Creative\Sentinel\Mail\FreezeNotificationMail;
 use D3Creative\Sentinel\Services\ContentFreezeService;
+use D3Creative\Sentinel\Services\PackageNoteService;
 use D3Creative\Sentinel\Services\ScheduleService;
+use D3Creative\Sentinel\Services\SentMailService;
 use D3Creative\Sentinel\Support\AtomicFile;
 use D3Creative\Sentinel\Tests\TestCase;
 use Illuminate\Filesystem\FilesystemAdapter;
@@ -14,11 +18,10 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 
 /**
- * Regression coverage for Laravel 8 (Statamic 3.3), where Flysystem 1's
- * rename() throws FileExistsException when the target exists. Every JSON
- * store used Storage::move() over its existing file, so each one stopped
- * updating after its first write, and a freeze stuck at `scheduled` re-sent
- * its heads-up email every minute.
+ * A store write must never leave the target worse off than before it. On a
+ * full disk Laravel's local disk returns false from put() (leaving a partial
+ * temp) instead of throwing, and json_encode() returns false on invalid
+ * UTF-8; both used to truncate or delete the store being replaced.
  *
  * @see AtomicFile
  */
@@ -41,9 +44,9 @@ class AtomicFileTest extends TestCase
         parent::tearDown();
     }
 
-    public function test_replaces_an_existing_file_when_move_refuses_to_overwrite(): void
+    public function test_replaces_an_existing_file(): void
     {
-        $this->useLaravel8Disk();
+        $this->useDisk();
 
         AtomicFile::put('statamic-sentinel/a.json', '{"v":1}');
         AtomicFile::put('statamic-sentinel/a.json', '{"v":2}');
@@ -52,9 +55,9 @@ class AtomicFileTest extends TestCase
         $this->assertSame(['statamic-sentinel/a.json'], Storage::disk('local')->allFiles());
     }
 
-    public function test_falls_back_to_delete_and_move_on_a_disk_without_local_paths(): void
+    public function test_replaces_an_existing_file_on_a_disk_without_local_paths(): void
     {
-        $this->useLaravel8Disk(false);
+        $this->useDisk(localPaths: false);
 
         AtomicFile::put('statamic-sentinel/a.json', '{"v":1}');
         AtomicFile::put('statamic-sentinel/a.json', '{"v":2}');
@@ -63,28 +66,104 @@ class AtomicFileTest extends TestCase
         $this->assertSame(['statamic-sentinel/a.json'], Storage::disk('local')->allFiles());
     }
 
-    public function test_services_keep_saving_after_their_first_write(): void
+    public function test_a_failed_temp_write_leaves_the_target_alone(): void
     {
-        $this->useLaravel8Disk();
+        $this->useDisk();
+        AtomicFile::put('statamic-sentinel/a.json', '{"v":1}');
+
+        $this->useDisk(putFails: 'nothing');
+        $this->assertWriteThrows('statamic-sentinel/a.json', '{"v":2}');
+
+        $this->assertSame('{"v":1}', Storage::disk('local')->get('statamic-sentinel/a.json'));
+        $this->assertSame(['statamic-sentinel/a.json'], Storage::disk('local')->allFiles());
+    }
+
+    /**
+     * The full-disk case: part of the temp is written, then put() reports
+     * false. That partial temp used to be renamed over the store.
+     */
+    public function test_a_partial_temp_write_is_not_renamed_over_the_target(): void
+    {
+        $this->useDisk();
+        AtomicFile::put('statamic-sentinel/a.json', '{"v":1}');
+
+        $this->useDisk(putFails: 'partial');
+        $this->assertWriteThrows('statamic-sentinel/a.json', '{"v":2,"long":"' . str_repeat('x', 100) . '"}');
+
+        $this->assertSame('{"v":1}', Storage::disk('local')->get('statamic-sentinel/a.json'));
+        $this->assertSame(['statamic-sentinel/a.json'], Storage::disk('local')->allFiles());
+    }
+
+    public function test_refuses_to_write_empty_contents(): void
+    {
+        $this->useDisk();
+        AtomicFile::put('statamic-sentinel/a.json', '{"v":1}');
+
+        $this->assertWriteThrows('statamic-sentinel/a.json', '');
+
+        $this->assertSame('{"v":1}', Storage::disk('local')->get('statamic-sentinel/a.json'));
+    }
+
+    public function test_put_json_substitutes_invalid_utf8_instead_of_writing_nothing(): void
+    {
+        $this->useDisk();
+
+        AtomicFile::putJson('statamic-sentinel/a.json', ['error' => "550 R\xE9cipient"]);
+
+        $this->assertSame(['error' => "550 R\u{FFFD}cipient"], json_decode(Storage::disk('local')->get('statamic-sentinel/a.json'), true));
+    }
+
+    public function test_a_store_reports_a_failed_save_and_keeps_its_previous_contents(): void
+    {
+        $this->useDisk();
 
         $schedules = new ScheduleService;
         $config    = $schedules->defaults();
-
-        $this->assertTrue($schedules->save($config));
-
         $config['status_report']['time'] = '17:30';
         $this->assertTrue($schedules->save($config));
+
+        $this->useDisk(putFails: 'partial');
+        $config['status_report']['time'] = '09:00';
+        $this->assertFalse($schedules->save($config));
 
         $this->assertSame('17:30', $schedules->all()['status_report']['time']);
     }
 
     /**
-     * The production symptom: with the state write failing, the freeze stayed
-     * `scheduled` and every tick sent the heads-up email again.
+     * A transport error carrying a Latin-1 SMTP reply used to empty the whole
+     * sent-mail index.
      */
+    public function test_a_non_utf8_send_error_keeps_the_sent_log(): void
+    {
+        $this->useDisk();
+
+        $sent = new SentMailService;
+        $kept = $sent->record(SentMailService::KIND_STATUS, ['a@example.com'], 'manual', SentMailService::OUTCOME_SENT);
+        $id   = $sent->record(SentMailService::KIND_STATUS, ['b@example.com'], 'manual', SentMailService::OUTCOME_QUEUED);
+
+        (new SendSentinelMail($id, ['b@example.com'], new FreezeCompletionMail([])))
+            ->failed(new \RuntimeException("550 Bo\xEEte aux lettres inconnue"));
+
+        $fresh = new SentMailService;
+        $this->assertNotNull($fresh->find($kept));
+        $this->assertSame(SentMailService::OUTCOME_FAILED, $fresh->find($id)['outcome']);
+        $this->assertStringContainsString("Bo\u{FFFD}te", $fresh->find($id)['error']);
+    }
+
+    public function test_a_note_with_invalid_utf8_keeps_the_other_notes(): void
+    {
+        $this->useDisk();
+
+        $notes = new PackageNoteService;
+        $this->assertTrue($notes->set('npm', 'braces', 'Waiting on Tailwind 4.', 'u1'));
+        $notes->set('npm', 'postcss', "Bad \xE9 byte", 'u1');
+
+        $this->assertSame('Waiting on Tailwind 4.', $notes->all()['npm']['braces']['note']);
+    }
+
     public function test_a_freeze_advances_after_its_heads_up_so_it_is_sent_once(): void
     {
-        $this->useLaravel8Disk();
+        $this->useDisk();
         Mail::fake();
 
         Storage::disk('local')->put(ContentFreezeService::CURRENT_PATH, json_encode([
@@ -104,28 +183,97 @@ class AtomicFileTest extends TestCase
         Mail::assertQueued(FreezeNotificationMail::class, 1);
     }
 
+    public function test_cancel_fails_when_the_record_cannot_be_removed(): void
+    {
+        $this->useDisk(deleteFails: true);
+
+        $this->writeFreeze(ContentFreezeService::STATUS_SCHEDULED);
+
+        $result = (new ContentFreezeService)->cancel('u1');
+
+        $this->assertFalse($result['ok']);
+        $this->assertNotNull((new ContentFreezeService)->current());
+    }
+
+    public function test_complete_fails_when_the_record_cannot_be_removed(): void
+    {
+        $this->useDisk(deleteFails: true);
+        Mail::fake();
+
+        $this->writeFreeze(ContentFreezeService::STATUS_ACTIVE);
+
+        $result = (new ContentFreezeService)->complete('u1');
+
+        $this->assertFalse($result['ok']);
+        $this->assertStringContainsString('could not be removed', $result['message']);
+    }
+
+    protected function writeFreeze(string $status): void
+    {
+        Storage::disk('local')->put(ContentFreezeService::CURRENT_PATH, json_encode([
+            'id'         => 'abc123',
+            'status'     => $status,
+            'notify_at'  => Carbon::now()->subHours(2)->toIso8601String(),
+            'freeze_at'  => Carbon::now()->subHour()->toIso8601String(),
+            'recipients' => ['editor@example.com'],
+        ]));
+    }
+
+    protected function assertWriteThrows(string $path, string $contents): void
+    {
+        try {
+            AtomicFile::put($path, $contents);
+        } catch (\Throwable $e) {
+            $this->addToAssertionCount(1);
+
+            return;
+        }
+
+        $this->fail('AtomicFile::put() should have thrown');
+    }
+
     /**
-     * Swap the local disk for one that behaves like Laravel 8: move() throws
-     * when the target exists. With $localPaths off, path() throws too, like a
-     * non-local adapter, to force the Storage fallback.
+     * Swap the local disk for a real local disk under a temp root.
+     *
+     * - $localPaths false: path() throws, like a non-local adapter, to force
+     *   the move() fallback.
+     * - $putFails 'nothing': put() returns false without writing, as when the
+     *   temp can't be created. 'partial': it writes half the contents and then
+     *   returns false, as on a full disk.
+     * - $deleteFails: delete() returns false and leaves the file.
      */
-    protected function useLaravel8Disk(bool $localPaths = true): void
+    protected function useDisk(bool $localPaths = true, ?string $putFails = null, bool $deleteFails = false): void
     {
         $base = Storage::build(['driver' => 'local', 'root' => $this->root]);
 
-        $disk = new class($base->getDriver(), $base->getAdapter(), $base->getConfig(), $localPaths) extends FilesystemAdapter {
-            public function __construct($driver, $adapter, array $config, protected bool $localPaths)
+        $disk = new class($base->getDriver(), $base->getAdapter(), $base->getConfig(), $localPaths, $putFails, $deleteFails) extends FilesystemAdapter {
+            public function __construct($driver, $adapter, array $config, protected bool $localPaths, protected ?string $putFails, protected bool $deleteFails)
             {
                 parent::__construct($driver, $adapter, $config);
             }
 
-            public function move($from, $to)
+            public function put($path, $contents, $options = [])
             {
-                if ($this->exists($to)) {
-                    throw new \RuntimeException("File already exists at path: {$to}");
+                if ($this->putFails === 'nothing') {
+                    return false;
                 }
 
-                return parent::move($from, $to);
+                if ($this->putFails === 'partial') {
+                    parent::put($path, substr((string) $contents, 0, intdiv(strlen((string) $contents), 2)), $options);
+
+                    return false;
+                }
+
+                return parent::put($path, $contents, $options);
+            }
+
+            public function delete($paths)
+            {
+                if ($this->deleteFails && $paths === ContentFreezeService::CURRENT_PATH) {
+                    return false;
+                }
+
+                return parent::delete($paths);
             }
 
             public function path($path)

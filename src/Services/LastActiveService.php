@@ -93,8 +93,6 @@ class LastActiveService
      */
     protected function write(array $entries): void
     {
-        $json = json_encode($entries, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
-
-        AtomicFile::put(self::RELATIVE_PATH, $json);
+        AtomicFile::putJson(self::RELATIVE_PATH, $entries);
     }
 }

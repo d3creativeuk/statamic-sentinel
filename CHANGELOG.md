@@ -16,6 +16,15 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
   for everyone. If that model had an `isSuper` query scope, the check passed for any Control Panel
   user instead. Every check now goes through Statamic's user, and users who are super admins
   through a role now count as one, matching Statamic.
+- **A full disk could wipe Sentinel's saved data.** When the server ran out of space mid-save, the
+  half-written file replaced the old one (or the old one was deleted), and the save still reported
+  success: history, the sent log, notes, schedules or a scheduled freeze could vanish. A failed
+  save now leaves the previous file in place and reports the error.
+- **One failed email could empty the sent log.** A mail server error containing non-UTF-8 text
+  made the log unwritable, and it was saved as an empty file. Such text is now stored with a
+  replacement character.
+- **Cancel and Mark complete reported success when the update record couldn't be removed.** The
+  freeze then carried on (banner, heads-up email, activation). They now report the failure.
 
 ### Removed
 

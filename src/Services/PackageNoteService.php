@@ -76,9 +76,7 @@ class PackageNoteService
             }
 
             // Encode empty ecosystems as {} rather than [].
-            $json = json_encode(array_map(fn ($eco) => (object) $eco, $notes), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-
-            AtomicFile::put(self::RELATIVE_PATH, $json);
+            AtomicFile::putJson(self::RELATIVE_PATH, array_map(fn ($eco) => (object) $eco, $notes), JSON_UNESCAPED_UNICODE);
 
             return true;
         } catch (\Throwable $e) {

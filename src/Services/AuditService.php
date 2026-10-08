@@ -153,9 +153,7 @@ class AuditService
     protected function writeToDisk(array $result): void
     {
         try {
-            $json = json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
-
-            AtomicFile::put(self::DISK_PATH, $json);
+            AtomicFile::putJson(self::DISK_PATH, $result);
         } catch (\Throwable $e) {
             // Silent fail
         }

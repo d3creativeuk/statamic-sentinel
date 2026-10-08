@@ -500,11 +500,12 @@ class ContentFreezeService
 
         $this->appendHistory($current);
 
-        try {
-            Storage::disk('local')->delete(self::CURRENT_PATH);
-        } catch (\Throwable $e) {
-            // Silent fail - the history record is the source of truth from
-            // this point forward.
+        // If the record can't be removed the freeze stays live (banner on,
+        // Complete still offered), so say so rather than reporting success.
+        if (! $this->deleteCurrent()) {
+            Log::warning('Sentinel could not remove the completed freeze record ' . ($current['id'] ?? '?'));
+
+            return $this->failure('The all-clear email was sent, but the update record could not be removed. Check storage permissions.');
         }
 
         return ['ok' => true, 'freeze' => $current];
@@ -548,9 +549,9 @@ class ContentFreezeService
             return $this->failure('This update can no longer be cancelled.');
         }
 
-        try {
-            Storage::disk('local')->delete(self::CURRENT_PATH);
-        } catch (\Throwable $e) {
+        // delete() returns false rather than throwing on a local disk, so
+        // check the file is really gone before reporting the cancel.
+        if (! $this->deleteCurrent()) {
             return $this->failure('Failed to remove the update record. Check storage permissions.');
         }
 
@@ -560,13 +561,11 @@ class ContentFreezeService
         // would make lastCancelAt() return null and resurface the banner.
         // Silent on failure - the banner suppression is best-effort.
         try {
-            $json = json_encode([
+            AtomicFile::putJson(self::LAST_CANCEL_PATH, [
                 'cancelled_at' => Carbon::now()->utc()->toIso8601String(),
                 'cancelled_by' => $cancelledBy,
                 'freeze_id'    => $current['id'] ?? null,
-            ], JSON_UNESCAPED_SLASHES);
-
-            AtomicFile::put(self::LAST_CANCEL_PATH, $json);
+            ]);
         } catch (\Throwable $e) {
             // Silent fail.
         }
@@ -815,12 +814,25 @@ class ContentFreezeService
             && ($fresh['status'] ?? null) === $status;
     }
 
+    /**
+     * Remove the current-freeze record. True only when it's really gone:
+     * a local disk's delete() returns false instead of throwing.
+     */
+    protected function deleteCurrent(): bool
+    {
+        try {
+            $disk = Storage::disk('local');
+
+            return $disk->delete(self::CURRENT_PATH) || ! $disk->exists(self::CURRENT_PATH);
+        } catch (\Throwable $e) {
+            return false;
+        }
+    }
+
     protected function writeCurrent(array $freeze): bool
     {
         try {
-            $json = json_encode($freeze, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
-
-            AtomicFile::put(self::CURRENT_PATH, $json);
+            AtomicFile::putJson(self::CURRENT_PATH, $freeze);
 
             return true;
         } catch (\Throwable $e) {
@@ -848,9 +860,7 @@ class ContentFreezeService
                 return false;
             }
 
-            $json = json_encode($entries, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
-
-            AtomicFile::put(self::HISTORY_PATH, $json);
+            AtomicFile::putJson(self::HISTORY_PATH, $entries);
 
             return true;
         } catch (\Throwable $e) {
@@ -869,9 +879,7 @@ class ContentFreezeService
                 $entries = array_slice($entries, 0, self::HISTORY_LIMIT);
             }
 
-            $json = json_encode($entries, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
-
-            AtomicFile::put(self::HISTORY_PATH, $json);
+            AtomicFile::putJson(self::HISTORY_PATH, $entries);
         } catch (\Throwable $e) {
             // Silent fail - history is bookkeeping, not part of the contract.
         }

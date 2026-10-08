@@ -55,9 +55,8 @@ class MaintenancePlanService
     {
         try {
             $config = array_merge($this->defaults(), $config);
-            $json   = json_encode($config, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
 
-            AtomicFile::put(self::RELATIVE_PATH, $json);
+            AtomicFile::putJson(self::RELATIVE_PATH, $config);
 
             return true;
         } catch (\Throwable $e) {
