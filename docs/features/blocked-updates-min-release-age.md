@@ -64,7 +64,7 @@ showing until the versions aged out.
 The documented place for publish times is the `time` map on the full document at
 `registry.npmjs.org/{name}`. That document is far too big for large packages: vite's is
 about 39 MB and tailwindcss's about 11 MB, and neither arrives inside the 5s timeout. In
-production (lbf-com, Sep 2026) that timeout left vite 8.3.0 unflagged five days into a
+production (a production site, Sep 2026) that timeout left vite 8.3.0 unflagged five days into a
 7 day window, so Sentinel showed an update npm was refusing to install.
 
 The `/{name}/latest` manifest has no `time` map, but it does carry
