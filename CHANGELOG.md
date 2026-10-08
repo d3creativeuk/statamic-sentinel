@@ -30,6 +30,13 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
   started from the Control Panel failed. That check is now skipped when the folder can't be
   read, and any scan that does fail keeps the previous report and returns to the page instead of
   showing an error.
+- **An unreadable `package-lock.json` read as "not found", and the next update report said every
+  open npm vulnerability was resolved.** A lock file can be valid for npm but not for PHP's JSON
+  decoder: a field copied from any installed package's manifest (such as an odd character in its
+  licence), merge-conflict markers, or a byte-order mark. npm checks then switched off without
+  warning. Now the check shows as failed, the report keeps the previous figures, and
+  `sentinel:scan` exits with an error. Byte-order marks and deeply nested fields are now read
+  normally. The same applies to `composer.lock`.
 
 ### Removed
 

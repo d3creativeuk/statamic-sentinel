@@ -49,6 +49,14 @@ class AuditService
     protected array $lockfileCache = [];
 
     /**
+     * Files that exist but couldn't be decoded, keyed by absolute path, with
+     * the JSON error. Kept apart from "missing" so an unreadable lock file
+     * reports a failed check rather than "not found" (which read as "this
+     * site has no npm" and recorded every vulnerability as resolved).
+     */
+    protected array $unreadableFiles = [];
+
+    /**
      * Packagist p2 responses already fetched this scan, keyed by package
      * name. fetchPlatformLatestVersions() needs statamic/cms and
      * laravel/framework, and composerOutdated() needs them again because
@@ -72,7 +80,12 @@ class AuditService
 
     /**
      * Read + decode a JSON file once per service instance. Returns null if
-     * the file is missing or malformed. Internal use only.
+     * the file is missing or malformed; a malformed one is also recorded in
+     * $unreadableFiles. Internal use only.
+     *
+     * npm writes lock files PHP's default decoder rejects: a UTF-8 BOM (npm
+     * itself tolerates one) and manifest fields copied verbatim from any
+     * installed package, which can nest deeper than 512 levels.
      */
     protected function readJsonFile(string $absolutePath): ?array
     {
@@ -84,9 +97,53 @@ class AuditService
             return $this->lockfileCache[$absolutePath] = null;
         }
 
-        $decoded = json_decode((string) file_get_contents($absolutePath), true);
+        $raw = @file_get_contents($absolutePath);
 
-        return $this->lockfileCache[$absolutePath] = is_array($decoded) ? $decoded : null;
+        if ($raw === false) {
+            $this->unreadableFiles[$absolutePath] = 'the file could not be read';
+
+            return $this->lockfileCache[$absolutePath] = null;
+        }
+
+        if (str_starts_with($raw, "\xEF\xBB\xBF")) {
+            $raw = substr($raw, 3);
+        }
+
+        $decoded = json_decode($raw, true, 4096);
+
+        if (! is_array($decoded)) {
+            $this->unreadableFiles[$absolutePath] = json_last_error_msg();
+
+            return $this->lockfileCache[$absolutePath] = null;
+        }
+
+        return $this->lockfileCache[$absolutePath] = $decoded;
+    }
+
+    /**
+     * True when the file exists but couldn't be decoded (after a read).
+     */
+    protected function isUnreadable(string $absolutePath): bool
+    {
+        return isset($this->unreadableFiles[$absolutePath]);
+    }
+
+    /**
+     * The audit result for a lock file that exists but couldn't be decoded:
+     * a failed check, so the CP shows it in red, history keeps the previous
+     * figures and sentinel:scan exits non-zero.
+     */
+    protected function unreadableLockResult(string $file): array
+    {
+        return [
+            'status'          => 'error',
+            'message'         => "{$file} could not be read, so it wasn't checked.",
+            'lock_unreadable' => true,
+            'severities'      => [],
+            'counts'          => [],
+            'total_packages'  => 0,
+            'total_vulns'     => 0,
+        ];
     }
 
     /**
@@ -546,6 +603,7 @@ class AuditService
         $this->packagistResponses = [];
         $this->marketplace        = null;
         $this->lockfileCache      = [];
+        $this->unreadableFiles    = [];
         $this->vulnSummaryCache   = null;
         $this->vulnIdsSeen        = [];
 
@@ -1424,6 +1482,10 @@ class AuditService
     {
         $lock = $this->readJsonFile(base_path('composer.lock'));
 
+        if ($lock === null && $this->isUnreadable(base_path('composer.lock'))) {
+            return $this->unreadableLockResult('composer.lock');
+        }
+
         if ($lock === null) {
             return ['status' => 'unavailable', 'message' => 'composer.lock not found.', 'severities' => [], 'counts' => [], 'total_packages' => 0, 'total_vulns' => 0];
         }
@@ -1456,6 +1518,10 @@ class AuditService
     protected function npmAudit(): array
     {
         $lock = $this->readJsonFile(base_path('package-lock.json'));
+
+        if ($lock === null && $this->isUnreadable(base_path('package-lock.json'))) {
+            return $this->unreadableLockResult('package-lock.json');
+        }
 
         if ($lock === null) {
             return ['status' => 'unavailable', 'message' => 'package-lock.json not found.', 'severities' => [], 'counts' => [], 'total_packages' => 0, 'total_vulns' => 0];
@@ -1952,6 +2018,10 @@ class AuditService
     {
         $installed = $this->composerInstalledDirect();
 
+        if (empty($installed) && $this->isUnreadable(base_path('composer.lock'))) {
+            return ['total' => 0, 'packages' => [], 'error' => true];
+        }
+
         if (empty($installed)) return ['total' => 0, 'packages' => []];
 
         $toCheck = array_keys($installed);
@@ -2075,6 +2145,10 @@ class AuditService
     protected function npmOutdated(): array
     {
         $installed = $this->npmInstalledDirect();
+
+        if (empty($installed) && $this->isUnreadable(base_path('package-lock.json'))) {
+            return ['total' => 0, 'packages' => [], 'error' => true];
+        }
 
         if (empty($installed)) return ['total' => 0, 'packages' => []];
 

@@ -250,7 +250,7 @@
                 @if($d['status'] === 'unavailable')
                     {{ $row['label'] }} - lock file not found
                 @elseif($d['status'] === 'error')
-                    {{ $row['label'] }} - <span style="color:#ef4444;">⚠ check failed</span>
+                    {{ $row['label'] }} - <span style="color:#ef4444;">⚠ check failed{{ ! empty($d['lock_unreadable']) ? ': lock file could not be read' : '' }}</span>
                 @else
                     {{ $d['total_packages'] }} {{ $row['label'] }} scanned
                 @endif

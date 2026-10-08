@@ -233,6 +233,12 @@ class HistoryService
                 $fields[] = "{$eco}_outdated";
             }
 
+            // An unreadable lock file also empties the installed-package
+            // list, which the update report would read as "all removed".
+            if (! empty($audit[$eco]['lock_unreadable'])) {
+                $fields[] = "{$eco}_packages";
+            }
+
             foreach ($fields as $field) {
                 if (array_key_exists($field, $previous)) {
                     $snapshot[$field] = $previous[$field];

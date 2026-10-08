@@ -100,7 +100,7 @@
         $totalSec   = $vulns + $vendorOnly;
 
         if ($status === 'unavailable') return ['text' => 'Not found',    'colour' => '#94a3b8', 'detail' => 'Lock file not found'];
-        if ($status === 'error')       return ['text' => 'Check failed', 'colour' => '#dc2626', 'detail' => 'Could not reach the registry'];
+        if ($status === 'error')       return ['text' => 'Check failed', 'colour' => '#dc2626', 'detail' => ! empty($eco['lock_unreadable']) ? 'Lock file could not be read' : 'Could not reach the registry'];
 
         $updatesText = $outdated . ' ' . \Illuminate\Support\Str::plural('update', $outdated) . ' available';
         $vulnsText   = $totalSec . ' security ' . \Illuminate\Support\Str::plural('issue', $totalSec);
