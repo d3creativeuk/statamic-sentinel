@@ -1337,10 +1337,10 @@ class AuditService
     }
 
     // -------------------------------------------------------------------------
-    // Statamic license
+    // Statamic licence
     //
     // Statamic models "renewal" as a version range, not a calendar date: when a
-    // Pro license no longer covers the running version, the Outpost response
+    // Pro licence no longer covers the running version, the Outpost response
     // carries reason `outside_license_range` and StatamicLicense::needsRenewal()
     // returns true. There is no renewal-date field in the API - the actual date
     // lives in the customer's statamic.com account, which SiteLicense::url()
@@ -1355,8 +1355,8 @@ class AuditService
     //   free    - site isn't running Statamic Pro (nothing to license)
     //   trial   - Pro on a test/development domain (Statamic's own trial mode)
     //   unknown - could not verify (Outpost request failed / offline)
-    //   renewal - license valid, but doesn't cover the installed version
-    //   invalid - license invalid for another reason
+    //   renewal - licence valid, but doesn't cover the installed version
+    //   invalid - licence invalid for another reason
     //   ok       - licensed and covering the installed version
     // -------------------------------------------------------------------------
 
@@ -1378,7 +1378,7 @@ class AuditService
                            : (method_exists($manager, 'valid')         ? (bool) $manager->valid() : true);
 
             // The licensed version window (versions, not dates). Present only
-            // when the license explicitly falls outside its covered range.
+            // when the licence explicitly falls outside its covered range.
             $range = null;
             $raw   = method_exists($manager, 'response') ? $manager->response('statamic', []) : [];
             if (is_array($raw) && ($raw['reason'] ?? null) === 'outside_license_range' && ! empty($raw['range'])) {

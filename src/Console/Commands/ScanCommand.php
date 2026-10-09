@@ -33,7 +33,7 @@ class ScanCommand extends Command
                 'ok' => 'licensed', 'renewal' => 'renewal due', 'invalid' => 'not licensed',
                 'trial' => 'trial', 'free' => 'free edition', 'unknown' => 'could not verify',
             ][$result['license']['status'] ?? 'unknown'] ?? 'could not verify';
-            $this->line("  License:  {$licenseLabel}");
+            $this->line("  Licence:  {$licenseLabel}");
         }
 
         // A failed lookup reports zeros, so say so and exit non-zero for cron

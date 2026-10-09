@@ -138,7 +138,7 @@
         return ['text' => 'Up to date', 'colour' => '#047857', 'detail' => ''];
     };
 
-    // The Statamic license status renders as a colour-coded pill, matching the
+    // The Statamic licence status renders as a colour-coded pill, matching the
     // widget and utility. The covered version range is deliberately not
     // surfaced - it's raw constraint syntax that confuses non-technical readers.
     $licenseBadge = function (array $l) {
@@ -199,8 +199,8 @@
         $intro        = 'Your Statamic website needs attention';
         $introDetail  = 'Security or platform issues were found.';
     } elseif ($licenseRenewal) {
-        $intro        = 'Your Statamic license is due for renewal.';
-        $introDetail  = 'The license no longer covers your installed version.';
+        $intro        = 'Your Statamic licence is due for renewal.';
+        $introDetail  = 'The licence no longer covers your installed version.';
     } elseif ($platformMajorBehind) {
         $intro        = 'One or more platforms a major version behind.';
     } elseif (! empty($composer['outdated']['error']) || ! empty($npm['outdated']['error'])) {
@@ -305,7 +305,7 @@
             <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden; margin-bottom:10px;">
                 <tr>
                     <td class="sentinel-row-cell" style="padding:12px 16px; vertical-align:middle;">
-                        <div style="font-size:15px; font-weight:600; color:#0f172a;">Statamic License Status</div>
+                        <div style="font-size:15px; font-weight:600; color:#0f172a;">Statamic Licence Status</div>
                         <div style="font-size:13px; color:#475569; margin-top:3px;">The commercial licence for your CMS</div>
                         <div class="sentinel-row-meta" style="margin-top:8px; font-size:12px; color:#475569; font-variant-numeric:tabular-nums; line-height:1.8;">
                             <span class="sentinel-pill" style="display:inline-block; text-transform:uppercase; letter-spacing:0.04em; margin:2px 6px 2px 0; font-size:10.5px; font-weight:500; padding:1px 7px; border-radius:4px; color:#fff; border:1px solid {{ $lb['colour'] }}; background:{{ $lb['colour'] }};">{{ $lb['text'] }}</span>

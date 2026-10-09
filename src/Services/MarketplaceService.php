@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Http;
  * cut a security release, since the public OSV / GHSA advisory feeds
  * typically lag behind that flag by days or weeks.
  *
- * Endpoint is public (no license header) and works for both `statamic/cms`
+ * Endpoint is public (no licence header) and works for both `statamic/cms`
  * and any addon published through the marketplace - non-marketplace
  * packages 404 and we treat that as "no vendor data, fall back to OSV".
  */

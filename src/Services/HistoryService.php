@@ -197,7 +197,7 @@ class HistoryService
             'statamic'                  => $audit['statamic']['current'] ?? null,
             'laravel'                   => $audit['laravel']['version']  ?? null,
             'php'                       => $audit['php']['version']      ?? null,
-            // Statamic license status (ok/renewal/invalid/trial/free/unknown), or
+            // Statamic licence status (ok/renewal/invalid/trial/free/unknown), or
             // null on installs where licensing isn't available. A status change
             // (e.g. renewal -> ok after renewing) drives a new snapshot + shows
             // in the update report.

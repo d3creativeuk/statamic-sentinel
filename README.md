@@ -139,6 +139,6 @@ This writes `config/statamic-sentinel.php` into your app. Committing it means `c
 
 This addon is maintained by [D3 Creative](https://d3creative.uk/?utm_source=sentinel&utm_medium=readme&utm_campaign=support). For enquiries about managed Statamic maintenance, visit [d3creative.uk/services/statamic-maintenance](https://d3creative.uk/services/statamic-maintenance?utm_source=sentinel&utm_medium=readme&utm_campaign=support).
 
-## License
+## Licence
 
 Released under the [MIT License](LICENSE).

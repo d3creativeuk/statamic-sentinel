@@ -418,7 +418,7 @@ Released under the tag `v2.2.1` (this section was first published as 2.1.1).
 
 ### Added
 
-- **Statamic License Status** on the dashboard widget, the utility page, and the status and
+- **Statamic Licence Status** on the dashboard widget, the utility page, and the status and
   update emails - a colour-coded pill reading Licensed / Renewal due / Not licensed / Trial /
   Free edition / Unverified, read from Statamic's cached Outpost data (Statamic 3.3-6, offline in
   the normal case), with a deep link to the statamic.com account when a renewal is due. Statamic

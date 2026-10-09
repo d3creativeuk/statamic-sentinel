@@ -35,7 +35,7 @@ class UpdateReportBuilder
             'php'      => self::diffPlatform($previous['php']      ?? null, $latest['php']      ?? null),
         ];
 
-        // Statamic license status (ok/renewal/invalid/...) between the two
+        // Statamic licence status (ok/renewal/invalid/...) between the two
         // snapshots. Reuses diffPlatform's from/to/changed shape. Null on
         // installs without licensing - the email skips the row in that case.
         $license = self::diffPlatform($previous['license_status'] ?? null, $latest['license_status'] ?? null);

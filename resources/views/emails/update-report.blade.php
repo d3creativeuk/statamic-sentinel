@@ -61,7 +61,7 @@
         'trial' => 'Trial', 'free' => 'Free edition', 'unknown' => 'Unverified',
     ][$s] ?? '-';
 
-    // Pill colour for the current license status, matching the widget/utility:
+    // Pill colour for the current licence status, matching the widget/utility:
     // red for states that need action, green for active, grey otherwise.
     $licenseColour = fn($s) => in_array($s, ['renewal', 'invalid']) ? '#dc2626' : ($s === 'ok' ? '#047857' : '#64748b');
 
@@ -88,7 +88,7 @@
             . ($unnotedVulns === 1 ? ' needs' : ' need') . ' attention.'
             . ($notedVulns > 0 ? ' ' . $notedVulns . ' more ' . $notedPhrase($notedVulns) . ' below.' : '');
     } elseif ($licenseAlert) {
-        $intro = 'Your Statamic website has been updated. Your license is now due for renewal.';
+        $intro = 'Your Statamic website has been updated. Your licence is now due for renewal.';
     } elseif ($hasAnyChange && $notedVulns > 0) {
         $intro = 'Your Statamic website has been updated. ' . $vulnCount($notedVulns) . ' ' . $notedPhrase($notedVulns) . ' below.';
     } elseif ($hasAnyChange) {
@@ -343,7 +343,7 @@
             <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden; margin-bottom:10px;">
                 <tr>
                     <td class="sentinel-row-cell" style="padding:12px 16px; vertical-align:middle;">
-                        <div style="font-size:15px; font-weight:600; color:#0f172a;">Statamic License Status</div>
+                        <div style="font-size:15px; font-weight:600; color:#0f172a;">Statamic Licence Status</div>
                         <div style="font-size:13px; color:#475569; margin-top:3px;">The commercial licence for your CMS</div>
                         <div class="sentinel-row-meta" style="margin-top:8px; font-size:12px; color:#475569; font-variant-numeric:tabular-nums; line-height:1.8;">
                             @php $licenseNow = $license['to'] ?? $license['from']; @endphp

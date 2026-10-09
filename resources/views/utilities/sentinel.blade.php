@@ -270,7 +270,7 @@
         @endforeach
         @if(! empty($license['supported']))
             @php
-                // Statamic reports "needs renewal" (license doesn't cover the
+                // Statamic reports "needs renewal" (licence doesn't cover the
                 // running version) rather than a renewal date; the real date
                 // lives in the statamic.com account the link points to. The
                 // covered version range is deliberately not shown - it's raw
@@ -287,7 +287,7 @@
             @endphp
             <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; padding:8px 14px; border-top:1px solid #e2e8f0;">
                 <span style="display:inline-flex; align-items:baseline; gap:8px; min-width:0; flex-wrap:wrap;">
-                    <span style="font-size:13px; font-weight:600; color:#0f172a;">Statamic License Status</span>
+                    <span style="font-size:13px; font-weight:600; color:#0f172a;">Statamic Licence Status</span>
                     @if(! empty($license['account_url']) && $licenseAlert && $canSeeLicenseKey)
                         <a href="{{ $license['account_url'] }}" target="_blank" rel="noopener" style="font-size:11px; font-weight:500; color:#1d4ed8; text-decoration:none;">View renewal date &#8599;</a>
                     @endif
