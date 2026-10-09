@@ -55,7 +55,7 @@
     };
 
     // Platform rows can carry two pills: the primary status (security / EOL)
-    // plus a solid "Major version behind" pill, so a security flag never hides
+    // plus a "Major version behind" pill, so a security flag never hides
     // a major gap - and never implies the security fix needs the major jump.
     $platformBadge = function (array $p, ?string $platform = null) use ($isMajorBehind) {
         $status      = $p['status'] ?? 'unknown';
@@ -71,9 +71,9 @@
         elseif ($status === 'eol')      $pills[] = ['text' => 'End of life',     'colour' => '#dc2626'];
         elseif ($status === 'security') $pills[] = ['text' => 'Security only',   'colour' => '#b45309'];
 
-        // The major gap always leads: it's the solid pill and the bigger job.
+        // The major gap always leads: it's the bigger job.
         if ($majorBehind) {
-            array_unshift($pills, ['text' => 'Major version behind', 'colour' => '#dc2626', 'solid' => true]);
+            array_unshift($pills, ['text' => 'Major version behind', 'colour' => '#dc2626']);
         }
 
         if ($pills) {
@@ -83,11 +83,11 @@
         if ($outdated) {
             // Minor and patch bumps are routine updates and read as
             // "Update available" in blue, matching the ecosystem badges.
-            return ['pills' => [['text' => 'Update available', 'colour' => '#3b82f6']], 'detail' => $arrow];
+            return ['pills' => [['text' => 'Update available', 'colour' => '#2563eb']], 'detail' => $arrow];
         }
-        if (in_array($status, ['ok', 'active'])) return ['pills' => [['text' => 'Up to date', 'colour' => '#10b981']], 'detail' => $current];
+        if (in_array($status, ['ok', 'active'])) return ['pills' => [['text' => 'Up to date', 'colour' => '#047857']], 'detail' => $current];
 
-        return ['pills' => [['text' => 'Unknown', 'colour' => '#94a3b8']], 'detail' => $current ?? '-'];
+        return ['pills' => [['text' => 'Unknown', 'colour' => '#64748b']], 'detail' => $current ?? '-'];
     };
 
     $ecosystemBadge = function (array $eco) {
@@ -99,7 +99,7 @@
         $vendorOnly = (int) ($eco['outdated']['vendor_security_updates_total'] ?? 0);
         $totalSec   = $vulns + $vendorOnly;
 
-        if ($status === 'unavailable') return ['text' => 'Not found',    'colour' => '#94a3b8', 'detail' => 'Lock file not found'];
+        if ($status === 'unavailable') return ['text' => 'Not found',    'colour' => '#64748b', 'detail' => 'Lock file not found'];
         if ($status === 'error')       return ['text' => 'Check failed', 'colour' => '#dc2626', 'detail' => ! empty($eco['lock_unreadable']) ? 'Lock file could not be read' : 'Could not reach the registry'];
 
         $updatesText = $outdated . ' ' . \Illuminate\Support\Str::plural('update', $outdated) . ' available';
@@ -118,10 +118,10 @@
 
         // No vulns: updates own the pill (blue), no detail line needed.
         if ($outdated > 0) {
-            return ['text' => $updatesText, 'colour' => '#3b82f6', 'detail' => ''];
+            return ['text' => $updatesText, 'colour' => '#2563eb', 'detail' => ''];
         }
 
-        return ['text' => 'Up to date', 'colour' => '#10b981', 'detail' => ''];
+        return ['text' => 'Up to date', 'colour' => '#047857', 'detail' => ''];
     };
 
     // The Statamic license status renders as a colour-coded pill, matching the
@@ -272,7 +272,7 @@
                                 <span style="color:#475569; margin-right:8px;">{{ $b['detail'] }}</span>
                             @endif
                             @foreach ($pills as $pill)
-                                <span class="sentinel-pill" style="display:inline-block; margin:2px 6px 2px 0; font-size:10.5px; font-weight:500; padding:1px 7px; border-radius:4px; border:1px solid {{ $pill['colour'] }}; @if (! empty($pill['solid'])) color:#ffffff; background:{{ $pill['colour'] }}; @else color:{{ $pill['colour'] }}; background:#fff; @endif">{{ $pill['text'] }}</span>
+                                <span class="sentinel-pill" style="display:inline-block; text-transform:uppercase; letter-spacing:0.04em; margin:2px 6px 2px 0; font-size:10.5px; font-weight:500; padding:1px 7px; border-radius:4px; border:1px solid {{ $pill['colour'] }}; color:#fff; background:{{ $pill['colour'] }};">{{ $pill['text'] }}</span>
                             @endforeach
                         </div>
                     </td>
@@ -291,7 +291,7 @@
                         <div style="font-size:15px; font-weight:600; color:#0f172a;">Statamic License Status</div>
                         <div style="font-size:13px; color:#475569; margin-top:3px;">The commercial licence for your CMS</div>
                         <div class="sentinel-row-meta" style="margin-top:8px; font-size:12px; color:#475569; font-variant-numeric:tabular-nums; line-height:1.8;">
-                            <span class="sentinel-pill" style="display:inline-block; margin:2px 6px 2px 0; font-size:10.5px; font-weight:500; padding:1px 7px; border-radius:4px; color:{{ $lb['colour'] }}; border:1px solid {{ $lb['colour'] }}; background:#fff;">{{ $lb['text'] }}</span>
+                            <span class="sentinel-pill" style="display:inline-block; text-transform:uppercase; letter-spacing:0.04em; margin:2px 6px 2px 0; font-size:10.5px; font-weight:500; padding:1px 7px; border-radius:4px; color:#fff; border:1px solid {{ $lb['colour'] }}; background:{{ $lb['colour'] }};">{{ $lb['text'] }}</span>
                         </div>
                     </td>
                 </tr>
