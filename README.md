@@ -84,6 +84,8 @@ Reporting, history, scheduling, and Content Freeze are super-admin only. A non-s
 
 Sentinel ships branded for D3 Creative out of the box - no configuration needed. The widget, utility, and report emails attribute to D3 Creative, link to the managed-maintenance service, and include a `Need help with your website?` button. Agencies installing Sentinel on a client site can white-label it, or remove the branding entirely.
 
+The developer link carries UTM parameters (`utm_source=sentinel`, where the link appears, and the site's domain as `utm_content`), so whoever's URL it is, D3 Creative's or your own `SENTINEL_DEV_URL`, can see in their analytics which visits came from Sentinel. Nothing is sent unless someone clicks the link. UTM values already on `SENTINEL_DEV_URL` are kept.
+
 **White-label for your agency** - set any of these env vars in the host app's `.env`:
 
 ```env
@@ -135,7 +137,7 @@ This writes `config/statamic-sentinel.php` into your app. Committing it means `c
 
 ## Support
 
-This addon is maintained by [D3 Creative](https://d3creative.uk). For enquiries about managed Statamic maintenance, visit [d3creative.uk/services/statamic-maintenance](https://d3creative.uk/services/statamic-maintenance).
+This addon is maintained by [D3 Creative](https://d3creative.uk/?utm_source=sentinel&utm_medium=readme&utm_campaign=support). For enquiries about managed Statamic maintenance, visit [d3creative.uk/services/statamic-maintenance](https://d3creative.uk/services/statamic-maintenance?utm_source=sentinel&utm_medium=readme&utm_campaign=support).
 
 ## License
 

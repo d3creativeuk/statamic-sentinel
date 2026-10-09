@@ -5,7 +5,7 @@
 
 @php
     $_devName = $sentinelDevName ?? null;
-    $_devUrl  = $sentinelDevUrl ?? null;
+    $_devUrl  = \D3Creative\Sentinel\Support\DevLink::tag($sentinelDevUrl ?? null, 'cp', 'utility');
     $sentinelBrandSuffix = $_devName
         ? ' by ' . ($_devUrl
             ? '<a href="' . e($_devUrl) . '" target="_blank" style="color:rgb(63 63 71); text-decoration:underline;">' . e($_devName) . '</a>'

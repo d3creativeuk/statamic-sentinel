@@ -120,6 +120,9 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Changed
 
+- **The developer link now carries UTM parameters**, including the site's domain, so D3 Creative,
+  or an agency using `SENTINEL_DEV_URL`, can see which visits came from Sentinel. Nothing is sent
+  unless someone clicks, and UTM values already on the configured URL are kept.
 - **Setting only `SENTINEL_DEV_NAME` no longer keeps D3 Creative's link and support email.** A
   white-label name now stands alone; set `SENTINEL_DEV_URL` and `SENTINEL_DEV_EMAIL` for a link and
   the "Need help with your website?" button.

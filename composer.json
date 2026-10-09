@@ -6,7 +6,7 @@
     "authors": [
         {
             "name": "D3 Creative",
-            "homepage": "https://d3creative.uk"
+            "homepage": "https://d3creative.uk/?utm_source=sentinel&utm_medium=packagist&utm_campaign=author"
         }
     ],
     "require": {
@@ -33,7 +33,7 @@
             "name": "Sentinel",
             "description": "Monitor your Statamic version, PHP version, and package vulnerabilities directly from the Control Panel.",
             "developer": "D3 Creative",
-            "developer_url": "https://d3creative.uk",
+            "developer_url": "https://d3creative.uk/?utm_source=sentinel&utm_medium=statamic-marketplace&utm_campaign=developer",
             "tags": ["monitoring", "security", "maintenance"]
         },
         "laravel": {

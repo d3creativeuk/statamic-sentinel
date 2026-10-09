@@ -96,7 +96,7 @@
     </div>
 
     {{-- Footer --}}
-    @include('statamic-sentinel::emails._footer', ['lead' => 'This notification was sent by'])
+    @include('statamic-sentinel::emails._footer', ['lead' => 'This notification was sent by', 'campaign' => 'freeze-notification'])
 
 </td></tr>
 </table>
