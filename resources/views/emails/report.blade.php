@@ -292,11 +292,16 @@
 
         {{-- Opening message: plain text, matching the Plan Summary intro --}}
         <div style="margin-bottom:24px;">
-            {{-- One paragraph. The greeting is only about Statamic, so anything
-                 urgent elsewhere (vulnerabilities, end of life, licence) follows
-                 it rather than being hidden behind an all-clear; without a
-                 greeting the summary stands alone. --}}
-            <div style="font-size:15px; font-weight:400; color:#0f172a; line-height:1.55;">@if ($introMessage){{ $introMessage }}@endif @if (! $introMessage || $introUrgent)<strong style="font-weight:600;">{{ $intro }}</strong>@if ($introDetail) {{ $introDetail }}@endif @endif</div>
+            {{-- The greeting is only about Statamic, so anything urgent
+                 elsewhere (vulnerabilities, end of life, licence) follows it in
+                 its own paragraph rather than being hidden behind an all-clear.
+                 Without a greeting the summary stands alone. --}}
+            @if ($introMessage)
+                <div style="font-size:15px; font-weight:400; color:#0f172a; line-height:1.55;">{{ $introMessage }}</div>
+            @endif
+            @if (! $introMessage || $introUrgent)
+                <div style="font-size:15px; font-weight:400; color:#0f172a; line-height:1.55; {{ $introMessage ? 'margin-top:12px;' : '' }}"><strong style="font-weight:600;">{{ $intro }}</strong>@if ($introDetail) {{ $introDetail }}@endif</div>
+            @endif
 
             {{-- Context for the rows below, for readers who don't know why a site has several versions. --}}
             <div style="font-size:13px; font-weight:400; color:#475569; line-height:1.55; margin-top:12px;"><strong style="font-weight:600; color:#0f172a;">Did you know?</strong> Your website isn't a single piece of software. Statamic runs on Laravel, which runs on PHP, and it also uses dozens of smaller packages for things like forms, images and search. Each receives its own updates and security fixes.</div>

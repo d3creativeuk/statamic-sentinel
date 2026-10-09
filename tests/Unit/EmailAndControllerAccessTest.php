@@ -89,7 +89,7 @@ class EmailAndControllerAccessTest extends TestCase
         $licensed['license']['status'] = 'ok';
         $licensed['statamic']['releases_behind'] = 34;
         $licensedHtml = (new SentinelReport($licensed))->render();
-        $this->assertStringContainsString('That&#039;s 34 versions behind, including a security fix. <strong', $licensedHtml);
+        $this->assertStringContainsString('That&#039;s 34 versions behind, including a security fix.</div>', $licensedHtml);
         $this->assertStringNotContainsString('active license', $licensedHtml);
 
         // Out of date with no behind count: the standard headline, not a shorter message.
@@ -107,7 +107,7 @@ class EmailAndControllerAccessTest extends TestCase
         // (here vulnerabilities and an end-of-life PHP) follows it rather
         // than hiding behind "running the latest version".
         $currentHtml = (new SentinelReport($current))->render();
-        $this->assertMatchesRegularExpression('#latest version, 6\.1\.0\. <strong[^>]*>Your Statamic website needs attention\.</strong> 2 known vulnerabilities were found in your packages\. PHP 8\.1 has reached end of life\. </div>#', $currentHtml);
+        $this->assertMatchesRegularExpression('#latest version, 6\.1\.0\.</div>\s*<div[^>]*margin-top:12px;[^>]*><strong[^>]*>Your Statamic website needs attention\.</strong> 2 known vulnerabilities were found in your packages\. PHP 8\.1 has reached end of life\.</div>#', $currentHtml);
 
         // With nothing urgent the greeting stands alone.
         $healthy = $current;
@@ -135,7 +135,7 @@ class EmailAndControllerAccessTest extends TestCase
         // A Laravel security fix is named even when Statamic is current.
         $laravelFix = $healthy;
         $laravelFix['laravel']['security_update_available'] = true;
-        $this->assertMatchesRegularExpression('#latest version, 6\.1\.0\. <strong[^>]*>Your Statamic website needs attention\.</strong> A security update is available for Laravel\. </div>#', (new SentinelReport($laravelFix))->render());
+        $this->assertMatchesRegularExpression('#latest version, 6\.1\.0\.</div>\s*<div[^>]*><strong[^>]*>Your Statamic website needs attention\.</strong> A security update is available for Laravel\.</div>#', (new SentinelReport($laravelFix))->render());
 
         // A minor gap reads as plain versions.
         $patchBehind['statamic'] = ['current' => '6.30.0', 'latest' => '6.35.1', 'is_latest' => false, 'status' => 'outdated', 'releases_behind' => 5];
