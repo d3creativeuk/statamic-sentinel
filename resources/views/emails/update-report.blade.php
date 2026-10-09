@@ -165,7 +165,7 @@
         @foreach ([
             ['key' => 'statamic', 'label' => 'Statamic', 'description' => 'The CMS that powers your website'],
             ['key' => 'laravel',  'label' => 'Laravel',  'description' => 'The framework Statamic is built on'],
-            ['key' => 'php',      'label' => 'PHP',      'description' => 'The server-side language that runs everything'],
+            ['key' => 'php',      'label' => 'PHP',      'description' => 'The language Laravel is built on'],
         ] as $row)
             @php $r = $platformRow($row['label'], $platform[$row['key']]); @endphp
             @if (! $loop->first)

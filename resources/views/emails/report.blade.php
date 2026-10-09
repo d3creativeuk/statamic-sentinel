@@ -143,7 +143,7 @@
     $rows = [
         ['kind' => 'platform', 'label' => 'Statamic', 'description' => 'The CMS that powers your website',           'data' => $statamic],
         ['kind' => 'platform', 'label' => 'Laravel',  'description' => 'The framework Statamic is built on',         'data' => $laravel],
-        ['kind' => 'platform', 'label' => 'PHP',      'description' => 'The server-side language that runs everything', 'data' => $php],
+        ['kind' => 'platform', 'label' => 'PHP',      'description' => 'The language Laravel is built on', 'data' => $php],
         ['kind' => 'eco',      'label' => 'Composer', 'description' => 'Third-party PHP packages your site uses',       'data' => $composer],
         ['kind' => 'eco',      'label' => 'npm',      'description' => 'Third-party JavaScript packages your site uses', 'data' => $npm],
     ];
