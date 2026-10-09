@@ -195,21 +195,26 @@
     }
 
     $introDetail = null;
+    // Whether the summary below is worth saying alongside the greeting:
+    // anything other than routine updates or all clear.
+    $introUrgent = true;
     if ($needsAttention) {
-        $intro        = 'Your Statamic website needs attention';
+        $intro        = 'Your Statamic website needs attention.';
         $introDetail  = 'Security or platform issues were found.';
     } elseif ($licenseRenewal) {
         $intro        = 'Your Statamic licence is due for renewal.';
         $introDetail  = 'The licence no longer covers your installed version.';
     } elseif ($platformMajorBehind) {
-        $intro        = 'One or more platforms a major version behind.';
+        $intro        = 'One or more platforms are a major version behind.';
     } elseif (! empty($composer['outdated']['error']) || ! empty($npm['outdated']['error'])) {
         $intro        = "Sentinel couldn't finish checking for updates.";
         $introDetail  = 'A package registry did not respond, so some updates may not be listed.';
     } elseif ($totalOutdated > 0) {
         $intro        = 'Your Statamic website is in good health, routine updates available.';
+        $introUrgent  = false;
     } else {
         $intro        = 'Your Statamic website is fully up to date and in good health.';
+        $introUrgent  = false;
     }
 
     // The banner reads like the opening of an email about the Statamic
@@ -224,9 +229,13 @@
 
     if ($statamicCurrent && $statamicLatest && version_compare($statamicCurrent, $statamicLatest, '<')) {
         if ($statamicBehind > 0) {
+            // Patch releases are bug fixes: say so, and that they can wait,
+            // unless one of them is a security fix.
+            $statamicPatch = $updateTier($statamicCurrent, $statamicLatest, 'Statamic') === 'patch';
             $introMessage = 'Hi, your Statamic installation is running version ' . $statamicCurrent . '. '
                 . 'The latest version is ' . $statamicLatest . '. '
-                . "That's " . $statamicBehind . ' ' . \Illuminate\Support\Str::plural('version', $statamicBehind) . ' behind.';
+                . "That's " . $statamicBehind . ' ' . ($statamicPatch ? 'patch ' : '') . \Illuminate\Support\Str::plural('version', $statamicBehind) . ' behind'
+                . ($statamicPatch && empty($statamic['security_update_available']) ? ', not urgent.' : '.');
         }
     } elseif ($statamicCurrent && $statamicLatest) {
         // Only when the latest version is known: an unreachable registry
@@ -254,6 +263,15 @@
         <div style="margin-bottom:24px;">
             @if ($introMessage)
                 <div style="font-size:15px; font-weight:400; color:#0f172a; line-height:1.55;">{{ $introMessage }}</div>
+                {{-- The greeting is only about Statamic, so anything urgent
+                     elsewhere (vulnerabilities, end of life, licence) follows it
+                     rather than being hidden behind an all-clear. --}}
+                @if ($introUrgent)
+                    <div style="font-size:15px; font-weight:600; color:#0f172a; line-height:1.4; margin-top:10px;">{{ $intro }}</div>
+                    @if ($introDetail)
+                        <div style="font-size:13px; font-weight:400; color:#475569; line-height:1.4; margin-top:4px;">{{ $introDetail }}</div>
+                    @endif
+                @endif
             @else
                 <div style="font-size:15px; font-weight:600; color:#0f172a; line-height:1.4;">{{ $intro }}</div>
                 @if ($introDetail)

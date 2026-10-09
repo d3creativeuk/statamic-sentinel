@@ -103,6 +103,38 @@ class EmailAndControllerAccessTest extends TestCase
         $current['statamic'] = ['current' => '6.1.0', 'latest' => '6.1.0', 'is_latest' => true, 'status' => 'ok'];
         $this->assertStringContainsString('Hi, your Statamic installation is running the latest version, 6.1.0.', (new SentinelReport($current))->render());
 
+        // The greeting covers Statamic only, so something urgent elsewhere
+        // (here vulnerabilities and an end-of-life PHP) follows it rather
+        // than hiding behind "running the latest version".
+        $currentHtml = (new SentinelReport($current))->render();
+        $this->assertMatchesRegularExpression('#latest version, 6\.1\.0\.</div>\s*<div[^>]*>Your Statamic website needs attention\.</div>\s*<div[^>]*>Security or platform issues were found\.</div>#', $currentHtml);
+
+        // With nothing urgent the greeting stands alone.
+        $healthy = $current;
+        $healthy['php'] = ['version' => '8.5.0', 'latest' => '8.5.0', 'is_latest' => true, 'status' => 'active', 'label' => 'Active Support'];
+        $healthy['license'] = ['supported' => true, 'status' => 'ok'];
+        foreach (['composer', 'npm'] as $eco) {
+            $healthy[$eco] = ['status' => 'ok', 'total_vulns' => 0, 'counts' => [], 'severities' => [], 'by_package' => [], 'outdated' => ['total' => 0, 'packages' => []]];
+        }
+        $healthyHtml = (new SentinelReport($healthy))->render();
+        $this->assertStringContainsString('running the latest version, 6.1.0.', $healthyHtml);
+        $this->assertStringNotContainsString('good health', $healthyHtml);
+
+        // A patch release behind is said to be one, and not urgent...
+        $patchBehind = $healthy;
+        $patchBehind['statamic'] = ['current' => '6.30.0', 'latest' => '6.30.1', 'is_latest' => false, 'status' => 'outdated', 'releases_behind' => 1];
+        $this->assertStringContainsString('The latest version is 6.30.1. That&#039;s 1 patch version behind, not urgent.', (new SentinelReport($patchBehind))->render());
+
+        // ...unless it's a security fix.
+        $patchBehind['statamic']['security_update_available'] = true;
+        $securityPatchHtml = (new SentinelReport($patchBehind))->render();
+        $this->assertStringContainsString('That&#039;s 1 patch version behind.', $securityPatchHtml);
+        $this->assertStringNotContainsString('not urgent', $securityPatchHtml);
+
+        // A minor gap reads as plain versions.
+        $patchBehind['statamic'] = ['current' => '6.30.0', 'latest' => '6.35.1', 'is_latest' => false, 'status' => 'outdated', 'releases_behind' => 5];
+        $this->assertStringContainsString('That&#039;s 5 versions behind.', (new SentinelReport($patchBehind))->render());
+
         // An unknown latest version (registry unreachable) isn't "the latest".
         $unknown = $this->audit();
         $unknown['statamic'] = ['current' => '6.1.0', 'latest' => null, 'status' => 'unknown'];
