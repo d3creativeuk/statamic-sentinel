@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="x-apple-disable-message-reformatting">
     <meta name="format-detection" content="telephone=no,address=no,email=no,date=no,url=no">
-    <title>Statamic Package Update Report</title>
+    <title>Statamic CMS Update Report</title>
     <style>
         /* Summary rows always stack the version + pills under the description.
            On narrow screens the remaining two-column rows (package lists)
@@ -149,7 +149,8 @@
     {{-- Header --}}
     <div style="background:#0f172a; padding:24px 32px;">
         <div style="font-size:18px; font-weight:700; letter-spacing:-0.02em;">@foreach ($hosts as $i => $h)@if ($i)<span style="color:#cbd5e1;">, </span>@endif<a href="https://{{ $h }}" style="color:#ffffff; text-decoration:none;">{{ $h }}</a>@endforeach</div>
-        <div style="font-size:13px; color:#cbd5e1; margin-top:4px;">Statamic Package Update Report &nbsp;·&nbsp; {{ $sentDate }}</div>
+        <div style="font-size:13px; color:#cbd5e1; margin-top:4px;">Statamic CMS Update Report</div>
+        <div style="font-size:13px; color:#cbd5e1; margin-top:2px;">{{ $sentDate }}</div>
     </div>
 
     <div style="padding:28px 32px;">
@@ -274,15 +275,24 @@
              lists above; this lists only what's still outstanding. --}}
         @if ($vulnsIntro > 0 || $vulnsOpen > 0)
             @php
-                // Each package (or group under the dependency that pulls it in)
-                // as a heading with its notes underneath, kept apart from the
-                // counts. A status label is only needed when several are listed.
-                $vulnSections = \D3Creative\Sentinel\Support\VulnerabilityGroups::build($vulns, $notes ?? []);
+                // Split into Composer and npm. In each, every package (or group
+                // under the dependency that pulls it in) is a heading with its
+                // notes underneath. A status label is only needed when an
+                // ecosystem lists more than one status.
+                $vulnEcosystems = [];
+                foreach (['composer' => 'Composer', 'npm' => 'npm'] as $vulnEco => $vulnEcoLabel) {
+                    $vulnEcoSections = \D3Creative\Sentinel\Support\VulnerabilityGroups::build(
+                        array_filter($vulns, fn ($key) => str_starts_with($key, $vulnEco . '_'), ARRAY_FILTER_USE_KEY),
+                        $notes ?? []
+                    );
+                    if (! empty($vulnEcoSections)) {
+                        $vulnEcosystems[] = ['label' => $vulnEcoLabel, 'sections' => $vulnEcoSections];
+                    }
+                }
                 $vulnStatus   = [
                     'new'      => ['label' => 'New',        'colour' => '#ef4444'],
                     'open'     => ['label' => 'Still open', 'colour' => '#b45309'],
                 ];
-                $vulnLabels = count($vulnSections) > 1;
             @endphp
             <div style="border-top:1px solid #e2e8f0; margin:18px 0;"></div>
             <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden; margin-bottom:10px;">
@@ -301,10 +311,12 @@
                         </div>
                     </td>
                 </tr>
-                @if (! empty($vulnSections))
+                @foreach ($vulnEcosystems as $vulnEcosystem)
+                    @php $vulnLabels = count($vulnEcosystem['sections']) > 1; @endphp
                     <tr style="border-top:1px solid #f1f5f9;">
                         <td colspan="2" style="padding:12px 16px;">
-                            @foreach ($vulnSections as $section)
+                            <div style="font-size:14px; font-weight:600; color:#0f172a; margin-bottom:8px;">{{ $vulnEcosystem['label'] }}</div>
+                            @foreach ($vulnEcosystem['sections'] as $section)
                                 @if ($vulnLabels)
                                     <div style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; color:{{ $vulnStatus[$section['status']]['colour'] }}; {{ $loop->first ? '' : 'margin-top:14px;' }}">{{ $vulnStatus[$section['status']]['label'] }}</div>
                                 @endif
@@ -319,7 +331,7 @@
                             @endforeach
                         </td>
                     </tr>
-                @endif
+                @endforeach
             </table>
         @endif
 

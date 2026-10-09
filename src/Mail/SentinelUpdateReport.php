@@ -39,7 +39,7 @@ class SentinelUpdateReport extends Mailable
                         'notes'     => app(PackageNoteService::class)->all(),
                         'host'      => $label,
                         'hosts'     => $hosts,
-                        'preheader' => 'Statamic Package Update Report',
+                        'preheader' => 'Statamic CMS Update Report',
                     ]);
     }
 }

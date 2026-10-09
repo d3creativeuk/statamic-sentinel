@@ -127,6 +127,9 @@ class PackageNotesTest extends TestCase
         $this->assertMatchesRegularExpression('#source-map-js <span[^>]*>\(security update\)</span>#', $html);
         $this->assertStringNotContainsString('resolved', strip_tags($html));
         $this->assertStringNotContainsString('>Still open</div>', $html);
+        // Listed under its ecosystem, and only the ecosystems with issues.
+        $this->assertMatchesRegularExpression('#font-size:14px[^>]*>npm</div>\s*<div[^>]*>\s*<div[^>]*>postcss-selector-parser via @tailwindcss/typography</div>#', $html);
+        $this->assertDoesNotMatchRegularExpression('#font-size:14px[^>]*>Composer</div>#', $html);
     }
 
     public function test_a_report_stored_before_parents_and_still_open_existed_renders(): void

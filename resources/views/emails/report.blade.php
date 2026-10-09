@@ -230,7 +230,8 @@
     {{-- Header --}}
     <div style="background:#0f172a; padding:24px 32px;">
         <div style="font-size:18px; font-weight:700; letter-spacing:-0.02em;">@foreach ($hosts as $i => $h)@if ($i)<span style="color:#cbd5e1;">, </span>@endif<a href="https://{{ $h }}" style="color:#ffffff; text-decoration:none;">{{ $h }}</a>@endforeach</div>
-        <div style="font-size:13px; color:#cbd5e1; margin-top:4px;">Statamic Package Status Report &nbsp;·&nbsp; {{ $audit['audited_at'] }}</div>
+        <div style="font-size:13px; color:#cbd5e1; margin-top:4px;">Statamic Package Status Report</div>
+        <div style="font-size:13px; color:#cbd5e1; margin-top:2px;">{{ $audit['audited_at'] }}</div>
     </div>
 
     <div style="padding:28px 32px;">

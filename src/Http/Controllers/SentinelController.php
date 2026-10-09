@@ -326,7 +326,7 @@ class SentinelController extends Controller
             'notes'     => app(PackageNoteService::class)->all(),
             'host'      => ReportHosts::label(),
             'hosts'     => ReportHosts::all(),
-            'preheader' => 'Statamic Package Update Report',
+            'preheader' => 'Statamic CMS Update Report',
         ])->render());
     }
 
