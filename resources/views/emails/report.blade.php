@@ -72,10 +72,9 @@
         'major' => ['text' => 'Major', 'colour' => '#dc2626'],
     ];
 
-    // Platform rows: any status pill (security / EOL) first, then the update
-    // tier with "update available" beside it. Kept apart, so a security flag
-    // never hides a major gap, and never implies the security fix needs the
-    // major jump.
+    // Platform rows: a security update trumps everything and stands alone.
+    // Otherwise any lifecycle pill (end of life / security only) first, then
+    // the update tier with "update available" beside it.
     $platformBadge = function (array $p, ?string $platform = null) use ($updateTier, $tierPills) {
         $status      = $p['status'] ?? 'unknown';
         $security    = ! empty($p['security_update_available']);
@@ -84,9 +83,12 @@
         $outdated    = $latest && $current && version_compare($current, $latest, '<');
         $arrow       = $current . ' → ' . $latest;
 
+        if ($security) {
+            return ['pills' => [['text' => 'Security update', 'colour' => '#dc2626']], 'detail' => $outdated ? $arrow : $current];
+        }
+
         $pills = [];
-        if ($security)                  $pills[] = ['text' => 'Security update', 'colour' => '#dc2626'];
-        elseif ($status === 'eol')      $pills[] = ['text' => 'End of life',     'colour' => '#dc2626'];
+        if ($status === 'eol')          $pills[] = ['text' => 'End of life',     'colour' => '#dc2626'];
         elseif ($status === 'security') $pills[] = ['text' => 'Security only',   'colour' => '#b45309'];
 
         if ($outdated) {

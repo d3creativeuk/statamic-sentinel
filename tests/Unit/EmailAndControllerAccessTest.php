@@ -154,12 +154,14 @@ class EmailAndControllerAccessTest extends TestCase
         $failedHtml = (new SentinelReport($failed))->render();
         $this->assertSame(2, substr_count($failedHtml, 'Update check failed'));
 
-        // A security flag and a major gap are separate pills: the security
-        // pill first, then the tier with "update available" beside it.
+        // A security update trumps every other pill, even a major gap.
         $majorAudit = $this->audit();
         $majorAudit['statamic'] = ['current' => '5.73.2', 'latest' => '6.33.0', 'is_latest' => false, 'status' => 'outdated', 'security_update_available' => true, 'security_source' => 'osv'];
-        $majorHtml  = (new SentinelReport($majorAudit))->render();
-        $this->assertMatchesRegularExpression('#>Security update</span>\s*<span[^>]*background:\#dc2626;">Major</span>\s*<span[^>]*>update available</span>#', $majorHtml);
+        $statamicRow = substr($majorHtml = (new SentinelReport($majorAudit))->render(), strpos($majorHtml, '>Statamic<'), 1500);
+        $this->assertStringContainsString('5.73.2 → 6.33.0', $statamicRow);
+        $this->assertMatchesRegularExpression('#>Security update</span>\s*</div>#', $statamicRow);
+        $this->assertStringNotContainsString('>Major</span>', $statamicRow);
+        $this->assertStringNotContainsString('update available', $statamicRow);
 
         // PHP compares against the newest release on any branch, and a new
         // X.Y branch counts as major.
