@@ -165,6 +165,9 @@ class ResolvedVulnVersionsTest extends TestCase
         $this->assertMatchesRegularExpression('#plyr <span[^>]*>\(security update\)</span></td> <td[^>]*> removed \(was 3\.7\.8\)#', $html);
         $this->assertStringContainsString('nanoid <span', $html);
 
+        // The first count in the pill, the rest beside it.
+        $this->assertMatchesRegularExpression('#class="sentinel-pill"[^>]*>1 updated</span><span style="color:\#64748b;">1 removed</span>#', $html);
+
         // Nothing outstanding, so no Vulnerabilities section.
         $this->assertStringNotContainsString('>Vulnerabilities</div>', $html);
     }

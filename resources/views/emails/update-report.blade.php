@@ -129,14 +129,15 @@
         $a = count($eco['added']);
         $r = count($eco['removed']);
 
-        if ($u + $a + $r === 0) return ['badge' => 'No change', 'colour' => '#94a3b8'];
+        if ($u + $a + $r === 0) return ['badge' => 'No change', 'extra' => null, 'colour' => '#94a3b8'];
 
         $parts = [];
         if ($u) $parts[] = $u . ' updated';
         if ($a) $parts[] = $a . ' added';
         if ($r) $parts[] = $r . ' removed';
 
-        return ['badge' => implode(', ', $parts), 'colour' => '#10b981'];
+        // The first count in the pill, the rest as plain text beside it.
+        return ['badge' => array_shift($parts), 'extra' => $parts ? implode(', ', $parts) : null, 'colour' => '#10b981'];
     };
 @endphp
 
@@ -177,7 +178,7 @@
                         <div style="font-size:15px; font-weight:600; color:#0f172a;">{{ $r['label'] }}<span style="font-weight:500; color:#475569; margin-left:8px; font-variant-numeric:tabular-nums;">@if ($r['changed']){{ $platform[$row['key']]['from'] }} <span style="color:#94a3b8;">→</span> <strong style="color:#0f172a;">{{ $platform[$row['key']]['to'] }}</strong>@else{{ $r['detail'] }}@endif</span></div>
                         <div style="font-size:13px; color:#475569; margin-top:3px;">{{ $row['description'] }}</div>
                         <div class="sentinel-row-meta" style="margin-top:8px; font-size:12px; color:#475569; font-variant-numeric:tabular-nums; line-height:1.8;">
-                            <span class="sentinel-pill" style="display:inline-block; margin:2px 6px 2px 0; font-size:10.5px; font-weight:500; padding:1px 7px; border-radius:4px; color:{{ $r['colour'] }}; border:1px solid {{ $r['colour'] }}; background:#fff;">{{ $r['badge'] }}</span>
+                            <span class="sentinel-pill" style="display:inline-block; margin:2px 6px 2px 0; font-size:10.5px; font-weight:500; padding:1px 7px; border-radius:4px; color:#fff; border:1px solid {{ $r['colour'] }}; background:{{ $r['colour'] }};">{{ $r['badge'] }}</span>
                         </div>
                     </td>
                 </tr>
@@ -193,7 +194,7 @@
                     <div style="font-size:15px; font-weight:600; color:#0f172a;">Composer</div>
                     <div style="font-size:13px; color:#475569; margin-top:3px;">Third-party PHP packages your site uses</div>
                     <div class="sentinel-row-meta" style="margin-top:8px; font-size:12px; color:#475569; font-variant-numeric:tabular-nums; line-height:1.8;">
-                        <span class="sentinel-pill" style="display:inline-block; margin:2px 6px 2px 0; font-size:10.5px; font-weight:500; padding:1px 7px; border-radius:4px; color:{{ $cs['colour'] }}; border:1px solid {{ $cs['colour'] }}; background:#fff;">{{ $cs['badge'] }}</span>
+                        <span class="sentinel-pill" style="display:inline-block; margin:2px 6px 2px 0; font-size:10.5px; font-weight:500; padding:1px 7px; border-radius:4px; color:#fff; border:1px solid {{ $cs['colour'] }}; background:{{ $cs['colour'] }};">{{ $cs['badge'] }}</span>@if ($cs['extra'])<span style="color:#64748b;">{{ $cs['extra'] }}</span>@endif
                     </div>
                 </td>
             </tr>
@@ -236,7 +237,7 @@
                     <div style="font-size:15px; font-weight:600; color:#0f172a;">npm</div>
                     <div style="font-size:13px; color:#475569; margin-top:3px;">Third-party JavaScript packages your site uses</div>
                     <div class="sentinel-row-meta" style="margin-top:8px; font-size:12px; color:#475569; font-variant-numeric:tabular-nums; line-height:1.8;">
-                        <span class="sentinel-pill" style="display:inline-block; margin:2px 6px 2px 0; font-size:10.5px; font-weight:500; padding:1px 7px; border-radius:4px; color:{{ $ns['colour'] }}; border:1px solid {{ $ns['colour'] }}; background:#fff;">{{ $ns['badge'] }}</span>
+                        <span class="sentinel-pill" style="display:inline-block; margin:2px 6px 2px 0; font-size:10.5px; font-weight:500; padding:1px 7px; border-radius:4px; color:#fff; border:1px solid {{ $ns['colour'] }}; background:{{ $ns['colour'] }};">{{ $ns['badge'] }}</span>@if ($ns['extra'])<span style="color:#64748b;">{{ $ns['extra'] }}</span>@endif
                     </div>
                 </td>
             </tr>
@@ -305,7 +306,7 @@
                         <div class="sentinel-row-meta" style="margin-top:8px; font-size:12px; color:#475569; font-variant-numeric:tabular-nums; line-height:1.8;">
                             @foreach ([[$vulnsIntro, 'new', '#ef4444'], [$vulnsOpen, 'still open', '#b45309']] as [$vulnCount, $vulnLabel, $vulnColour])
                                 @if ($vulnCount > 0)
-                                    <span class="sentinel-pill" style="display:inline-block; margin:2px 6px 2px 0; font-size:10.5px; font-weight:500; padding:1px 7px; border-radius:4px; color:{{ $vulnColour }}; border:1px solid {{ $vulnColour }}; background:#fff;">{{ $vulnCount }} {{ $vulnLabel }}</span>
+                                    <span class="sentinel-pill" style="display:inline-block; margin:2px 6px 2px 0; font-size:10.5px; font-weight:500; padding:1px 7px; border-radius:4px; color:#fff; border:1px solid {{ $vulnColour }}; background:{{ $vulnColour }};">{{ $vulnCount }} {{ $vulnLabel }}</span>
                                 @endif
                             @endforeach
                         </div>
@@ -349,7 +350,7 @@
                             @if ($licenseChanged)
                                 <span style="margin-right:4px;">{{ $licenseLabel($license['from']) }} <span style="color:#94a3b8;">→</span></span>
                             @endif
-                            <span class="sentinel-pill" style="display:inline-block; margin:2px 6px 2px 0; font-size:10.5px; font-weight:500; padding:1px 7px; border-radius:4px; color:{{ $licenseColour($licenseNow) }}; border:1px solid {{ $licenseColour($licenseNow) }}; background:#fff;">{{ $licenseLabel($licenseNow) }}</span>
+                            <span class="sentinel-pill" style="display:inline-block; margin:2px 6px 2px 0; font-size:10.5px; font-weight:500; padding:1px 7px; border-radius:4px; color:#fff; border:1px solid {{ $licenseColour($licenseNow) }}; background:{{ $licenseColour($licenseNow) }};">{{ $licenseLabel($licenseNow) }}</span>
                         </div>
                     </td>
                 </tr>
