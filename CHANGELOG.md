@@ -11,7 +11,7 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 ### Fixed
 
 - **The status report's greeting could hide urgent problems.** When Statamic itself was up to date,
-  the email opened with "running the latest version" and never mentioned vulnerabilities, an
+  the email opened with "the latest version" and never mentioned vulnerabilities, an
   end-of-life platform or a licence problem elsewhere. Those now follow the greeting, each named
   ("A security update is available for Laravel. PHP 8.1 has reached end of life."), and a Statamic
   update that includes a security fix says so. A Statamic patch release that isn't a security fix
@@ -126,6 +126,8 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Changed
 
+- **The status report's opening drops the "Hi,"** and reads "Your website is running Statamic
+  6.26.0. The latest version is 6.35.1." (or "…6.35.1, the latest version.").
 - **The status report labels each Statamic, Laravel and PHP update as Patch, Minor or Major**, with
   "update available" beside it, instead of one "Update available" pill for everything. A routine
   patch no longer looks the same as a feature release, and a major gap is no longer worded

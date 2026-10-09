@@ -261,7 +261,7 @@
             // Patch releases are bug fixes: say so, and that they can wait,
             // unless one of them is a security fix.
             $statamicPatch = $updateTier($statamicCurrent, $statamicLatest, 'Statamic') === 'patch';
-            $introMessage = 'Hi, your Statamic installation is running version ' . $statamicCurrent . '. '
+            $introMessage = 'Your website is running Statamic ' . $statamicCurrent . '. '
                 . 'The latest version is ' . $statamicLatest . '. '
                 . "That's " . $statamicBehind . ' ' . ($statamicPatch ? 'patch ' : '') . \Illuminate\Support\Str::plural('version', $statamicBehind) . ' behind'
                 . (! empty($statamic['security_update_available'])
@@ -271,7 +271,7 @@
     } elseif ($statamicCurrent && $statamicLatest) {
         // Only when the latest version is known: an unreachable registry
         // leaves it null, which isn't the same as being up to date.
-        $introMessage = 'Hi, your Statamic installation is running the latest version, ' . $statamicCurrent . '.';
+        $introMessage = 'Your website is running Statamic ' . $statamicCurrent . ', the latest version.';
     }
 @endphp
 
