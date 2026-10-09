@@ -54,16 +54,34 @@
         return ($c[0] ?? null) !== ($l[0] ?? null);
     };
 
-    // Platform rows can carry two pills: the primary status (security / EOL)
-    // plus a "Major version behind" pill, so a security flag never hides
-    // a major gap - and never implies the security fix needs the major jump.
-    $platformBadge = function (array $p, ?string $platform = null) use ($isMajorBehind) {
+    // How big the jump to the latest version is. PHP's X.Y branches count as
+    // major (see $isMajorBehind); otherwise semver: a changed minor number
+    // is minor, anything else a patch.
+    $updateTier = function ($current, $latest, $platform = null) use ($isMajorBehind) {
+        if ($isMajorBehind($current, $latest, $platform)) return 'major';
+        $c = explode('.', (string) $current);
+        $l = explode('.', (string) $latest);
+        return ($c[1] ?? null) !== ($l[1] ?? null) ? 'minor' : 'patch';
+    };
+
+    // Patch is routine (muted blue), minor a feature release (blue), major
+    // the bigger job (red). Each passes AA contrast with white text.
+    $tierPills = [
+        'patch' => ['text' => 'Patch', 'colour' => '#4f73b8'],
+        'minor' => ['text' => 'Minor', 'colour' => '#2563eb'],
+        'major' => ['text' => 'Major', 'colour' => '#dc2626'],
+    ];
+
+    // Platform rows: any status pill (security / EOL) first, then the update
+    // tier with "update available" beside it. Kept apart, so a security flag
+    // never hides a major gap, and never implies the security fix needs the
+    // major jump.
+    $platformBadge = function (array $p, ?string $platform = null) use ($updateTier, $tierPills) {
         $status      = $p['status'] ?? 'unknown';
         $security    = ! empty($p['security_update_available']);
         $current     = $p['current'] ?? $p['version'] ?? null;
         $latest      = $p['latest']  ?? null;
         $outdated    = $latest && $current && version_compare($current, $latest, '<');
-        $majorBehind = $outdated && $isMajorBehind($current, $latest, $platform);
         $arrow       = $current . ' → ' . $latest;
 
         $pills = [];
@@ -71,20 +89,16 @@
         elseif ($status === 'eol')      $pills[] = ['text' => 'End of life',     'colour' => '#dc2626'];
         elseif ($status === 'security') $pills[] = ['text' => 'Security only',   'colour' => '#b45309'];
 
-        // The major gap always leads: it's the bigger job.
-        if ($majorBehind) {
-            array_unshift($pills, ['text' => 'Major version behind', 'colour' => '#dc2626']);
+        if ($outdated) {
+            $pills[] = $tierPills[$updateTier($current, $latest, $platform)];
+
+            return ['pills' => $pills, 'note' => 'update available', 'detail' => $arrow];
         }
 
         if ($pills) {
-            return ['pills' => $pills, 'detail' => ($security || $majorBehind) ? $arrow : $current];
+            return ['pills' => $pills, 'detail' => $current];
         }
 
-        if ($outdated) {
-            // Minor and patch bumps are routine updates and read as
-            // "Update available" in blue, matching the ecosystem badges.
-            return ['pills' => [['text' => 'Update available', 'colour' => '#2563eb']], 'detail' => $arrow];
-        }
         if (in_array($status, ['ok', 'active'])) return ['pills' => [['text' => 'Up to date', 'colour' => '#047857']], 'detail' => $current];
 
         return ['pills' => [['text' => 'Unknown', 'colour' => '#64748b']], 'detail' => $current ?? '-'];
@@ -167,7 +181,7 @@
 
     $needsAttention = $totalVulns > 0 || $platformEol || $securityUpdate || $licenseInvalid;
 
-    // Mirror the row-level "Major version behind" pill at the banner: any platform
+    // Mirror the row-level "Major" pill at the banner: any platform
     // a full major behind earns its own tier between needs-attention (red)
     // and routine updates (blue).
     $platformMajorBehind = false;
@@ -274,6 +288,9 @@
                             @foreach ($pills as $pill)
                                 <span class="sentinel-pill" style="display:inline-block; text-transform:uppercase; letter-spacing:0.04em; margin:2px 6px 2px 0; font-size:10.5px; font-weight:500; padding:1px 7px; border-radius:4px; border:1px solid {{ $pill['colour'] }}; color:#fff; background:{{ $pill['colour'] }};">{{ $pill['text'] }}</span>
                             @endforeach
+                            @if (! empty($b['note']))
+                                <span style="color:#64748b;">{{ $b['note'] }}</span>
+                            @endif
                         </div>
                     </td>
                 </tr>

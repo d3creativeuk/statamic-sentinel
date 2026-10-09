@@ -120,6 +120,10 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Changed
 
+- **The status report labels each Statamic, Laravel and PHP update as Patch, Minor or Major**, with
+  "update available" beside it, instead of one "Update available" pill for everything. A routine
+  patch no longer looks the same as a feature release, and a major gap is no longer worded
+  differently from the rest.
 - **The Statamic row in the status and update reports shows the Statamic icon**, taken from the
   site's installed Statamic and embedded in the email, so nothing is loaded from elsewhere when it's
   opened.

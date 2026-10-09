@@ -116,27 +116,33 @@ class EmailAndControllerAccessTest extends TestCase
         $failedHtml = (new SentinelReport($failed))->render();
         $this->assertSame(2, substr_count($failedHtml, 'Update check failed'));
 
-        // "Major version behind" is always the first pill.
+        // A security flag and a major gap are separate pills: the security
+        // pill first, then the tier with "update available" beside it.
         $majorAudit = $this->audit();
         $majorAudit['statamic'] = ['current' => '5.73.2', 'latest' => '6.33.0', 'is_latest' => false, 'status' => 'outdated', 'security_update_available' => true, 'security_source' => 'osv'];
         $majorHtml  = (new SentinelReport($majorAudit))->render();
-        $this->assertLessThan(strpos($majorHtml, 'Security update</span>'), strpos($majorHtml, 'Major version behind</span>'));
+        $this->assertMatchesRegularExpression('#>Security update</span>\s*<span[^>]*background:\#dc2626;">Major</span>\s*<span[^>]*>update available</span>#', $majorHtml);
 
-        // PHP compares against the newest release on any branch, with the
-        // major gap as its only pill (no patch-level "Update available").
+        // PHP compares against the newest release on any branch, and a new
+        // X.Y branch counts as major.
         $phpAudit = $this->audit();
         $phpAudit['php'] = ['version' => '8.4.20', 'latest' => '8.5.10', 'status' => 'active', 'label' => 'Active Support'];
         $phpRow = substr($html = (new SentinelReport($phpAudit))->render(), strpos($html, '>PHP<'), 1500);
         $this->assertStringContainsString('8.4.20 → 8.5.10', $phpRow);
-        $this->assertStringContainsString('Major version behind', $phpRow);
-        $this->assertStringNotContainsString('Update available', $phpRow);
+        $this->assertMatchesRegularExpression('#>Major</span>\s*<span[^>]*>update available</span>#', $phpRow);
         $this->assertStringNotContainsString('is also available', $phpRow);
 
-        // A patch-only update still gets the "Update available" pill.
+        // A patch is labelled as one, in the muted blue.
         $patch = $this->audit();
-        $patch['php'] = ['version' => '8.5.7', 'latest' => '8.5.10', 'status' => 'active', 'label' => 'Active Support'];
+        $patch['php'] = ['version' => '8.5.10', 'latest' => '8.5.11', 'status' => 'active', 'label' => 'Active Support'];
         $patchRow = substr($html = (new SentinelReport($patch))->render(), strpos($html, '>PHP<'), 1500);
-        $this->assertStringContainsString('Update available', $patchRow);
+        $this->assertMatchesRegularExpression('#background:\#4f73b8;">Patch</span>\s*<span[^>]*>update available</span>#', $patchRow);
+
+        // And a minor, in the stronger blue.
+        $minor = $this->audit();
+        $minor['laravel'] = ['version' => '13.30.0', 'latest' => '13.35.0', 'status' => 'active', 'label' => 'Active Support'];
+        $minorRow = substr($html = (new SentinelReport($minor))->render(), strpos($html, '>Laravel<'), 1500);
+        $this->assertMatchesRegularExpression('#background:\#2563eb;">Minor</span>\s*<span[^>]*>update available</span>#', $minorRow);
 
         // Platform versions sit beside the title, not in front of the pills.
         $this->assertMatchesRegularExpression('/>Statamic<span[^>]*>6\.0\.0 → 6\.1\.0<\/span><\/div>/u', $rendered['status']);
