@@ -265,7 +265,7 @@
                     <td class="sentinel-row-cell" style="padding:12px 16px; vertical-align:middle;">
                         {{-- Platform rows put the version beside the title; package rows keep
                              their detail (if any) in front of the pills. --}}
-                        <div style="font-size:15px; font-weight:600; color:#0f172a;">{{ $row['label'] }}@if ($row['kind'] === 'platform' && ! empty($b['detail']))<span style="font-weight:500; color:#475569; margin-left:8px; font-variant-numeric:tabular-nums;">{{ $b['detail'] }}</span>@endif</div>
+                        <div style="font-size:15px; font-weight:600; color:#0f172a;">@if ($row['label'] === 'Statamic' && ($statamicIcon = \D3Creative\Sentinel\Support\StatamicIcon::src($message ?? null)))<img src="{{ $statamicIcon }}" width="16" height="16" alt="" style="display:inline-block; width:16px; height:16px; vertical-align:-2px; margin-right:7px; border:0;">@endif{{ $row['label'] }}@if ($row['kind'] === 'platform' && ! empty($b['detail']))<span style="font-weight:500; color:#475569; margin-left:8px; font-variant-numeric:tabular-nums;">{{ $b['detail'] }}</span>@endif</div>
                         <div style="font-size:13px; color:#475569; margin-top:3px;">{{ $row['description'] }}</div>
                         <div class="sentinel-row-meta" style="margin-top:8px; font-size:12px; color:#475569; font-variant-numeric:tabular-nums; line-height:1.8;">
                             @if ($row['kind'] !== 'platform' && ! empty($b['detail']))

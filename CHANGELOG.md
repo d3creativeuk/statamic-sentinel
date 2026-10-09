@@ -120,6 +120,9 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Changed
 
+- **The Statamic row in the status and update reports shows the Statamic icon**, taken from the
+  site's installed Statamic and embedded in the email, so nothing is loaded from elsewhere when it's
+  opened.
 - **Fixed vulnerabilities show as security updates in the update report's package lists.** Any
   package update that fixed a vulnerability, including one pulled in by another package, is marked
   "(security update)" with the versions it moved between, instead of being repeated in a separate
