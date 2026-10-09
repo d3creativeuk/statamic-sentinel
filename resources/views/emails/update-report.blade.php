@@ -198,15 +198,19 @@
             </tr>
             @foreach ($composer['updated'] as $pkg)
                 <tr style="border-top:1px solid #f1f5f9;">
-                    <td class="sentinel-row-cell" style="padding:8px 16px; font-size:13px; color:#0f172a;">{{ $pkg['name'] }}</td>
+                    <td class="sentinel-row-cell" style="padding:8px 16px; font-size:13px; color:#0f172a;">{{ $pkg['name'] }}@if (! empty($pkg['security'])) <span style="color:#10b981; font-size:12px; white-space:nowrap;">(security update)</span>@endif</td>
                     <td align="right" class="sentinel-row-cell sentinel-row-meta" style="padding:8px 16px; font-size:12px; color:#475569; font-variant-numeric:tabular-nums; white-space:nowrap;">
-                        {{ $pkg['from'] }} <span style="color:#94a3b8;">→</span> <strong style="color:#0f172a;">{{ $pkg['to'] }}</strong>
+                        @if ($pkg['from'] && $pkg['to'])
+                            {{ $pkg['from'] }} <span style="color:#94a3b8;">→</span> <strong style="color:#0f172a;">{{ $pkg['to'] }}</strong>
+                        @elseif ($pkg['to'])
+                            <strong style="color:#0f172a;">{{ $pkg['to'] }}</strong>
+                        @endif
                     </td>
                 </tr>
             @endforeach
             @foreach ($composer['added'] as $pkg)
                 <tr style="border-top:1px solid #f1f5f9;">
-                    <td class="sentinel-row-cell" style="padding:8px 16px; font-size:13px; color:#0f172a;">{{ $pkg['name'] }}</td>
+                    <td class="sentinel-row-cell" style="padding:8px 16px; font-size:13px; color:#0f172a;">{{ $pkg['name'] }}@if (! empty($pkg['security'])) <span style="color:#10b981; font-size:12px; white-space:nowrap;">(security update)</span>@endif</td>
                     <td align="right" class="sentinel-row-cell sentinel-row-meta" style="padding:8px 16px; font-size:12px; color:#10b981; font-variant-numeric:tabular-nums; white-space:nowrap;">
                         added at {{ $pkg['to'] }}
                     </td>
@@ -214,9 +218,9 @@
             @endforeach
             @foreach ($composer['removed'] as $pkg)
                 <tr style="border-top:1px solid #f1f5f9;">
-                    <td class="sentinel-row-cell" style="padding:8px 16px; font-size:13px; color:#0f172a;">{{ $pkg['name'] }}</td>
+                    <td class="sentinel-row-cell" style="padding:8px 16px; font-size:13px; color:#0f172a;">{{ $pkg['name'] }}@if (! empty($pkg['security'])) <span style="color:#10b981; font-size:12px; white-space:nowrap;">(security update)</span>@endif</td>
                     <td align="right" class="sentinel-row-cell sentinel-row-meta" style="padding:8px 16px; font-size:12px; color:#64748b; font-variant-numeric:tabular-nums; white-space:nowrap;">
-                        removed (was {{ $pkg['from'] }})
+                        removed{{ $pkg['from'] ? ' (was ' . $pkg['from'] . ')' : '' }}
                     </td>
                 </tr>
             @endforeach
@@ -237,15 +241,19 @@
             </tr>
             @foreach ($npm['updated'] as $pkg)
                 <tr style="border-top:1px solid #f1f5f9;">
-                    <td class="sentinel-row-cell" style="padding:8px 16px; font-size:13px; color:#0f172a;">{{ $pkg['name'] }}</td>
+                    <td class="sentinel-row-cell" style="padding:8px 16px; font-size:13px; color:#0f172a;">{{ $pkg['name'] }}@if (! empty($pkg['security'])) <span style="color:#10b981; font-size:12px; white-space:nowrap;">(security update)</span>@endif</td>
                     <td align="right" class="sentinel-row-cell sentinel-row-meta" style="padding:8px 16px; font-size:12px; color:#475569; font-variant-numeric:tabular-nums; white-space:nowrap;">
-                        {{ $pkg['from'] }} <span style="color:#94a3b8;">→</span> <strong style="color:#0f172a;">{{ $pkg['to'] }}</strong>
+                        @if ($pkg['from'] && $pkg['to'])
+                            {{ $pkg['from'] }} <span style="color:#94a3b8;">→</span> <strong style="color:#0f172a;">{{ $pkg['to'] }}</strong>
+                        @elseif ($pkg['to'])
+                            <strong style="color:#0f172a;">{{ $pkg['to'] }}</strong>
+                        @endif
                     </td>
                 </tr>
             @endforeach
             @foreach ($npm['added'] as $pkg)
                 <tr style="border-top:1px solid #f1f5f9;">
-                    <td class="sentinel-row-cell" style="padding:8px 16px; font-size:13px; color:#0f172a;">{{ $pkg['name'] }}</td>
+                    <td class="sentinel-row-cell" style="padding:8px 16px; font-size:13px; color:#0f172a;">{{ $pkg['name'] }}@if (! empty($pkg['security'])) <span style="color:#10b981; font-size:12px; white-space:nowrap;">(security update)</span>@endif</td>
                     <td align="right" class="sentinel-row-cell sentinel-row-meta" style="padding:8px 16px; font-size:12px; color:#10b981; font-variant-numeric:tabular-nums; white-space:nowrap;">
                         added at {{ $pkg['to'] }}
                     </td>
@@ -253,23 +261,24 @@
             @endforeach
             @foreach ($npm['removed'] as $pkg)
                 <tr style="border-top:1px solid #f1f5f9;">
-                    <td class="sentinel-row-cell" style="padding:8px 16px; font-size:13px; color:#0f172a;">{{ $pkg['name'] }}</td>
+                    <td class="sentinel-row-cell" style="padding:8px 16px; font-size:13px; color:#0f172a;">{{ $pkg['name'] }}@if (! empty($pkg['security'])) <span style="color:#10b981; font-size:12px; white-space:nowrap;">(security update)</span>@endif</td>
                     <td align="right" class="sentinel-row-cell sentinel-row-meta" style="padding:8px 16px; font-size:12px; color:#64748b; font-variant-numeric:tabular-nums; white-space:nowrap;">
-                        removed (was {{ $pkg['from'] }})
+                        removed{{ $pkg['from'] ? ' (was ' . $pkg['from'] . ')' : '' }}
                     </td>
                 </tr>
             @endforeach
         </table>
 
         {{-- Vulnerabilities (only when relevant) --}}
-        @if ($vulnsResolved > 0 || $vulnsIntro > 0 || $vulnsOpen > 0)
+        {{-- Fixed vulnerabilities show as "(security update)" in the package
+             lists above; this lists only what's still outstanding. --}}
+        @if ($vulnsIntro > 0 || $vulnsOpen > 0)
             @php
                 // Each package (or group under the dependency that pulls it in)
                 // as a heading with its notes underneath, kept apart from the
                 // counts. A status label is only needed when several are listed.
                 $vulnSections = \D3Creative\Sentinel\Support\VulnerabilityGroups::build($vulns, $notes ?? []);
                 $vulnStatus   = [
-                    'resolved' => ['label' => 'Resolved',   'colour' => '#10b981'],
                     'new'      => ['label' => 'New',        'colour' => '#ef4444'],
                     'open'     => ['label' => 'Still open', 'colour' => '#b45309'],
                 ];
@@ -277,18 +286,19 @@
             @endphp
             <div style="border-top:1px solid #e2e8f0; margin:18px 0;"></div>
             <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden; margin-bottom:10px;">
+                {{-- Heading styled like the Composer and npm sections: title,
+                     description, then a pill per status. --}}
                 <tr>
-                    <td class="sentinel-row-cell" style="padding:12px 16px; font-size:13px; font-weight:600; color:#0f172a;">Vulnerabilities</td>
-                    <td align="right" class="sentinel-row-cell sentinel-row-meta" style="padding:12px 16px; font-size:12px; color:#475569;">
-                        @if ($vulnsResolved > 0)
-                            <div style="color:#10b981; font-weight:600;">{{ $vulnsResolved }} resolved</div>
-                        @endif
-                        @if ($vulnsIntro > 0)
-                            <div style="color:#ef4444; font-weight:600; {{ $vulnsResolved > 0 ? 'margin-top:4px;' : '' }}">{{ $vulnsIntro }} new</div>
-                        @endif
-                        @if ($vulnsOpen > 0)
-                            <div style="color:#b45309; font-weight:600; {{ $vulnsResolved > 0 || $vulnsIntro > 0 ? 'margin-top:4px;' : '' }}">{{ $vulnsOpen }} still open</div>
-                        @endif
+                    <td colspan="2" class="sentinel-row-cell" style="padding:12px 16px; vertical-align:middle;">
+                        <div style="font-size:15px; font-weight:600; color:#0f172a;">Vulnerabilities</div>
+                        <div style="font-size:13px; color:#475569; margin-top:3px;">Packages with known security issues</div>
+                        <div class="sentinel-row-meta" style="margin-top:8px; font-size:12px; color:#475569; font-variant-numeric:tabular-nums; line-height:1.8;">
+                            @foreach ([[$vulnsIntro, 'new', '#ef4444'], [$vulnsOpen, 'still open', '#b45309']] as [$vulnCount, $vulnLabel, $vulnColour])
+                                @if ($vulnCount > 0)
+                                    <span class="sentinel-pill" style="display:inline-block; margin:2px 6px 2px 0; font-size:10.5px; font-weight:500; padding:1px 7px; border-radius:4px; color:{{ $vulnColour }}; border:1px solid {{ $vulnColour }}; background:#fff;">{{ $vulnCount }} {{ $vulnLabel }}</span>
+                                @endif
+                            @endforeach
+                        </div>
                     </td>
                 </tr>
                 @if (! empty($vulnSections))

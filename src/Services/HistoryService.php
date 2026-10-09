@@ -65,6 +65,8 @@ class HistoryService
                 return;
             }
 
+            $snapshot = $this->withVulnVersions($snapshot, $audit, $entries[0] ?? null);
+
             if (! empty($entries) && $this->matches($snapshot, $entries[0])) {
                 // Snapshots recorded before parents were stored lack them. Fill
                 // them in from this scan of the same state, so the update
@@ -79,6 +81,17 @@ class HistoryService
                         $entries[0][$key] = $snapshot[$key];
                         $backfilled = true;
                     }
+                }
+
+                // Same state, same lock files, so this scan can fill in
+                // versions the snapshot lacks: one recorded before they were
+                // kept, or whose neighbour changed (a history row deleted)
+                // so the report now pairs it with different packages.
+                $topped = $this->withVulnVersions($entries[0], $audit, $entries[1] ?? null);
+
+                if ($topped !== $entries[0]) {
+                    $entries[0] = $topped;
+                    $backfilled = true;
                 }
 
                 if ($backfilled) {
@@ -218,6 +231,53 @@ class HistoryService
             'composer_dependency_parents' => $audit['composer']['dependency_parents'] ?? [],
             'npm_dependency_parents'      => $audit['npm']['dependency_parents']      ?? [],
         ];
+    }
+
+    /**
+     * `{eco}_vuln_versions`: installed versions (`[name => '1.2.3']`) of every
+     * package that's vulnerable in this snapshot or `$previous`, read from
+     * the lock file the scan just used. A package looked up and not found is
+     * stored as null, meaning removed; a name that isn't a key wasn't looked
+     * up, so nothing is claimed about it. Versions already stored are kept.
+     * The update report shows a resolved package's move from the previous
+     * snapshot's version to this one's. Payload-only, like the maps above.
+     */
+    protected function withVulnVersions(array $snapshot, array $audit, ?array $previous): array
+    {
+        foreach (['composer', 'npm'] as $eco) {
+            $key = "{$eco}_vuln_versions";
+
+            // An unreadable lock has no versions; don't read that as removed.
+            if (! empty($audit[$eco]['lock_unreadable'])) {
+                if (! array_key_exists($key, $snapshot) && $previous !== null && array_key_exists($key, $previous)) {
+                    $snapshot[$key] = $previous[$key];
+                }
+
+                continue;
+            }
+
+            $known = is_array($snapshot[$key] ?? null) ? $snapshot[$key] : [];
+            $names = array_values(array_diff(array_keys(array_merge(
+                (array) ($previous["{$eco}_vuln_packages"] ?? []),
+                (array) ($snapshot["{$eco}_vuln_packages"] ?? [])
+            )), array_keys($known)));
+
+            if (empty($names) && array_key_exists($key, $snapshot)) {
+                continue;
+            }
+
+            $found = app(AuditService::class)->lockVersions($eco, $names);
+            $map   = $known + array_fill_keys($names, null);
+
+            foreach ($found as $name => $version) {
+                $map[$name] = $version;
+            }
+
+            ksort($map);
+            $snapshot[$key] = $map;
+        }
+
+        return $snapshot;
     }
 
     /**

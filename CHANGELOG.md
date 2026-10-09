@@ -120,6 +120,11 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Changed
 
+- **Fixed vulnerabilities show as security updates in the update report's package lists.** Any
+  package update that fixed a vulnerability, including one pulled in by another package, is marked
+  "(security update)" with the versions it moved between, instead of being repeated in a separate
+  resolved list. The Vulnerabilities section now lists only new and still-open issues, and doesn't
+  appear when there are none.
 - **The developer link now carries UTM parameters**, including the site's domain, so D3 Creative,
   or an agency using `SENTINEL_DEV_URL`, can see which visits came from Sentinel. Nothing is sent
   unless someone clicks, and UTM values already on the configured URL are kept.

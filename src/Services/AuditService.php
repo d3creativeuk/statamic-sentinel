@@ -523,6 +523,52 @@ class AuditService
      * both packages + packages-dev so dev-only upgrades are pruned too.
      * Empty array if the lock can't be read.
      */
+    /**
+     * Installed versions of the named packages, from the lock file: `[name =>
+     * '1.2.3']`, or `'1.2.3, 2.0.1'` for an npm package installed at several
+     * versions. Packages that aren't installed are left out. The history
+     * snapshot stores these for vulnerable packages, so the update report can
+     * show the versions a resolved package moved between.
+     */
+    public function lockVersions(string $ecosystem, array $names): array
+    {
+        if (empty($names)) {
+            return [];
+        }
+
+        $wanted = array_flip($names);
+        $found  = [];
+
+        try {
+            if ($ecosystem === 'composer') {
+                foreach ($this->liveComposerVersions() as $name => $version) {
+                    if (isset($wanted[$name])) {
+                        $found[$name][] = $version;
+                    }
+                }
+            } elseif ($ecosystem === 'npm') {
+                $lock = $this->readJsonFile(base_path('package-lock.json'));
+
+                foreach ($lock ? $this->npmLockPackages($lock) : [] as $pkg) {
+                    if (isset($wanted[$pkg['name']])) {
+                        $found[$pkg['name']][] = $pkg['version'];
+                    }
+                }
+            }
+        } catch (\Throwable $e) {
+            return [];
+        }
+
+        ksort($found);
+
+        return array_map(function ($versions) {
+            $versions = array_values(array_unique($versions));
+            usort($versions, 'version_compare');
+
+            return implode(', ', $versions);
+        }, $found);
+    }
+
     protected function liveComposerVersions(): array
     {
         $versions = [];

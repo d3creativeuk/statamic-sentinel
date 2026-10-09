@@ -45,7 +45,7 @@ class PackageNotesTest extends TestCase
             $report['vulns']['npm_introduced_packages']
         );
         $this->assertSame(
-            [['name' => 'old-pkg', 'count' => 2, 'parent' => 'vite', 'ecosystem' => 'npm']],
+            [['name' => 'old-pkg', 'count' => 2, 'parent' => 'vite', 'ecosystem' => 'npm', 'from' => null, 'to' => null, 'removed' => false]],
             $report['vulns']['npm_resolved_packages']
         );
     }
@@ -118,13 +118,15 @@ class PackageNotesTest extends TestCase
 
         $html = (new SentinelUpdateReport($report))->render();
 
-        $this->assertStringContainsString('1 resolved</div>', $html);
-        $this->assertStringContainsString('2 still open</div>', $html);
+        $this->assertStringContainsString('>2 still open</span>', $html);
+        $this->assertStringContainsString('>Vulnerabilities</div>', $html);
         $this->assertStringContainsString('postcss-selector-parser via @tailwindcss/typography</div>', $html);
         $this->assertMatchesRegularExpression('#braces via tailwindcss</div>\s*<div[^>]*>Braces can&\#039;t be updated until Tailwind 3 is.</div>#', $html);
-        // Two statuses listed, so each gets a label.
-        $this->assertStringContainsString('>Resolved</div>', $html);
-        $this->assertStringContainsString('>Still open</div>', $html);
+        // The fix is a security update in the npm list, not a resolved row,
+        // so only one status is listed and it needs no label.
+        $this->assertMatchesRegularExpression('#source-map-js <span[^>]*>\(security update\)</span>#', $html);
+        $this->assertStringNotContainsString('resolved', strip_tags($html));
+        $this->assertStringNotContainsString('>Still open</div>', $html);
     }
 
     public function test_a_report_stored_before_parents_and_still_open_existed_renders(): void
@@ -148,7 +150,7 @@ class PackageNotesTest extends TestCase
 
         $html = (new SentinelUpdateReport($report))->render();
 
-        $this->assertStringContainsString('1 new</div>', $html);
+        $this->assertStringContainsString('>1 new</span>', $html);
         $this->assertStringNotContainsString('>New</div>', $html);
     }
 
@@ -162,7 +164,6 @@ class PackageNotesTest extends TestCase
         ]];
 
         $sections = VulnerabilityGroups::build([
-            'npm_resolved_packages'   => [['name' => 'esbuild', 'count' => 1, 'parent' => 'vite', 'ecosystem' => 'npm']],
             'npm_introduced_packages' => [
                 ['name' => 'axios', 'count' => 2, 'parent' => null, 'ecosystem' => 'npm'],
                 ['name' => 'braces', 'count' => 1, 'parent' => 'tailwindcss', 'ecosystem' => 'npm'],
@@ -171,10 +172,7 @@ class PackageNotesTest extends TestCase
             'npm_open_packages'       => [['name' => 'micromatch', 'count' => 1, 'parent' => 'tailwindcss', 'ecosystem' => 'npm']],
         ], $notes);
 
-        $this->assertSame(['resolved', 'new', 'open'], array_column($sections, 'status'));
-
-        // Resolved packages never show a note.
-        $this->assertSame([['title' => 'esbuild via vite', 'notes' => []]], $sections[0]['groups']);
+        $this->assertSame(['new', 'open'], array_column($sections, 'status'));
 
         // Direct dependencies stand alone; a child's own note is labelled when
         // the heading lists several packages.
@@ -184,10 +182,10 @@ class PackageNotesTest extends TestCase
                 ['label' => null, 'text' => 'Tailwind 3 holds these back.'],
                 ['label' => 'postcss-selector-parser', 'text' => 'Pinned by the typography plugin.'],
             ]],
-        ], $sections[1]['groups']);
+        ], $sections[0]['groups']);
 
         // The tailwindcss note already showed above.
-        $this->assertSame([['title' => 'micromatch via tailwindcss', 'notes' => []]], $sections[2]['groups']);
+        $this->assertSame([['title' => 'micromatch via tailwindcss', 'notes' => []]], $sections[1]['groups']);
     }
 
     public function test_history_stores_parents_without_them_driving_a_new_snapshot(): void

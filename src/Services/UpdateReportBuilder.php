@@ -53,6 +53,9 @@ class UpdateReportBuilder
         $composerVulnDiff = self::diffVulnPackages('composer', $previous, $latest);
         $npmVulnDiff      = self::diffVulnPackages('npm', $previous, $latest);
 
+        $composer = self::markSecurityUpdates($composer, $composerVulnDiff['resolved']);
+        $npm      = self::markSecurityUpdates($npm, $npmVulnDiff['resolved']);
+
         $vulns = [
             'composer_resolved'   => $composerVulnDiff['resolved_count'],
             'composer_introduced' => $composerVulnDiff['introduced_count'],
@@ -96,6 +99,49 @@ class UpdateReportBuilder
             'to'      => $to,
             'changed' => $from !== null && $to !== null && $from !== $to,
         ];
+    }
+
+    /**
+     * Flag the package changes that fixed vulnerabilities (`security`), and
+     * add the fixed packages the lists don't have: the lists only cover direct
+     * dependencies, and most fixes land in indirect ones. A client sees
+     * "guzzlehttp/guzzle (security update)" in the package list rather than
+     * the same package again in a separate section, and needn't know which
+     * dependency pulled it in.
+     *
+     * A fixed package whose version didn't change (an advisory withdrawn or
+     * narrowed) isn't an update, so it's left out.
+     */
+    protected static function markSecurityUpdates(array $lists, array $resolved): array
+    {
+        foreach ($resolved as $fix) {
+            $name = $fix['name'];
+
+            foreach (['updated', 'removed', 'added'] as $list) {
+                foreach ($lists[$list] as $i => $row) {
+                    if ($row['name'] === $name) {
+                        $lists[$list][$i]['security'] = true;
+
+                        continue 3;
+                    }
+                }
+            }
+
+            $from = $fix['from'] ?? null;
+            $to   = $fix['to'] ?? null;
+
+            if (! empty($fix['removed'])) {
+                $lists['removed'][] = ['name' => $name, 'from' => $from, 'security' => true];
+            } elseif ($from === null || $to === null || $from !== $to) {
+                $lists['updated'][] = ['name' => $name, 'from' => $from, 'to' => $to, 'security' => true];
+            }
+        }
+
+        foreach (['updated', 'removed'] as $list) {
+            usort($lists[$list], fn ($a, $b) => strcmp($a['name'], $b['name']));
+        }
+
+        return $lists;
     }
 
     /**
@@ -168,7 +214,8 @@ class UpdateReportBuilder
             $now = (int) ($after[$name]  ?? 0);
 
             if ($was > $now) {
-                $resolved[] = self::vulnEntry($eco, $name, $was - $now, $parents['previous']);
+                $resolved[] = self::vulnEntry($eco, $name, $was - $now, $parents['previous'])
+                    + self::resolvedVersions($eco, $name, $previous, $latest);
             } elseif ($now > $was) {
                 $introduced[] = self::vulnEntry($eco, $name, $now - $was, $parents['latest']);
             }
@@ -198,6 +245,50 @@ class UpdateReportBuilder
             'resolved_count'   => $resolvedCount,
             'introduced_count' => $introducedCount,
             'open_count'       => array_sum(array_column($open, 'count')),
+        ];
+    }
+
+    /**
+     * The version a resolved package moved from and to, from the snapshots'
+     * `{eco}_vuln_versions` (null where a snapshot doesn't know it). `removed`
+     * only when the latest snapshot looked the package up and found it gone
+     * (stored as null); a package it never looked up isn't claimed. An npm
+     * package installed at several versions reads as its lowest before and
+     * highest after ("2.3.2 → 3.0.3"), not every version.
+     *
+     * A direct dependency falls back to the snapshot's `{eco}_packages`, which
+     * every snapshot has, so it shows its old version even against one
+     * recorded before vuln versions were kept.
+     */
+    protected static function resolvedVersions(string $eco, string $name, array $previous, array $latest): array
+    {
+        $before = $previous["{$eco}_vuln_versions"] ?? null;
+        $after  = $latest["{$eco}_vuln_versions"]   ?? null;
+
+        $version = function (?array $vulnVersions, array $snapshot) use ($eco, $name) {
+            $fromVulns = is_array($vulnVersions) ? ($vulnVersions[$name] ?? null) : null;
+
+            return is_string($fromVulns) && $fromVulns !== ''
+                ? $fromVulns
+                : (($snapshot["{$eco}_packages"][$name] ?? null) ?: null);
+        };
+
+        $pick = function ($list, bool $highest) {
+            if (! is_string($list) || $list === '') {
+                return null;
+            }
+
+            $versions = array_map('trim', explode(',', $list));
+            usort($versions, 'version_compare');
+
+            return $highest ? end($versions) : $versions[0];
+        };
+
+        return [
+            'from'    => $pick($version($before, $previous), false),
+            'to'      => $pick($version($after, $latest), true),
+            'removed' => is_array($after) && array_key_exists($name, $after) && $after[$name] === null
+                && ! isset($latest["{$eco}_packages"][$name]),
         ];
     }
 
