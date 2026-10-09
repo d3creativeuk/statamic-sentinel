@@ -199,8 +199,35 @@
     // anything other than routine updates or all clear.
     $introUrgent = true;
     if ($needsAttention) {
+        // Say exactly what needs attention: a security fix in particular
+        // must always be named in the opening, never left to the rows.
+        $_names = fn (array $list) => count($list) > 1
+            ? implode(', ', array_slice($list, 0, -1)) . ' and ' . end($list)
+            : ($list[0] ?? '');
+        $_parts = [];
+        $_secure = array_keys(array_filter(['Statamic' => $statamic['security_update_available'] ?? false, 'Laravel' => $laravel['security_update_available'] ?? false]));
+        if ($_secure) {
+            $_parts[] = (count($_secure) > 1 ? 'Security updates are' : 'A security update is') . ' available for ' . $_names($_secure) . '.';
+        }
+        if ($totalVulns > 0) {
+            $_parts[] = $totalVulns . ' known ' . \Illuminate\Support\Str::plural('vulnerability', $totalVulns) . ' ' . ($totalVulns === 1 ? 'was' : 'were') . ' found in your packages.';
+        }
+        $_eol = [];
+        foreach (['Statamic' => $statamic, 'Laravel' => $laravel, 'PHP' => $php] as $_name => $_p) {
+            if (($_p['status'] ?? null) === 'eol') {
+                // The branch that's ended: PHP's are X.Y, the others' the major.
+                $_v = explode('.', (string) ($_p['current'] ?? $_p['version'] ?? ''));
+                $_eol[] = trim($_name . ' ' . ($_name === 'PHP' ? implode('.', array_slice($_v, 0, 2)) : ($_v[0] ?? '')));
+            }
+        }
+        if ($_eol) {
+            $_parts[] = $_names($_eol) . ' ' . (count($_eol) > 1 ? 'have' : 'has') . ' reached end of life.';
+        }
+        if ($licenseInvalid) {
+            $_parts[] = 'Your Statamic licence is not valid.';
+        }
         $intro        = 'Your Statamic website needs attention.';
-        $introDetail  = 'Security or platform issues were found.';
+        $introDetail  = implode(' ', $_parts) ?: 'Security or platform issues were found.';
     } elseif ($licenseRenewal) {
         $intro        = 'Your Statamic licence is due for renewal.';
         $introDetail  = 'The licence no longer covers your installed version.';
@@ -235,7 +262,9 @@
             $introMessage = 'Hi, your Statamic installation is running version ' . $statamicCurrent . '. '
                 . 'The latest version is ' . $statamicLatest . '. '
                 . "That's " . $statamicBehind . ' ' . ($statamicPatch ? 'patch ' : '') . \Illuminate\Support\Str::plural('version', $statamicBehind) . ' behind'
-                . ($statamicPatch && empty($statamic['security_update_available']) ? ', not urgent.' : '.');
+                . (! empty($statamic['security_update_available'])
+                    ? ($statamicBehind === 1 ? ', and it includes a security fix.' : ', including a security fix.')
+                    : ($statamicPatch ? ', not urgent.' : '.'));
         }
     } elseif ($statamicCurrent && $statamicLatest) {
         // Only when the latest version is known: an unreachable registry

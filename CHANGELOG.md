@@ -12,9 +12,10 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 - **The status report's greeting could hide urgent problems.** When Statamic itself was up to date,
   the email opened with "running the latest version" and never mentioned vulnerabilities, an
-  end-of-life platform or a licence problem elsewhere. Those now follow the greeting. A Statamic
-  patch release is also called one ("1 patch version behind, not urgent"), unless it's a security
-  fix.
+  end-of-life platform or a licence problem elsewhere. Those now follow the greeting, each named
+  ("A security update is available for Laravel. PHP 8.1 has reached end of life."), and a Statamic
+  update that includes a security fix says so. A Statamic patch release that isn't a security fix
+  is called one ("1 patch version behind, not urgent").
 - **Turning off activity tracking kept showing, and keeping, the activity already recorded.** With
   `SENTINEL_TRACK_ACTIVITY=false` the Users tab now drops its Status column and the stored activity
   is deleted. Activity older than 30 days also stops showing on a quiet site, rather than waiting

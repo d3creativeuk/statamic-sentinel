@@ -83,13 +83,13 @@ class EmailAndControllerAccessTest extends TestCase
         $this->assertStringContainsString("Did you know?</strong> Your website isn't a single piece of software.", $rendered['status']);
 
         // The banner reads like an email about the Statamic install.
-        $this->assertStringContainsString("Hi, your Statamic installation is running version 6.0.0. The latest version is 6.1.0. That&#039;s 1 version behind.", $rendered['status']);
+        $this->assertStringContainsString("Hi, your Statamic installation is running version 6.0.0. The latest version is 6.1.0. That&#039;s 1 version behind, and it includes a security fix.", $rendered['status']);
 
         $licensed = $this->audit();
         $licensed['license']['status'] = 'ok';
         $licensed['statamic']['releases_behind'] = 34;
         $licensedHtml = (new SentinelReport($licensed))->render();
-        $this->assertStringContainsString('That&#039;s 34 versions behind.</div>', $licensedHtml);
+        $this->assertStringContainsString('That&#039;s 34 versions behind, including a security fix.</div>', $licensedHtml);
         $this->assertStringNotContainsString('active license', $licensedHtml);
 
         // Out of date with no behind count: the standard headline, not a shorter message.
@@ -107,7 +107,7 @@ class EmailAndControllerAccessTest extends TestCase
         // (here vulnerabilities and an end-of-life PHP) follows it rather
         // than hiding behind "running the latest version".
         $currentHtml = (new SentinelReport($current))->render();
-        $this->assertMatchesRegularExpression('#latest version, 6\.1\.0\.</div>\s*<div[^>]*>Your Statamic website needs attention\.</div>\s*<div[^>]*>Security or platform issues were found\.</div>#', $currentHtml);
+        $this->assertMatchesRegularExpression('#latest version, 6\.1\.0\.</div>\s*<div[^>]*>Your Statamic website needs attention\.</div>\s*<div[^>]*>2 known vulnerabilities were found in your packages\. PHP 8\.1 has reached end of life\.</div>#', $currentHtml);
 
         // With nothing urgent the greeting stands alone.
         $healthy = $current;
@@ -125,11 +125,17 @@ class EmailAndControllerAccessTest extends TestCase
         $patchBehind['statamic'] = ['current' => '6.30.0', 'latest' => '6.30.1', 'is_latest' => false, 'status' => 'outdated', 'releases_behind' => 1];
         $this->assertStringContainsString('The latest version is 6.30.1. That&#039;s 1 patch version behind, not urgent.', (new SentinelReport($patchBehind))->render());
 
-        // ...unless it's a security fix.
+        // ...unless it's a security fix, which the opening always names.
         $patchBehind['statamic']['security_update_available'] = true;
         $securityPatchHtml = (new SentinelReport($patchBehind))->render();
-        $this->assertStringContainsString('That&#039;s 1 patch version behind.', $securityPatchHtml);
+        $this->assertStringContainsString('That&#039;s 1 patch version behind, and it includes a security fix.', $securityPatchHtml);
+        $this->assertStringContainsString('A security update is available for Statamic.', $securityPatchHtml);
         $this->assertStringNotContainsString('not urgent', $securityPatchHtml);
+
+        // A Laravel security fix is named even when Statamic is current.
+        $laravelFix = $healthy;
+        $laravelFix['laravel']['security_update_available'] = true;
+        $this->assertMatchesRegularExpression('#latest version, 6\.1\.0\.</div>\s*<div[^>]*>Your Statamic website needs attention\.</div>\s*<div[^>]*>A security update is available for Laravel\.</div>#', (new SentinelReport($laravelFix))->render());
 
         // A minor gap reads as plain versions.
         $patchBehind['statamic'] = ['current' => '6.30.0', 'latest' => '6.35.1', 'is_latest' => false, 'status' => 'outdated', 'releases_behind' => 5];
